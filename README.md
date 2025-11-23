@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Admin Pro Template (Next.js + Tailwind + Radix UI)
 
-## Getting Started
+## Démarrage
 
-First, run the development server:
+Installer les dépendances puis lancer le serveur de dev:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvrez `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/
+    page.tsx               # Dashboard (squelette)
+    customers/page.tsx     # Customers (vide)
+    accounts/page.tsx      # Accounts (vide)
+    transactions/page.tsx  # Transactions (vide)
+    reports/page.tsx       # Reports (vide)
+    users/page.tsx         # Users (vide)
+    settings/page.tsx      # Settings (vide)
+    layout.tsx             # Layout admin (Sidebar + Topbar)
+    globals.css            # Styles globaux (Tailwind)
+  components/
+    admin/
+      AdminSidebar.tsx     # Sidebar avec Collapsible (Radix)
+      AdminTopbar.tsx      # Topbar avec Dropdown, Tooltip, Dialog (Radix)
+      MobileSidebar.tsx    # Sidebar mobile (Dialog en drawer)
+      PageHeader.tsx       # En-tête de page (breadcrumbs + actions)
+      Breadcrumbs.tsx      # Fil d’Ariane
+      AdminCard.tsx        # Carte générique
+      AdminStatCard.tsx    # Carte KPI
+      AdminTable.tsx       # Tableau générique
+    ui/
+      Button.tsx           # Bouton
+      Input.tsx            # Champ texte
+      Badge.tsx            # Badge d’état
+  lib/
+    utils.ts               # utilitaire cn()
+```
 
-## Learn More
+## Personnalisation
+- Ajoutez vos modules métier dans `app/*`.
+- Remplacez les sections “vide” par vos listes/formulaires/tableaux.
+- Utilisez les composants Radix (Tabs, Toast, Accordion, Popover…) au besoin.
 
-To learn more about Next.js, take a look at the following resources:
+## Production
+```bash
+npm run build
+npm start
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Pour le déploiement, suivez la documentation Next.js.

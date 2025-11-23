@@ -1,0 +1,16 @@
+# Cursor Rules
+
+- **Types TypeScript**
+  - Place tous les `type`, `interface` et `enum` partagés dans `src/types/`.
+  - N’utilise pas d’export par défaut pour les types; préfère des exports nommés.
+  - Crée ou mets à jour des fichiers dédiés (ex: `src/types/user.ts`, `src/types/api.ts`) plutôt que de déclarer des types dans les composants.
+  - Centralise les exports dans `src/types/index.ts` et importe depuis cet index.
+  - Lors d’implémentations, si de nouveaux types sont nécessaires, ajoute-les dans `src/types/` et mets à jour `src/types/index.ts`.
+
+- **Imports**
+  - Utilise l’alias `@types/*` pour importer des types (ex: `import { User } from '@types/user'`).
+
+- **Portée**
+  - Les types strictement locaux à un fichier peuvent rester in-file; sinon, mets-les dans `src/types/`.
+
+
