@@ -12,6 +12,7 @@ export interface Customer {
 	status: CustomerStatus;
 	riskScore?: number | null;
 	pepFlag?: boolean | null;
+	rejectionReason?: string | null;
 	createdAt?: string;
 	updatedAt?: string;
 }
@@ -26,7 +27,7 @@ export interface Address {
 	line2?: string | null;
 	city: string;
 	state?: string | null;
-	postalCode: string;
+	postalCode?: string | null;
 	country: string; // ISO-2
 	primaryAddress: boolean;
 	createdAt?: string;
@@ -65,9 +66,35 @@ export interface AddAddressRequest {
 	line2?: string;
 	city: string;
 	state?: string;
-	postalCode: string;
+	postalCode?: string;
 	country: string;
 	primaryAddress?: boolean;
+}
+
+export type RelatedPersonRole = "UBO" | "DIRECTOR" | "SIGNATORY";
+
+export interface RelatedPerson {
+	id: number;
+	clientId: number;
+	role: RelatedPersonRole;
+	firstName: string;
+	lastName: string;
+	dateOfBirth?: string | null;
+	nationalId?: string | null;
+	pepFlag: boolean;
+	ownershipPercent?: number | null;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface AddRelatedPersonRequest {
+	role: RelatedPersonRole;
+	firstName: string;
+	lastName: string;
+	dateOfBirth?: string;
+	nationalId?: string;
+	ownershipPercent?: number;
+	pepFlag?: boolean;
 }
 
 

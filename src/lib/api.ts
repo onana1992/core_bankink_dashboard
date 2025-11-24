@@ -1,9 +1,12 @@
 import type {
 	AddAddressRequest,
+	AddRelatedPersonRequest,
+	Address,
 	CreateCustomerRequest,
 	Customer,
 	Document,
-	DocumentType
+	DocumentType,
+	RelatedPerson
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
@@ -72,6 +75,11 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
+	async getAddresses(id: number | string): Promise<Address[]> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses`, { cache: "no-store" });
+		return handleJsonResponse<Address[]>(res);
+	},
+
 	async addAddress(id: number | string, payload: AddAddressRequest): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses`, {
 			method: "POST",
@@ -81,12 +89,47 @@ export const customersApi = {
 		await handleJsonResponse(res);
 	},
 
+	async updateAddress(id: number | string, addressId: number | string, payload: AddAddressRequest): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses/${addressId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		await handleJsonResponse(res);
+	},
+
+	async getDocuments(id: number | string): Promise<Document[]> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/documents`, { cache: "no-store" });
+		return handleJsonResponse<Document[]>(res);
+	},
+
 	async uploadDocument(id: number | string, type: DocumentType, file: File): Promise<Document> {
 		const form = new FormData();
 		form.append("file", file);
 		const res = await fetch(`${API_BASE}/api/customers/${id}/documents?type=${encodeURIComponent(type)}`, {
 			method: "POST",
 			body: form
+		});
+		return handleJsonResponse<Document>(res);
+	},
+
+	getDocumentUrl(id: number | string, documentId: number | string): string {
+		return `${API_BASE}/api/customers/${id}/documents/${documentId}/download`;
+	},
+
+	async reviewDocument(
+		id: number | string,
+		documentId: number | string,
+		status: "APPROVED" | "REJECTED",
+		reviewerNote?: string
+	): Promise<Document> {
+		const usp = new URLSearchParams();
+		usp.set("status", status);
+		if (reviewerNote) {
+			usp.set("reviewerNote", reviewerNote);
+		}
+		const res = await fetch(`${API_BASE}/api/customers/${id}/documents/${documentId}/review?${usp.toString()}`, {
+			method: "PUT"
 		});
 		return handleJsonResponse<Document>(res);
 	},
@@ -111,11 +154,49 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
-	async rejectKyc(id: number | string): Promise<Customer> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/kyc/reject`, {
+	async rejectKyc(id: number | string, rejectionReason?: string): Promise<Customer> {
+		const usp = new URLSearchParams();
+		if (rejectionReason) {
+			usp.set("rejectionReason", rejectionReason);
+		}
+		const res = await fetch(`${API_BASE}/api/customers/${id}/kyc/reject?${usp.toString()}`, {
 			method: "POST"
 		});
 		return handleJsonResponse<Customer>(res);
+	},
+
+	async getRelatedPersons(id: number | string): Promise<RelatedPerson[]> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons`, { cache: "no-store" });
+		return handleJsonResponse<RelatedPerson[]>(res);
+	},
+
+	async addRelatedPerson(id: number | string, payload: AddRelatedPersonRequest): Promise<RelatedPerson> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<RelatedPerson>(res);
+	},
+
+	async updateRelatedPerson(
+		id: number | string,
+		relatedPersonId: number | string,
+		payload: AddRelatedPersonRequest
+	): Promise<RelatedPerson> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons/${relatedPersonId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<RelatedPerson>(res);
+	},
+
+	async deleteRelatedPerson(id: number | string, relatedPersonId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons/${relatedPersonId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
 	}
 };
 

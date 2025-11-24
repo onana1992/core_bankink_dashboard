@@ -35,16 +35,6 @@ export default function NewCustomerPage() {
 			setSubmitting(false);
 			return;
 		}
-		if (!form.firstName?.trim()) {
-			setError("Le prénom est requis");
-			setSubmitting(false);
-			return;
-		}
-		if (!form.lastName?.trim()) {
-			setError("Le nom de famille est requis");
-			setSubmitting(false);
-			return;
-		}
 		if (!form.email?.trim()) {
 			setError("L'email est requis");
 			setSubmitting(false);
@@ -113,26 +103,24 @@ export default function NewCustomerPage() {
 							required
 						/>
 					</div>
-					<div>
-						<label className="block text-sm mb-1">
-							Prénom <span className="text-red-500">*</span>
-						</label>
-						<Input
-							value={form.firstName}
-							onChange={e => update("firstName", e.target.value)}
-							required
-						/>
-					</div>
-					<div>
-						<label className="block text-sm mb-1">
-							Nom de famille <span className="text-red-500">*</span>
-						</label>
-						<Input
-							value={form.lastName}
-							onChange={e => update("lastName", e.target.value)}
-							required
-						/>
-					</div>
+					{form.type === "PERSON" && (
+						<>
+							<div>
+								<label className="block text-sm mb-1">Prénom</label>
+								<Input
+									value={form.firstName || ""}
+									onChange={e => update("firstName", e.target.value)}
+								/>
+							</div>
+							<div>
+								<label className="block text-sm mb-1">Nom de famille</label>
+								<Input
+									value={form.lastName || ""}
+									onChange={e => update("lastName", e.target.value)}
+								/>
+							</div>
+						</>
+					)}
 					<div>
 						<label className="block text-sm mb-1">
 							Email <span className="text-red-500">*</span>

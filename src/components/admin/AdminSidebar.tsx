@@ -110,6 +110,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</div>
 					</details>
 
+
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
 							<span className="flex items-center gap-2">
