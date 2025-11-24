@@ -1,0 +1,107 @@
+{
+	"sidebar": {
+		"coreAdmin": "Core Admin",
+		"tailwindAdmin": "Tailwind Admin",
+		"dashboard": "Dashboard",
+		"clientsKyc": "Clients & KYC",
+		"clients": "Clients",
+		"kycChecks": "KYC Checks",
+		"productCatalog": "Product Catalog",
+		"products": "Products",
+		"pricingRules": "Pricing Rules",
+		"fees": "Fees",
+		"interestSchemes": "Interest Schemes",
+		"limitProfiles": "Limit Profiles",
+		"accountsLedger": "Accounts & Ledger",
+		"customerAccounts": "Customer Accounts",
+		"glAccounts": "GL Accounts",
+		"chartOfAccounts": "Chart of Accounts",
+		"transactions": "Transactions",
+		"journal": "Journal",
+		"transfers": "Transfers",
+		"holds": "Holds",
+		"payments": "Payments",
+		"outgoingTransfers": "Outgoing Transfers",
+		"incomingTransfers": "Incoming Transfers",
+		"interestFees": "Interest & Fees",
+		"calculationAccrual": "Calculation & Accrual",
+		"feeApplication": "Fee Application",
+		"statementsExtracts": "Statements & Extracts",
+		"accountStatements": "Account Statements",
+		"pdfCsvExports": "PDF/CSV Exports",
+		"riskCompliance": "Risk & Compliance",
+		"limits": "Limits",
+		"sanctionsWatchlists": "Sanctions & Watchlists",
+		"reconciliationClosure": "Reconciliation & Closure",
+		"reconciliation": "Reconciliation",
+		"dailyClosure": "Daily Closure",
+		"monthlyClosure": "Monthly Closure",
+		"governance": "Governance",
+		"roles": "Roles",
+		"approvals": "Approvals",
+		"auditCompliance": "Audit & Compliance",
+		"auditEvents": "Audit Events",
+		"accessLogs": "Access Logs",
+		"notifications": "Notifications",
+		"templates": "Templates",
+		"outbox": "Outbox",
+		"reports": "Reports",
+		"activity": "Activity",
+		"balances": "Balances",
+		"feesInterest": "Fees & Interest",
+		"system": "System"
+	},
+	"topbar": {
+		"toggleSidebar": "Toggle sidebar"
+	},
+	"common": {
+		"users": "Users",
+		"customers": "Customers",
+		"refresh": "Refresh",
+		"all": "All",
+		"id": "ID",
+		"name": "Name",
+		"type": "Type",
+		"status": "Status",
+		"email": "Email",
+		"risk": "Risk",
+		"loading": "Loading...",
+		"reset": "Reset"
+	},
+	"customer": {
+		"new": "New Customer",
+		"errors": {
+			"unknown": "An unknown error occurred"
+		},
+		"stats": {
+			"total": "Total",
+			"drafts": "Drafts",
+			"pending": "Pending",
+			"verified": "Verified",
+			"rejected": "Rejected",
+			"blocked": "Blocked"
+		},
+		"filters": {
+			"search": "Search",
+			"searchPlaceholder": "Search by name or email...",
+			"status": "Status",
+			"type": "Type"
+		},
+		"statuses": {
+			"DRAFT": "Draft",
+			"PENDING_REVIEW": "Pending Review",
+			"VERIFIED": "Verified",
+			"REJECTED": "Rejected",
+			"BLOCKED": "Blocked"
+		},
+		"types": {
+			"PERSON": "Person",
+			"BUSINESS": "Business"
+		},
+		"table": {
+			"noCustomers": "No customers found",
+			"view": "View"
+		}
+	}
+}
+

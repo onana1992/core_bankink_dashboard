@@ -1,0 +1,107 @@
+{
+	"sidebar": {
+		"coreAdmin": "Core Admin",
+		"tailwindAdmin": "Administration Tailwind",
+		"dashboard": "Tableau de bord",
+		"clientsKyc": "Clients & KYC",
+		"clients": "Clients",
+		"kycChecks": "Vérifications KYC",
+		"productCatalog": "Catalogue de produits",
+		"products": "Produits",
+		"pricingRules": "Règles de tarification",
+		"fees": "Frais",
+		"interestSchemes": "Schémas d'intérêt",
+		"limitProfiles": "Profils de limite",
+		"accountsLedger": "Comptes & Grand livre",
+		"customerAccounts": "Comptes clients",
+		"glAccounts": "Comptes généraux",
+		"chartOfAccounts": "Plan comptable",
+		"transactions": "Transactions",
+		"journal": "Journal",
+		"transfers": "Virements",
+		"holds": "Blocages",
+		"payments": "Paiements",
+		"outgoingTransfers": "Virements sortants",
+		"incomingTransfers": "Virements entrants",
+		"interestFees": "Intérêts & Frais",
+		"calculationAccrual": "Calcul & Comptabilisation",
+		"feeApplication": "Application des frais",
+		"statementsExtracts": "Relevés & Extraits",
+		"accountStatements": "Relevés de compte",
+		"pdfCsvExports": "Exports PDF/CSV",
+		"riskCompliance": "Risque & Conformité",
+		"limits": "Limites",
+		"sanctionsWatchlists": "Sanctions & Listes de surveillance",
+		"reconciliationClosure": "Réconciliation & Clôture",
+		"reconciliation": "Réconciliation",
+		"dailyClosure": "Clôture quotidienne",
+		"monthlyClosure": "Clôture mensuelle",
+		"governance": "Gouvernance",
+		"roles": "Rôles",
+		"approvals": "Approbations",
+		"auditCompliance": "Audit & Conformité",
+		"auditEvents": "Événements d'audit",
+		"accessLogs": "Journaux d'accès",
+		"notifications": "Notifications",
+		"templates": "Modèles",
+		"outbox": "Boîte d'envoi",
+		"reports": "Rapports",
+		"activity": "Activité",
+		"balances": "Soldes",
+		"feesInterest": "Frais & Intérêts",
+		"system": "Système"
+	},
+	"topbar": {
+		"toggleSidebar": "Basculer la barre latérale"
+	},
+	"common": {
+		"users": "Utilisateurs",
+		"customers": "Clients",
+		"refresh": "Actualiser",
+		"all": "Tous",
+		"id": "ID",
+		"name": "Nom",
+		"type": "Type",
+		"status": "Statut",
+		"email": "Email",
+		"risk": "Risque",
+		"loading": "Chargement...",
+		"reset": "Réinitialiser"
+	},
+	"customer": {
+		"new": "Nouveau client",
+		"errors": {
+			"unknown": "Une erreur inconnue s'est produite"
+		},
+		"stats": {
+			"total": "Total",
+			"drafts": "Brouillons",
+			"pending": "En attente",
+			"verified": "Vérifié",
+			"rejected": "Rejeté",
+			"blocked": "Bloqué"
+		},
+		"filters": {
+			"search": "Rechercher",
+			"searchPlaceholder": "Rechercher par nom ou email...",
+			"status": "Statut",
+			"type": "Type"
+		},
+		"statuses": {
+			"DRAFT": "Brouillon",
+			"PENDING_REVIEW": "En attente d'examen",
+			"VERIFIED": "Vérifié",
+			"REJECTED": "Rejeté",
+			"BLOCKED": "Bloqué"
+		},
+		"types": {
+			"PERSON": "Personne",
+			"BUSINESS": "Entreprise"
+		},
+		"table": {
+			"noCustomers": "Aucun client trouvé",
+			"view": "Voir"
+		}
+	}
+}
+
