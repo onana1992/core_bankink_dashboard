@@ -6,12 +6,34 @@ import type {
 	Customer,
 	Document,
 	DocumentType,
-	RelatedPerson
+	RelatedPerson,
+	Product,
+	ProductCategory,
+	ProductStatus,
+	CreateProductRequest,
+	UpdateProductRequest,
+	ProductInterestRate,
+	CreateProductInterestRateRequest,
+	ProductFee,
+	CreateProductFeeRequest,
+	ProductLimit,
+	CreateProductLimitRequest,
+	ProductPeriod,
+	CreateProductPeriodRequest,
+	ProductPenalty,
+	CreateProductPenaltyRequest,
+	ProductEligibilityRule,
+	CreateProductEligibilityRuleRequest
 } from "@/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
 async function handleJsonResponse<T>(res: Response): Promise<T> {
+	// Gérer les réponses vides (204 No Content, etc.) avant de vérifier res.ok
+	if (res.status === 204 || (res.status >= 200 && res.status < 300 && !res.headers.get('content-type')?.includes('application/json'))) {
+		return undefined as T;
+	}
+
 	if (!res.ok) {
 		let errorMessage = `HTTP ${res.status}`;
 		try {
@@ -43,7 +65,19 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 		}
 		throw new Error(errorMessage);
 	}
-	return (await res.json()) as T;
+
+	// Lire le texte une seule fois
+	const text = await res.text();
+	if (!text || text.trim() === '') {
+		return undefined as T;
+	}
+	
+	try {
+		return JSON.parse(text) as T;
+	} catch {
+		// Si ce n'est pas du JSON valide, retourner undefined
+		return undefined as T;
+	}
 }
 
 export const customersApi = {
@@ -194,6 +228,193 @@ export const customersApi = {
 
 	async deleteRelatedPerson(id: number | string, relatedPersonId: number | string): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons/${relatedPersonId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	}
+};
+
+export const productsApi = {
+	async list(params?: { category?: ProductCategory; status?: ProductStatus }): Promise<Product[]> {
+		const usp = new URLSearchParams();
+		if (params?.category) usp.set("category", params.category);
+		if (params?.status) usp.set("status", params.status);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/products${query ? `?${query}` : ""}`, { cache: "no-store" });
+		return handleJsonResponse<Product[]>(res);
+	},
+
+	async create(payload: CreateProductRequest): Promise<Product> {
+		const res = await fetch(`${API_BASE}/api/products`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Product>(res);
+	},
+
+	async get(id: number | string): Promise<Product> {
+		const res = await fetch(`${API_BASE}/api/products/${id}`, { cache: "no-store" });
+		return handleJsonResponse<Product>(res);
+	},
+
+	async update(id: number | string, payload: UpdateProductRequest): Promise<Product> {
+		const res = await fetch(`${API_BASE}/api/products/${id}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Product>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	async activate(id: number | string): Promise<Product> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/activate`, {
+			method: "POST"
+		});
+		return handleJsonResponse<Product>(res);
+	},
+
+	async deactivate(id: number | string): Promise<Product> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/deactivate`, {
+			method: "POST"
+		});
+		return handleJsonResponse<Product>(res);
+	},
+
+	// Interest Rates
+	async getInterestRates(id: number | string): Promise<ProductInterestRate[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates`, { cache: "no-store" });
+		return handleJsonResponse<ProductInterestRate[]>(res);
+	},
+
+	async addInterestRate(id: number | string, payload: CreateProductInterestRateRequest): Promise<ProductInterestRate> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductInterestRate>(res);
+	},
+
+	async deleteInterestRate(id: number | string, rateId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates/${rateId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	// Fees
+	async getFees(id: number | string): Promise<ProductFee[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/fees`, { cache: "no-store" });
+		return handleJsonResponse<ProductFee[]>(res);
+	},
+
+	async addFee(id: number | string, payload: CreateProductFeeRequest): Promise<ProductFee> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/fees`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductFee>(res);
+	},
+
+	async deleteFee(id: number | string, feeId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/fees/${feeId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	// Limits
+	async getLimits(id: number | string): Promise<ProductLimit[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/limits`, { cache: "no-store" });
+		return handleJsonResponse<ProductLimit[]>(res);
+	},
+
+	async addLimit(id: number | string, payload: CreateProductLimitRequest): Promise<ProductLimit> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/limits`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductLimit>(res);
+	},
+
+	async deleteLimit(id: number | string, limitId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/limits/${limitId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	// Periods
+	async getPeriods(id: number | string): Promise<ProductPeriod[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/periods`, { cache: "no-store" });
+		return handleJsonResponse<ProductPeriod[]>(res);
+	},
+
+	async addPeriod(id: number | string, payload: CreateProductPeriodRequest): Promise<ProductPeriod> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/periods`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPeriod>(res);
+	},
+
+	async deletePeriod(id: number | string, periodId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/periods/${periodId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	// Penalties
+	async getPenalties(id: number | string): Promise<ProductPenalty[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/penalties`, { cache: "no-store" });
+		return handleJsonResponse<ProductPenalty[]>(res);
+	},
+
+	async addPenalty(id: number | string, payload: CreateProductPenaltyRequest): Promise<ProductPenalty> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/penalties`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPenalty>(res);
+	},
+
+	async deletePenalty(id: number | string, penaltyId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/penalties/${penaltyId}`, {
+			method: "DELETE"
+		});
+		await handleJsonResponse(res);
+	},
+
+	// Eligibility Rules
+	async getEligibilityRules(id: number | string): Promise<ProductEligibilityRule[]> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules`, { cache: "no-store" });
+		return handleJsonResponse<ProductEligibilityRule[]>(res);
+	},
+
+	async addEligibilityRule(id: number | string, payload: CreateProductEligibilityRuleRequest): Promise<ProductEligibilityRule> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductEligibilityRule>(res);
+	},
+
+	async deleteEligibilityRule(id: number | string, ruleId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules/${ruleId}`, {
 			method: "DELETE"
 		});
 		await handleJsonResponse(res);
