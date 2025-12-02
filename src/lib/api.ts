@@ -354,6 +354,15 @@ export const productsApi = {
 		return handleJsonResponse<ProductFee>(res);
 	},
 
+	async updateFee(id: number | string, feeId: number | string, payload: CreateProductFeeRequest): Promise<ProductFee> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/fees/${feeId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductFee>(res);
+	},
+
 	async deleteFee(id: number | string, feeId: number | string): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/fees/${feeId}`, {
 			method: "DELETE"
@@ -370,6 +379,15 @@ export const productsApi = {
 	async addLimit(id: number | string, payload: CreateProductLimitRequest): Promise<ProductLimit> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/limits`, {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductLimit>(res);
+	},
+
+	async updateLimit(id: number | string, limitId: number | string, payload: CreateProductLimitRequest): Promise<ProductLimit> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/limits/${limitId}`, {
+			method: "PUT",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(payload)
 		});
@@ -398,6 +416,15 @@ export const productsApi = {
 		return handleJsonResponse<ProductPeriod>(res);
 	},
 
+	async updatePeriod(id: number | string, periodId: number | string, payload: CreateProductPeriodRequest): Promise<ProductPeriod> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/periods/${periodId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPeriod>(res);
+	},
+
 	async deletePeriod(id: number | string, periodId: number | string): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/periods/${periodId}`, {
 			method: "DELETE"
@@ -420,6 +447,15 @@ export const productsApi = {
 		return handleJsonResponse<ProductPenalty>(res);
 	},
 
+	async updatePenalty(id: number | string, penaltyId: number | string, payload: CreateProductPenaltyRequest): Promise<ProductPenalty> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/penalties/${penaltyId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPenalty>(res);
+	},
+
 	async deletePenalty(id: number | string, penaltyId: number | string): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/penalties/${penaltyId}`, {
 			method: "DELETE"
@@ -436,6 +472,15 @@ export const productsApi = {
 	async addEligibilityRule(id: number | string, payload: CreateProductEligibilityRuleRequest): Promise<ProductEligibilityRule> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules`, {
 			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductEligibilityRule>(res);
+	},
+
+	async updateEligibilityRule(id: number | string, ruleId: number | string, payload: CreateProductEligibilityRuleRequest): Promise<ProductEligibilityRule> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules/${ruleId}`, {
+			method: "PUT",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify(payload)
 		});

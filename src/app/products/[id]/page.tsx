@@ -187,8 +187,8 @@ export default function ProductDetailPage() {
 	async function handleDelete() {
 		if (!product) return;
 		
-		// Vérifier les dépendances
-		const totalDependencies = 
+		// Compter les configurations pour informer l'utilisateur
+		const totalConfigurations = 
 			interestRates.length + 
 			fees.length + 
 			limits.length + 
@@ -196,20 +196,17 @@ export default function ProductDetailPage() {
 			penalties.length + 
 			eligibilityRules.length;
 		
-		if (totalDependencies > 0) {
-			const message = `Impossible de supprimer le produit car il contient des configurations :\n` +
+		const configurationsMessage = totalConfigurations > 0 
+			? `\n\nAttention: Toutes les configurations associées seront également supprimées :\n` +
 				(interestRates.length > 0 ? `- ${interestRates.length} taux d'intérêt\n` : '') +
 				(fees.length > 0 ? `- ${fees.length} frais\n` : '') +
 				(limits.length > 0 ? `- ${limits.length} limites\n` : '') +
 				(periods.length > 0 ? `- ${periods.length} périodes\n` : '') +
 				(penalties.length > 0 ? `- ${penalties.length} pénalités\n` : '') +
-				(eligibilityRules.length > 0 ? `- ${eligibilityRules.length} règles d'éligibilité\n` : '') +
-				`\nVeuillez supprimer toutes les configurations avant de supprimer le produit.`;
-			alert(message);
-			return;
-		}
+				(eligibilityRules.length > 0 ? `- ${eligibilityRules.length} règles d'éligibilité\n` : '')
+			: '';
 		
-		if (!confirm(`Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?\n\nCette action est irréversible.`)) {
+		if (!confirm(`Êtes-vous sûr de vouloir supprimer le produit "${product.name}" ?${configurationsMessage}\n\nCette action est irréversible.\n\nNote: Le produit ne peut pas être supprimé s'il existe des comptes ouverts avec ce produit.`)) {
 			return;
 		}
 		
@@ -217,6 +214,7 @@ export default function ProductDetailPage() {
 			await productsApi.delete(product.id);
 			router.push("/products");
 		} catch (e: any) {
+			// Le backend vérifie les comptes et retourne un message d'erreur approprié
 			alert(e?.message ?? "Erreur lors de la suppression");
 		}
 	}
@@ -287,9 +285,24 @@ export default function ProductDetailPage() {
 
 	if (error || !product) {
 		return (
-			<div className="p-4">
-				<div className="text-red-600">{error ?? "Produit non trouvé"}</div>
-				<Button onClick={() => router.push("/products")} className="mt-4">Retour à la liste</Button>
+			<div className="space-y-4">
+				<div className="bg-red-50 border-l-4 border-red-500 text-red-800 px-4 py-3 rounded-r-md flex items-start gap-3">
+					<svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+						<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+					</svg>
+					<div>
+						<div className="font-medium">Erreur</div>
+						<div className="text-sm mt-1">{error ?? "Produit non trouvé"}</div>
+					</div>
+				</div>
+				<Link href="/products">
+					<Button className="flex items-center gap-2">
+						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+						</svg>
+						Retour à la liste
+					</Button>
+				</Link>
 			</div>
 		);
 	}
@@ -326,44 +339,60 @@ export default function ProductDetailPage() {
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<div>
-					<Link href="/products" className="text-sm text-gray-500 hover:text-gray-700">← Retour</Link>
-					<h1 className="text-2xl font-semibold mt-1">{product.name}</h1>
-					<div className="flex gap-2 mt-2">
-						<Badge variant={statusBadgeVariant(product.status)}>{product.status}</Badge>
-						<span className="text-sm text-gray-500">{categoryLabel(product.category)}</span>
+			{/* En-tête amélioré */}
+			<div>
+				<Link href="/products" className="text-blue-600 hover:text-blue-800 hover:underline text-sm mb-3 inline-flex items-center gap-1">
+					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+					</svg>
+					Retour à la liste des produits
+				</Link>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-4">
+						<div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+							<Package className="w-7 h-7 text-white" />
+						</div>
+						<div>
+							<h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+							<p className="text-gray-600 mt-1">Détails et configuration du produit bancaire</p>
+							<div className="flex gap-2 mt-2">
+								<Badge variant={statusBadgeVariant(product.status)}>{product.status}</Badge>
+								<span className="text-sm text-gray-500">{categoryLabel(product.category)}</span>
+							</div>
+						</div>
 					</div>
-				</div>
-				<div className="flex gap-2">
-					{product.status === "ACTIVE" ? (
-						<Button variant="outline" onClick={handleDeactivate}>Désactiver</Button>
-					) : (
-						<Button onClick={handleActivate}>Activer</Button>
-					)}
-					<Button variant="outline" onClick={load}>Actualiser</Button>
-					{(() => {
-						const totalDependencies = 
-							interestRates.length + 
-							fees.length + 
-							limits.length + 
-							periods.length + 
-							penalties.length + 
-							eligibilityRules.length;
-						const canDelete = totalDependencies === 0;
-						return (
-							<Button 
-								variant="outline" 
-								onClick={handleDelete}
-								disabled={!canDelete}
-								className={!canDelete ? "opacity-50 cursor-not-allowed" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
-								title={!canDelete ? "Impossible de supprimer : le produit contient des configurations" : "Supprimer le produit"}
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								Supprimer
+					<div className="flex gap-2">
+						{product.status === "ACTIVE" ? (
+							<Button variant="outline" onClick={handleDeactivate} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+								</svg>
+								Désactiver
 							</Button>
-						);
-					})()}
+						) : (
+							<Button onClick={handleActivate} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								Activer
+							</Button>
+						)}
+						<Button variant="outline" onClick={load} className="flex items-center gap-2">
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+							</svg>
+							Actualiser
+						</Button>
+						<Button 
+							variant="outline" 
+							onClick={handleDelete}
+							className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+							title="Supprimer le produit et toutes ses configurations associées"
+						>
+							<Trash2 className="h-4 w-4" />
+							Supprimer
+						</Button>
+					</div>
 				</div>
 			</div>
 
@@ -658,8 +687,8 @@ function ProductOverviewTab({
 			{/* Header avec bouton modifier */}
 			<div className="flex justify-between items-start">
 				<div>
-					<h2 className="text-xl font-semibold text-gray-900">Informations générales</h2>
-					<p className="text-sm text-gray-500 mt-1">Détails et configuration du produit</p>
+					<h2 className="text-2xl font-bold text-gray-900">Informations générales</h2>
+					<p className="text-gray-600 mt-1">Détails et configuration du produit</p>
 				</div>
 				<Button variant="outline" onClick={() => setEditing(true)} className="flex items-center gap-2">
 					<Edit2 className="h-4 w-4" />
@@ -718,103 +747,174 @@ function ProductOverviewTab({
 			{/* Informations principales */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 				{/* Carte: Identité */}
-				<div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-					<div className="flex items-center gap-2 mb-4">
-						<Package className="h-5 w-5 text-gray-600" />
-						<h3 className="font-semibold text-gray-900">Identité</h3>
+				<div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl shadow-sm overflow-hidden">
+					<div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+								<Package className="h-6 w-6 text-white" />
+							</div>
+							<div>
+								<h3 className="text-lg font-bold text-white">Identité</h3>
+								<p className="text-xs text-purple-100">Informations de base</p>
+							</div>
+						</div>
 					</div>
-					<div className="space-y-3">
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Code produit</label>
-							<div className="font-mono text-sm font-semibold text-gray-900 mt-1">{product.code}</div>
+					<div className="p-6 space-y-4">
+						<div className="bg-white rounded-lg p-4 border border-purple-100">
+							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+								<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+								</svg>
+								Code produit
+							</label>
+							<div className="font-mono font-bold text-lg text-gray-900 mt-1">{product.code}</div>
 						</div>
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Nom</label>
-							<div className="text-sm font-medium text-gray-900 mt-1">{product.name}</div>
+						<div className="flex items-center justify-between py-2 border-t border-gray-200">
+							<dt className="text-sm text-gray-600 flex items-center gap-2">
+								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+								</svg>
+								Nom
+							</dt>
+							<dd className="font-semibold text-gray-900">{product.name}</dd>
 						</div>
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Catégorie</label>
-							<div className="mt-1">
-								<Badge variant="neutral" className="mt-1">
+						<div className="flex items-center justify-between py-2 border-t border-gray-200">
+							<dt className="text-sm text-gray-600 flex items-center gap-2">
+								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+								</svg>
+								Catégorie
+							</dt>
+							<dd>
+								<Badge variant="neutral">
 									{categoryLabel(product.category)}
 								</Badge>
-							</div>
+							</dd>
 						</div>
 					</div>
 				</div>
 
 				{/* Carte: Statut */}
-				<div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-					<div className="flex items-center gap-2 mb-4">
-						<Tag className="h-5 w-5 text-gray-600" />
-						<h3 className="font-semibold text-gray-900">Statut</h3>
+				<div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm overflow-hidden">
+					<div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+								<Tag className="h-6 w-6 text-white" />
+							</div>
+							<div>
+								<h3 className="text-lg font-bold text-white">Statut</h3>
+								<p className="text-xs text-blue-100">État et devise</p>
+							</div>
+						</div>
 					</div>
-					<div className="space-y-3">
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Statut actuel</label>
-							<div className="mt-1">
+					<div className="p-6 space-y-4">
+						<div className="flex items-center justify-between py-2">
+							<dt className="text-sm text-gray-600 flex items-center gap-2">
+								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+								Statut actuel
+							</dt>
+							<dd>
 								<Badge variant={
 									product.status === "ACTIVE" ? "success" :
 									product.status === "DRAFT" ? "warning" : "danger"
 								}>
 									{product.status}
 								</Badge>
-							</div>
+							</dd>
 						</div>
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Devise</label>
-							<div className="flex items-center gap-2 mt-1">
+						<div className="flex items-center justify-between py-2 border-t border-gray-200">
+							<dt className="text-sm text-gray-600 flex items-center gap-2">
 								<Currency className="h-4 w-4 text-gray-400" />
-								<span className="text-sm font-semibold text-gray-900">{product.currency}</span>
-							</div>
+								Devise
+							</dt>
+							<dd>
+								<span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+									{product.currency}
+								</span>
+							</dd>
 						</div>
 					</div>
 				</div>
 
 				{/* Carte: Soldes */}
-				<div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-5 border border-blue-200">
-					<div className="flex items-center gap-2 mb-4">
-						<Wallet className="h-5 w-5 text-blue-600" />
-						<h3 className="font-semibold text-gray-900">Soldes</h3>
-					</div>
-					<div className="space-y-3">
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Solde minimum</label>
-							<div className="text-lg font-bold text-gray-900 mt-1">
-								{product.minBalance != null ? (
-									<span>{product.minBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
-								) : (
-									<span className="text-gray-400">Non défini</span>
-								)}
+				<div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-xl shadow-sm overflow-hidden">
+					<div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+								<Wallet className="h-6 w-6 text-white" />
+							</div>
+							<div>
+								<h3 className="text-lg font-bold text-white">Soldes</h3>
+								<p className="text-xs text-green-100">Limites min/max</p>
 							</div>
 						</div>
-						<div>
-							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Solde maximum</label>
-							<div className="text-lg font-bold text-gray-900 mt-1">
-								{product.maxBalance != null ? (
-									<span>{product.maxBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
-								) : (
-									<span className="text-gray-400">Non défini</span>
-								)}
+					</div>
+					<div className="p-6">
+						<div className="grid grid-cols-2 gap-3">
+							<div className="bg-white rounded-lg p-4 border border-green-200">
+								<label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									Minimum
+								</label>
+								<div className="font-bold text-lg text-gray-900">
+									{product.minBalance != null ? (
+										<span>{product.minBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
+									) : (
+										<span className="text-gray-400 text-sm">Non défini</span>
+									)}
+								</div>
+							</div>
+							<div className="bg-white rounded-lg p-4 border border-green-200">
+								<label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+									Maximum
+								</label>
+								<div className="font-bold text-lg text-gray-900">
+									{product.maxBalance != null ? (
+										<span>{product.maxBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
+									) : (
+										<span className="text-gray-400 text-sm">Non défini</span>
+									)}
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 
 				{/* Carte: Taux d'intérêt */}
-				<div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-5 border border-green-200">
-					<div className="flex items-center gap-2 mb-4">
-						<TrendingUp className="h-5 w-5 text-green-600" />
-						<h3 className="font-semibold text-gray-900">Taux d'intérêt</h3>
+				<div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-xl shadow-sm overflow-hidden">
+					<div className="bg-gradient-to-r from-orange-600 to-amber-600 px-6 py-4">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+								<TrendingUp className="h-6 w-6 text-white" />
+							</div>
+							<div>
+								<h3 className="text-lg font-bold text-white">Taux d'intérêt</h3>
+								<p className="text-xs text-orange-100">Taux par défaut</p>
+							</div>
+						</div>
 					</div>
-					<div>
-						<label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Taux par défaut</label>
-						<div className="text-2xl font-bold text-green-700 mt-1">
-							{product.defaultInterestRate != null ? (
-								<span>{product.defaultInterestRate}%</span>
-							) : (
-								<span className="text-gray-400 text-lg">Non défini</span>
-							)}
+					<div className="p-6">
+						<div className="bg-white rounded-lg p-4 border border-orange-100">
+							<label className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+								<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+								</svg>
+								Taux par défaut
+							</label>
+							<div className="text-2xl font-bold text-orange-700 mt-1">
+								{product.defaultInterestRate != null ? (
+									<span>{product.defaultInterestRate}%</span>
+								) : (
+									<span className="text-gray-400 text-lg">Non défini</span>
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -822,12 +922,18 @@ function ProductOverviewTab({
 
 			{/* Description */}
 			{product.description && (
-				<div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
-					<div className="flex items-center gap-2 mb-3">
-						<FileText className="h-5 w-5 text-gray-600" />
-						<h3 className="font-semibold text-gray-900">Description</h3>
+				<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+					<div className="bg-gradient-to-r from-gray-50 to-slate-50 px-6 py-4 border-b border-gray-200">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+								<FileText className="h-5 w-5 text-gray-600" />
+							</div>
+							<h3 className="text-lg font-bold text-gray-900">Description</h3>
+						</div>
 					</div>
-					<p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+					<div className="p-6">
+						<p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{product.description}</p>
+					</div>
 				</div>
 			)}
 		</div>
@@ -1167,73 +1273,173 @@ function InterestRatesTab({
 			{/* Modal pour voir les détails */}
 			{showViewModal && selectedRate && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails du taux d'intérêt</h3>
-							<button
-								type="button"
-								onClick={() => setShowViewModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								×
-							</button>
+					<div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+						{/* En-tête avec gradient */}
+						<div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+										<TrendingUp className="h-6 w-6 text-white" />
+									</div>
+									<div>
+										<h3 className="text-xl font-bold text-white">Détails du taux d'intérêt</h3>
+										<p className="text-sm text-blue-100 mt-0.5">{selectedRate.rateType}</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onClick={() => setShowViewModal(false)}
+									className="text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
 						</div>
-						<div className="space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de taux</label>
-									<div className="mt-1 text-sm">{selectedRate.rateType}</div>
+
+						{/* Contenu scrollable */}
+						<div className="overflow-y-auto p-6 space-y-6">
+							{/* Informations principales */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+									<label className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Type de taux
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRate.rateType}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Valeur du taux</label>
-									<div className="mt-1 text-sm font-semibold">{selectedRate.rateValue}%</div>
+								<div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200">
+									<label className="text-xs font-medium text-cyan-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<Percent className="w-3 h-3" />
+										Valeur du taux
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										<span className="text-2xl text-cyan-700">{selectedRate.rateValue}%</span>
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Montant minimum</label>
-									<div className="mt-1 text-sm">{selectedRate.minAmount != null ? `${selectedRate.minAmount}` : "-"}</div>
+								<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+									<label className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+										</svg>
+										Montant minimum
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedRate.minAmount != null ? (
+											<span className="text-lg">{selectedRate.minAmount}</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Montant maximum</label>
-									<div className="mt-1 text-sm">{selectedRate.maxAmount != null ? `${selectedRate.maxAmount}` : "-"}</div>
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+										</svg>
+										Montant maximum
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedRate.maxAmount != null ? (
+											<span className="text-lg">{selectedRate.maxAmount}</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Période minimum (jours)</label>
-									<div className="mt-1 text-sm">{selectedRate.minPeriodDays != null ? `${selectedRate.minPeriodDays}` : "-"}</div>
+								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<Calendar className="w-3 h-3" />
+										Période minimum (jours)
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedRate.minPeriodDays != null ? (
+											<span className="text-lg">{selectedRate.minPeriodDays}</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Période maximum (jours)</label>
-									<div className="mt-1 text-sm">{selectedRate.maxPeriodDays != null ? `${selectedRate.maxPeriodDays}` : "-"}</div>
+								<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
+									<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<Calendar className="w-3 h-3" />
+										Période maximum (jours)
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedRate.maxPeriodDays != null ? (
+											<span className="text-lg">{selectedRate.maxPeriodDays}</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Méthode de calcul</label>
-									<div className="mt-1 text-sm">{selectedRate.calculationMethod}</div>
+								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<BarChart3 className="w-3 h-3" />
+										Méthode de calcul
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRate.calculationMethod}</div>
 								</div>
 								{selectedRate.compoundingFrequency && (
-									<div>
-										<label className="text-sm font-medium text-gray-500">Fréquence de capitalisation</label>
-										<div className="mt-1 text-sm">{selectedRate.compoundingFrequency}</div>
+									<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+										<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											Fréquence de capitalisation
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">{selectedRate.compoundingFrequency}</div>
 									</div>
 								)}
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
-									<div className="mt-1 text-sm">{selectedRate.effectiveFrom}</div>
+							</div>
+
+							{/* Dates et statut */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date d'effet
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedRate.effectiveFrom}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date de fin</label>
-									<div className="mt-1 text-sm">{selectedRate.effectiveTo ?? "-"}</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date de fin
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedRate.effectiveTo ?? "-"}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
-									<div className="mt-1">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Statut
+									</dt>
+									<dd>
 										<Badge variant={selectedRate.isActive ? "success" : "neutral"}>
 											{selectedRate.isActive ? "Actif" : "Inactif"}
 										</Badge>
-									</div>
+									</dd>
 								</div>
 							</div>
 						</div>
-						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+
+						{/* Footer */}
+						<div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+								Fermer
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -1698,9 +1904,7 @@ function FeesTab({
 														<button
 															type="button"
 															onClick={() => {
-																if (confirm("Êtes-vous sûr de vouloir supprimer ce frais ?")) {
-																	onDelete(fee.id);
-																}
+																onDelete(fee.id);
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -1724,71 +1928,187 @@ function FeesTab({
 			{/* Modal pour voir les détails */}
 			{showViewModal && selectedFee && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails du frais</h3>
-							<button
-								type="button"
-								onClick={() => setShowViewModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								×
-							</button>
+					<div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+						{/* En-tête avec gradient */}
+						<div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+										<DollarSign className="h-6 w-6 text-white" />
+									</div>
+									<div>
+										<h3 className="text-xl font-bold text-white">Détails du frais</h3>
+										<p className="text-sm text-emerald-100 mt-0.5">{selectedFee.feeName}</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onClick={() => setShowViewModal(false)}
+									className="text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
 						</div>
-						<div className="space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de frais</label>
-									<div className="mt-1 text-sm">{selectedFee.feeType}</div>
+
+						{/* Contenu scrollable */}
+						<div className="overflow-y-auto p-6 space-y-6">
+							{/* Informations principales */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
+									<label className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Type de frais
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeType}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Nom</label>
-									<div className="mt-1 text-sm">{selectedFee.feeName}</div>
+								<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
+									<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Nom
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeName}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Montant fixe</label>
-									<div className="mt-1 text-sm">{selectedFee.feeAmount != null ? `${selectedFee.feeAmount} ${selectedFee.currency}` : "-"}</div>
+								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Montant fixe
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedFee.feeAmount != null ? (
+											<span className="text-lg">{selectedFee.feeAmount} <span className="text-sm text-gray-600">{selectedFee.currency}</span></span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Pourcentage</label>
-									<div className="mt-1 text-sm">{selectedFee.feePercentage != null ? `${selectedFee.feePercentage}%` : "-"}</div>
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+									<label className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+										</svg>
+										Pourcentage
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedFee.feePercentage != null ? (
+											<span className="text-lg text-blue-700">{selectedFee.feePercentage}%</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Base de calcul</label>
-									<div className="mt-1 text-sm">{selectedFee.feeCalculationBase}</div>
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+										</svg>
+										Base de calcul
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeCalculationBase}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Dispensable</label>
-									<div className="mt-1 text-sm">{selectedFee.isWaivable ? "Oui" : "Non"}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Frais minimum</label>
-									<div className="mt-1 text-sm">{selectedFee.minFee != null ? `${selectedFee.minFee}` : "-"}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Frais maximum</label>
-									<div className="mt-1 text-sm">{selectedFee.maxFee != null ? `${selectedFee.maxFee}` : "-"}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
-									<div className="mt-1 text-sm">{selectedFee.effectiveFrom}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date de fin</label>
-									<div className="mt-1 text-sm">{selectedFee.effectiveTo ?? "-"}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
+								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+										</svg>
+										Dispensable
+									</label>
 									<div className="mt-1">
-										<Badge variant={selectedFee.isActive ? "success" : "neutral"}>
-											{selectedFee.isActive ? "Actif" : "Inactif"}
+										<Badge variant={selectedFee.isWaivable ? "warning" : "neutral"}>
+											{selectedFee.isWaivable ? "Oui" : "Non"}
 										</Badge>
 									</div>
 								</div>
 							</div>
+
+							{/* Limites min/max */}
+							{(selectedFee.minFee != null || selectedFee.maxFee != null) && (
+								<div className="grid grid-cols-2 gap-4">
+									<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+										<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+											</svg>
+											Frais minimum
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">
+											{selectedFee.minFee != null ? (
+												<span className="text-lg">{selectedFee.minFee} <span className="text-sm text-gray-600">{selectedFee.currency}</span></span>
+											) : (
+												<span className="text-gray-400">-</span>
+											)}
+										</div>
+									</div>
+									<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+										<label className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+											</svg>
+											Frais maximum
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">
+											{selectedFee.maxFee != null ? (
+												<span className="text-lg">{selectedFee.maxFee} <span className="text-sm text-gray-600">{selectedFee.currency}</span></span>
+											) : (
+												<span className="text-gray-400">-</span>
+											)}
+										</div>
+									</div>
+								</div>
+							)}
+
+							{/* Dates et statut */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date d'effet
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedFee.effectiveFrom}</dd>
+								</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date de fin
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedFee.effectiveTo ?? "-"}</dd>
+								</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Statut
+									</dt>
+									<dd>
+										<Badge variant={selectedFee.isActive ? "success" : "neutral"}>
+											{selectedFee.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</dd>
+								</div>
+							</div>
 						</div>
-						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+
+						{/* Footer */}
+						<div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+								Fermer
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -1796,7 +2116,21 @@ function FeesTab({
 
 			{/* Formulaire de modification */}
 			{showEditForm && selectedFee && (
-				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updateFee(productId, selectedFee.id, form);
+						setShowEditForm(false);
+						setSelectedFee(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
 						<h4 className="font-semibold">Modifier le frais</h4>
 						<button
@@ -1804,22 +2138,149 @@ function FeesTab({
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedFee(null);
+								setError(null);
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
 							×
 						</button>
 					</div>
-					<div className="text-sm text-amber-600 mb-4">
-						⚠️ La modification des frais n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de frais *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.feeType}
+								onChange={e => setForm({ ...form, feeType: e.target.value as FeeType })}
+								required
+							>
+								<option value="OPENING">Ouverture</option>
+								<option value="MONTHLY">Mensuel</option>
+								<option value="ANNUAL">Annuel</option>
+								<option value="TRANSACTION">Transaction</option>
+								<option value="WITHDRAWAL">Retrait</option>
+								<option value="OVERDRAFT">Découvert</option>
+								<option value="LATE_PAYMENT">Retard de paiement</option>
+								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
+								<option value="CARD_ISSUANCE">Émission de carte</option>
+								<option value="CARD_RENEWAL">Renouvellement de carte</option>
+								<option value="OTHER">Autre</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Nom du frais *</label>
+							<Input
+								value={form.feeName}
+								onChange={e => setForm({ ...form, feeName: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Base de calcul *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.feeCalculationBase}
+								onChange={e => setForm({ ...form, feeCalculationBase: e.target.value as FeeCalculationBase })}
+								required
+							>
+								<option value="FIXED">Fixe</option>
+								<option value="BALANCE">Solde</option>
+								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+								<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant fixe</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={form.feeAmount ?? ""}
+								onChange={e => setForm({ ...form, feeAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Pourcentage</label>
+							<Input
+								type="number"
+								step="0.0001"
+								value={form.feePercentage ?? ""}
+								onChange={e => setForm({ ...form, feePercentage: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Frais minimum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={form.minFee ?? ""}
+								onChange={e => setForm({ ...form, minFee: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Frais maximum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={form.maxFee ?? ""}
+								onChange={e => setForm({ ...form, maxFee: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Devise</label>
+							<Input
+								value={form.currency ?? "USD"}
+								onChange={e => setForm({ ...form, currency: e.target.value })}
+								maxLength={3}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Dispensable</label>
+							<input
+								type="checkbox"
+								checked={form.isWaivable ?? false}
+								onChange={e => setForm({ ...form, isWaivable: e.target.checked })}
+								className="rounded"
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date d'effet *</label>
+							<Input
+								type="date"
+								value={form.effectiveFrom}
+								onChange={e => setForm({ ...form, effectiveFrom: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date de fin</label>
+							<Input
+								type="date"
+								value={form.effectiveTo ?? ""}
+								onChange={e => setForm({ ...form, effectiveTo: e.target.value || undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.isActive ? "true" : "false"}
+								onChange={e => setForm({ ...form, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={() => {
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedFee(null);
+							setError(null);
 						}}>Annuler</Button>
 					</div>
-				</div>
+				</form>
 			)}
 		</div>
 	);
@@ -1851,6 +2312,12 @@ function LimitsTab({
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
+	const [editForm, setEditForm] = useState<CreateProductLimitRequest>({
+		limitType: "DAILY_LIMIT",
+		limitValue: 0,
+		effectiveFrom: new Date().toISOString().split('T')[0],
+		isActive: true
+	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedLimit, setSelectedLimit] = useState<ProductLimit | null>(null);
@@ -1859,6 +2326,20 @@ function LimitsTab({
 	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+
+	useEffect(() => {
+		if (selectedLimit && showEditForm) {
+			setEditForm({
+				limitType: selectedLimit.limitType,
+				limitValue: selectedLimit.limitValue,
+				currency: selectedLimit.currency,
+				periodType: selectedLimit.periodType,
+				effectiveFrom: selectedLimit.effectiveFrom,
+				effectiveTo: selectedLimit.effectiveTo,
+				isActive: selectedLimit.isActive ?? true
+			});
+		}
+	}, [selectedLimit, showEditForm]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -2049,15 +2530,6 @@ function LimitsTab({
 																setSelectedLimit(limit);
 																setShowEditForm(true);
 																onCloseForm();
-																setForm({
-																	limitType: limit.limitType,
-																	limitValue: limit.limitValue,
-																	currency: limit.currency,
-																	periodType: limit.periodType ?? undefined,
-																	effectiveFrom: limit.effectiveFrom,
-																	effectiveTo: limit.effectiveTo ?? undefined,
-																	isActive: limit.isActive
-																});
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2069,9 +2541,7 @@ function LimitsTab({
 														<button
 															type="button"
 															onClick={() => {
-																if (confirm("Êtes-vous sûr de vouloir supprimer cette limite ?")) {
-																	onDelete(limit.id);
-																}
+																onDelete(limit.id);
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2095,51 +2565,110 @@ function LimitsTab({
 			{/* Modal pour voir les détails */}
 			{showViewModal && selectedLimit && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails de la limite</h3>
-							<button
-								type="button"
-								onClick={() => setShowViewModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								×
-							</button>
+					<div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+						{/* En-tête avec gradient */}
+						<div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+										<BarChart3 className="h-6 w-6 text-white" />
+									</div>
+									<div>
+										<h3 className="text-xl font-bold text-white">Détails de la limite</h3>
+										<p className="text-sm text-purple-100 mt-0.5">{selectedLimit.limitType}</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onClick={() => setShowViewModal(false)}
+									className="text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
 						</div>
-						<div className="space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de limite</label>
-									<div className="mt-1 text-sm">{selectedLimit.limitType}</div>
+
+						{/* Contenu scrollable */}
+						<div className="overflow-y-auto p-6 space-y-6">
+							{/* Informations principales */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Type de limite
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.limitType}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Valeur</label>
-									<div className="mt-1 text-sm font-semibold">{selectedLimit.limitValue} {selectedLimit.currency}</div>
+								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Valeur
+									</label>
+									<div className="mt-1 font-bold text-xl text-gray-900">
+										{selectedLimit.limitValue} <span className="text-sm font-normal text-gray-600">{selectedLimit.currency}</span>
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Période</label>
-									<div className="mt-1 text-sm">{selectedLimit.periodType ?? "-"}</div>
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+									<label className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Période
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.periodType ?? "-"}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
-									<div className="mt-1 text-sm">{selectedLimit.effectiveFrom}</div>
+							</div>
+
+							{/* Dates et statut */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date d'effet
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedLimit.effectiveFrom}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date de fin</label>
-									<div className="mt-1 text-sm">{selectedLimit.effectiveTo ?? "-"}</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date de fin
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedLimit.effectiveTo ?? "-"}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
-									<div className="mt-1">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Statut
+									</dt>
+									<dd>
 										<Badge variant={selectedLimit.isActive ? "success" : "neutral"}>
 											{selectedLimit.isActive ? "Actif" : "Inactif"}
 										</Badge>
-									</div>
+									</dd>
 								</div>
 							</div>
 						</div>
-						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+
+						{/* Footer */}
+						<div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+								Fermer
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -2147,7 +2676,29 @@ function LimitsTab({
 
 			{/* Formulaire de modification */}
 			{showEditForm && selectedLimit && (
-				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updateLimit(productId, selectedLimit.id!, {
+							limitType: editForm.limitType,
+							limitValue: editForm.limitValue,
+							currency: editForm.currency,
+							periodType: editForm.periodType,
+							effectiveFrom: editForm.effectiveFrom,
+							effectiveTo: editForm.effectiveTo || undefined,
+							isActive: editForm.isActive
+						});
+						setShowEditForm(false);
+						setSelectedLimit(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
 						<h4 className="font-semibold">Modifier la limite</h4>
 						<button
@@ -2155,22 +2706,110 @@ function LimitsTab({
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedLimit(null);
+								setError(null);
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
 							×
 						</button>
 					</div>
-					<div className="text-sm text-amber-600 mb-4">
-						⚠️ La modification des limites n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de limite *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.limitType}
+								onChange={e => setEditForm({ ...editForm, limitType: e.target.value as LimitType })}
+								required
+							>
+								<option value="MIN_BALANCE">Solde minimum</option>
+								<option value="MAX_BALANCE">Solde maximum</option>
+								<option value="MIN_TRANSACTION">Transaction minimum</option>
+								<option value="MAX_TRANSACTION">Transaction maximum</option>
+								<option value="DAILY_LIMIT">Limite quotidienne</option>
+								<option value="MONTHLY_LIMIT">Limite mensuelle</option>
+								<option value="ANNUAL_LIMIT">Limite annuelle</option>
+								<option value="MIN_LOAN_AMOUNT">Prêt minimum</option>
+								<option value="MAX_LOAN_AMOUNT">Prêt maximum</option>
+								<option value="MIN_DEPOSIT_AMOUNT">Dépôt minimum</option>
+								<option value="MAX_DEPOSIT_AMOUNT">Dépôt maximum</option>
+								<option value="CARD_LIMIT">Limite de carte</option>
+								<option value="WITHDRAWAL_LIMIT">Limite de retrait</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Valeur *</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.limitValue}
+								onChange={e => setEditForm({ ...editForm, limitValue: parseFloat(e.target.value) || 0 })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Devise</label>
+							<Input
+								value={editForm.currency ?? "USD"}
+								onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+								maxLength={3}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Période</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.periodType ?? ""}
+								onChange={e => setEditForm({ ...editForm, periodType: e.target.value ? e.target.value as PeriodType : undefined })}
+							>
+								<option value="">Aucune</option>
+								<option value="TRANSACTION">Par transaction</option>
+								<option value="DAILY">Quotidien</option>
+								<option value="WEEKLY">Hebdomadaire</option>
+								<option value="MONTHLY">Mensuel</option>
+								<option value="ANNUAL">Annuel</option>
+								<option value="LIFETIME">À vie</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date d'effet *</label>
+							<Input
+								type="date"
+								value={editForm.effectiveFrom}
+								onChange={e => setEditForm({ ...editForm, effectiveFrom: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date de fin</label>
+							<Input
+								type="date"
+								value={editForm.effectiveTo ?? ""}
+								onChange={e => setEditForm({ ...editForm, effectiveTo: e.target.value || undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.isActive ? "true" : "false"}
+								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={() => {
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedLimit(null);
+							setError(null);
 						}}>Annuler</Button>
 					</div>
-				</div>
+				</form>
 			)}
 		</div>
 	);
@@ -2202,6 +2841,12 @@ function PeriodsTab({
 		displayOrder: 0,
 		isActive: true
 	});
+	const [editForm, setEditForm] = useState<CreateProductPeriodRequest>({
+		periodName: "",
+		periodDays: 0,
+		displayOrder: 0,
+		isActive: true
+	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedPeriod, setSelectedPeriod] = useState<ProductPeriod | null>(null);
@@ -2210,6 +2855,22 @@ function PeriodsTab({
 	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+
+	useEffect(() => {
+		if (selectedPeriod && showEditForm) {
+			setEditForm({
+				periodName: selectedPeriod.periodName,
+				periodDays: selectedPeriod.periodDays,
+				periodMonths: selectedPeriod.periodMonths ?? undefined,
+				periodYears: selectedPeriod.periodYears ?? undefined,
+				interestRate: selectedPeriod.interestRate ?? undefined,
+				minAmount: selectedPeriod.minAmount ?? undefined,
+				maxAmount: selectedPeriod.maxAmount ?? undefined,
+				isActive: selectedPeriod.isActive ?? true,
+				displayOrder: selectedPeriod.displayOrder
+			});
+		}
+	}, [selectedPeriod, showEditForm]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -2414,17 +3075,6 @@ function PeriodsTab({
 																setSelectedPeriod(period);
 																setShowEditForm(true);
 																onCloseForm();
-																setForm({
-																	periodName: period.periodName,
-																	periodDays: period.periodDays,
-																	periodMonths: period.periodMonths ?? undefined,
-																	periodYears: period.periodYears ?? undefined,
-																	interestRate: period.interestRate ?? undefined,
-																	minAmount: period.minAmount ?? undefined,
-																	maxAmount: period.maxAmount ?? undefined,
-																	isActive: period.isActive,
-																	displayOrder: period.displayOrder
-																});
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2436,9 +3086,7 @@ function PeriodsTab({
 														<button
 															type="button"
 															onClick={() => {
-																if (confirm("Êtes-vous sûr de vouloir supprimer cette période ?")) {
-																	onDelete(period.id);
-																}
+																onDelete(period.id);
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2530,7 +3178,31 @@ function PeriodsTab({
 
 			{/* Formulaire de modification */}
 			{showEditForm && selectedPeriod && (
-				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updatePeriod(productId, selectedPeriod.id, {
+							periodName: editForm.periodName,
+							periodDays: editForm.periodDays,
+							periodMonths: editForm.periodMonths,
+							periodYears: editForm.periodYears,
+							interestRate: editForm.interestRate,
+							minAmount: editForm.minAmount,
+							maxAmount: editForm.maxAmount,
+							isActive: editForm.isActive,
+							displayOrder: editForm.displayOrder
+						});
+						setShowEditForm(false);
+						setSelectedPeriod(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
 						<h4 className="font-semibold">Modifier la période</h4>
 						<button
@@ -2538,22 +3210,104 @@ function PeriodsTab({
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedPeriod(null);
+								setError(null);
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
 							×
 						</button>
 					</div>
-					<div className="text-sm text-amber-600 mb-4">
-						⚠️ La modification des périodes n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Nom de la période *</label>
+							<Input
+								value={editForm.periodName}
+								onChange={e => setEditForm({ ...editForm, periodName: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Durée en jours *</label>
+							<Input
+								type="number"
+								value={editForm.periodDays}
+								onChange={e => setEditForm({ ...editForm, periodDays: parseInt(e.target.value) || 0 })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Durée en mois</label>
+							<Input
+								type="number"
+								value={editForm.periodMonths ?? ""}
+								onChange={e => setEditForm({ ...editForm, periodMonths: e.target.value ? parseInt(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Durée en années</label>
+							<Input
+								type="number"
+								value={editForm.periodYears ?? ""}
+								onChange={e => setEditForm({ ...editForm, periodYears: e.target.value ? parseInt(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Taux d'intérêt (%)</label>
+							<Input
+								type="number"
+								step="0.0001"
+								value={editForm.interestRate ?? ""}
+								onChange={e => setEditForm({ ...editForm, interestRate: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant minimum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.minAmount ?? ""}
+								onChange={e => setEditForm({ ...editForm, minAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant maximum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.maxAmount ?? ""}
+								onChange={e => setEditForm({ ...editForm, maxAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Ordre d'affichage</label>
+							<Input
+								type="number"
+								value={editForm.displayOrder ?? 0}
+								onChange={e => setEditForm({ ...editForm, displayOrder: parseInt(e.target.value) || 0 })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.isActive ? "true" : "false"}
+								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={() => {
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPeriod(null);
+							setError(null);
 						}}>Annuler</Button>
 					</div>
-				</div>
+				</form>
 			)}
 		</div>
 	);
@@ -2586,6 +3340,13 @@ function PenaltiesTab({
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
+	const [editForm, setEditForm] = useState<CreateProductPenaltyRequest>({
+		penaltyType: "LATE_PAYMENT",
+		penaltyName: "",
+		calculationBase: "FIXED",
+		effectiveFrom: new Date().toISOString().split('T')[0],
+		isActive: true
+	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedPenalty, setSelectedPenalty] = useState<ProductPenalty | null>(null);
@@ -2594,6 +3355,25 @@ function PenaltiesTab({
 	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+
+	useEffect(() => {
+		if (selectedPenalty && showEditForm) {
+			setEditForm({
+				penaltyType: selectedPenalty.penaltyType,
+				penaltyName: selectedPenalty.penaltyName,
+				penaltyAmount: selectedPenalty.penaltyAmount ?? undefined,
+				penaltyPercentage: selectedPenalty.penaltyPercentage ?? undefined,
+				calculationBase: selectedPenalty.calculationBase,
+				minPenalty: selectedPenalty.minPenalty ?? undefined,
+				maxPenalty: selectedPenalty.maxPenalty ?? undefined,
+				currency: selectedPenalty.currency,
+				gracePeriodDays: selectedPenalty.gracePeriodDays ?? undefined,
+				effectiveFrom: selectedPenalty.effectiveFrom,
+				effectiveTo: selectedPenalty.effectiveTo ?? undefined,
+				isActive: selectedPenalty.isActive ?? true
+			});
+		}
+	}, [selectedPenalty, showEditForm]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -2827,20 +3607,6 @@ function PenaltiesTab({
 																setSelectedPenalty(penalty);
 																setShowEditForm(true);
 																onCloseForm();
-																setForm({
-																	penaltyType: penalty.penaltyType,
-																	penaltyName: penalty.penaltyName,
-																	penaltyAmount: penalty.penaltyAmount ?? undefined,
-																	penaltyPercentage: penalty.penaltyPercentage ?? undefined,
-																	calculationBase: penalty.calculationBase,
-																	minPenalty: penalty.minPenalty ?? undefined,
-																	maxPenalty: penalty.maxPenalty ?? undefined,
-																	currency: penalty.currency,
-																	gracePeriodDays: penalty.gracePeriodDays ?? undefined,
-																	effectiveFrom: penalty.effectiveFrom,
-																	effectiveTo: penalty.effectiveTo ?? undefined,
-																	isActive: penalty.isActive
-																});
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2852,9 +3618,7 @@ function PenaltiesTab({
 														<button
 															type="button"
 															onClick={() => {
-																if (confirm("Êtes-vous sûr de vouloir supprimer cette pénalité ?")) {
-																	onDelete(penalty.id);
-																}
+																onDelete(penalty.id);
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -2878,71 +3642,183 @@ function PenaltiesTab({
 			{/* Modal pour voir les détails */}
 			{showViewModal && selectedPenalty && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails de la pénalité</h3>
-							<button
-								type="button"
-								onClick={() => setShowViewModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								×
-							</button>
+					<div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+						{/* En-tête avec gradient */}
+						<div className="bg-gradient-to-r from-red-600 to-orange-600 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+										<AlertCircle className="h-6 w-6 text-white" />
+									</div>
+									<div>
+										<h3 className="text-xl font-bold text-white">Détails de la pénalité</h3>
+										<p className="text-sm text-red-100 mt-0.5">{selectedPenalty.penaltyName}</p>
+									</div>
+								</div>
+								<button
+									type="button"
+									onClick={() => setShowViewModal(false)}
+									className="text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
 						</div>
-						<div className="space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de pénalité</label>
-									<div className="mt-1 text-sm">{selectedPenalty.penaltyType}</div>
+
+						{/* Contenu scrollable */}
+						<div className="overflow-y-auto p-6 space-y-6">
+							{/* Informations principales */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+									<label className="text-xs font-medium text-red-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Type de pénalité
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.penaltyType}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Nom</label>
-									<div className="mt-1 text-sm">{selectedPenalty.penaltyName}</div>
+								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Nom
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.penaltyName}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Montant fixe</label>
-									<div className="mt-1 text-sm">{selectedPenalty.penaltyAmount != null ? `${selectedPenalty.penaltyAmount} ${selectedPenalty.currency}` : "-"}</div>
+								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Montant fixe
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedPenalty.penaltyAmount != null ? (
+											<span className="text-lg">{selectedPenalty.penaltyAmount} <span className="text-sm text-gray-600">{selectedPenalty.currency}</span></span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Pourcentage</label>
-									<div className="mt-1 text-sm">{selectedPenalty.penaltyPercentage != null ? `${selectedPenalty.penaltyPercentage}%` : "-"}</div>
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+									<label className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+										</svg>
+										Pourcentage
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedPenalty.penaltyPercentage != null ? (
+											<span className="text-lg text-blue-700">{selectedPenalty.penaltyPercentage}%</span>
+										) : (
+											<span className="text-gray-400">-</span>
+										)}
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Base de calcul</label>
-									<div className="mt-1 text-sm">{selectedPenalty.calculationBase}</div>
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+										</svg>
+										Base de calcul
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.calculationBase}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Pénalité minimum</label>
-									<div className="mt-1 text-sm">{selectedPenalty.minPenalty != null ? `${selectedPenalty.minPenalty}` : "-"}</div>
+								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Période de grâce (jours)
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.gracePeriodDays ?? "-"}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Pénalité maximum</label>
-									<div className="mt-1 text-sm">{selectedPenalty.maxPenalty != null ? `${selectedPenalty.maxPenalty}` : "-"}</div>
+							</div>
+
+							{/* Limites min/max */}
+							{(selectedPenalty.minPenalty != null || selectedPenalty.maxPenalty != null) && (
+								<div className="grid grid-cols-2 gap-4">
+									<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
+										<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+											</svg>
+											Pénalité minimum
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">
+											{selectedPenalty.minPenalty != null ? (
+												<span className="text-lg">{selectedPenalty.minPenalty} <span className="text-sm text-gray-600">{selectedPenalty.currency}</span></span>
+											) : (
+												<span className="text-gray-400">-</span>
+											)}
+										</div>
+									</div>
+									<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+										<label className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+											</svg>
+											Pénalité maximum
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">
+											{selectedPenalty.maxPenalty != null ? (
+												<span className="text-lg">{selectedPenalty.maxPenalty} <span className="text-sm text-gray-600">{selectedPenalty.currency}</span></span>
+											) : (
+												<span className="text-gray-400">-</span>
+											)}
+										</div>
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Période de grâce (jours)</label>
-									<div className="mt-1 text-sm">{selectedPenalty.gracePeriodDays ?? "-"}</div>
+							)}
+
+							{/* Dates et statut */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date d'effet
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedPenalty.effectiveFrom}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
-									<div className="mt-1 text-sm">{selectedPenalty.effectiveFrom}</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date de fin
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedPenalty.effectiveTo ?? "-"}</dd>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date de fin</label>
-									<div className="mt-1 text-sm">{selectedPenalty.effectiveTo ?? "-"}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
-									<div className="mt-1">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Statut
+									</dt>
+									<dd>
 										<Badge variant={selectedPenalty.isActive ? "success" : "neutral"}>
 											{selectedPenalty.isActive ? "Actif" : "Inactif"}
 										</Badge>
-									</div>
+									</dd>
 								</div>
 							</div>
 						</div>
-						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+
+						{/* Footer */}
+						<div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+								Fermer
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -2950,7 +3826,34 @@ function PenaltiesTab({
 
 			{/* Formulaire de modification */}
 			{showEditForm && selectedPenalty && (
-				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updatePenalty(productId, selectedPenalty.id, {
+							penaltyType: editForm.penaltyType,
+							penaltyName: editForm.penaltyName,
+							penaltyAmount: editForm.penaltyAmount,
+							penaltyPercentage: editForm.penaltyPercentage,
+							calculationBase: editForm.calculationBase,
+							minPenalty: editForm.minPenalty,
+							maxPenalty: editForm.maxPenalty,
+							currency: editForm.currency,
+							gracePeriodDays: editForm.gracePeriodDays,
+							effectiveFrom: editForm.effectiveFrom,
+							effectiveTo: editForm.effectiveTo,
+							isActive: editForm.isActive
+						});
+						setShowEditForm(false);
+						setSelectedPenalty(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
 						<h4 className="font-semibold">Modifier la pénalité</h4>
 						<button
@@ -2958,22 +3861,145 @@ function PenaltiesTab({
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedPenalty(null);
+								setError(null);
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
 							×
 						</button>
 					</div>
-					<div className="text-sm text-amber-600 mb-4">
-						⚠️ La modification des pénalités n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de pénalité *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.penaltyType}
+								onChange={e => setEditForm({ ...editForm, penaltyType: e.target.value as PenaltyType })}
+								required
+							>
+								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
+								<option value="OVERDRAFT">Découvert</option>
+								<option value="LATE_PAYMENT">Retard de paiement</option>
+								<option value="MIN_BALANCE_VIOLATION">Violation solde minimum</option>
+								<option value="EXCESS_TRANSACTION">Transaction excessive</option>
+								<option value="PREPAYMENT">Prépaiement</option>
+								<option value="OTHER">Autre</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Nom de la pénalité *</label>
+							<Input
+								value={editForm.penaltyName}
+								onChange={e => setEditForm({ ...editForm, penaltyName: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Base de calcul *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.calculationBase}
+								onChange={e => setEditForm({ ...editForm, calculationBase: e.target.value as PenaltyCalculationBase })}
+								required
+							>
+								<option value="FIXED">Fixe</option>
+								<option value="PRINCIPAL">Principal</option>
+								<option value="INTEREST">Intérêt</option>
+								<option value="BALANCE">Solde</option>
+								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant fixe</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.penaltyAmount ?? ""}
+								onChange={e => setEditForm({ ...editForm, penaltyAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Pourcentage</label>
+							<Input
+								type="number"
+								step="0.0001"
+								value={editForm.penaltyPercentage ?? ""}
+								onChange={e => setEditForm({ ...editForm, penaltyPercentage: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Pénalité minimum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.minPenalty ?? ""}
+								onChange={e => setEditForm({ ...editForm, minPenalty: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Pénalité maximum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={editForm.maxPenalty ?? ""}
+								onChange={e => setEditForm({ ...editForm, maxPenalty: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Devise</label>
+							<Input
+								value={editForm.currency ?? "USD"}
+								onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
+								maxLength={3}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Période de grâce (jours)</label>
+							<Input
+								type="number"
+								value={editForm.gracePeriodDays ?? ""}
+								onChange={e => setEditForm({ ...editForm, gracePeriodDays: e.target.value ? parseInt(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date d'effet *</label>
+							<Input
+								type="date"
+								value={editForm.effectiveFrom}
+								onChange={e => setEditForm({ ...editForm, effectiveFrom: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date de fin</label>
+							<Input
+								type="date"
+								value={editForm.effectiveTo ?? ""}
+								onChange={e => setEditForm({ ...editForm, effectiveTo: e.target.value || undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.isActive ? "true" : "false"}
+								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={() => {
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPenalty(null);
+							setError(null);
 						}}>Annuler</Button>
 					</div>
-				</div>
+				</form>
 			)}
 		</div>
 	);
@@ -3009,6 +4035,16 @@ function EligibilityRulesTab({
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
+	const [editForm, setEditForm] = useState<CreateProductEligibilityRuleRequest>({
+		ruleType: "MIN_AGE",
+		ruleName: "",
+		operator: "GREATER_THAN_OR_EQUAL",
+		ruleValue: "",
+		dataType: "NUMBER",
+		isMandatory: true,
+		effectiveFrom: new Date().toISOString().split('T')[0],
+		isActive: true
+	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedRule, setSelectedRule] = useState<ProductEligibilityRule | null>(null);
@@ -3017,6 +4053,23 @@ function EligibilityRulesTab({
 	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+
+	useEffect(() => {
+		if (selectedRule && showEditForm) {
+			setEditForm({
+				ruleType: selectedRule.ruleType,
+				ruleName: selectedRule.ruleName,
+				operator: selectedRule.operator,
+				ruleValue: selectedRule.ruleValue,
+				dataType: selectedRule.dataType,
+				isMandatory: selectedRule.isMandatory ?? true,
+				errorMessage: selectedRule.errorMessage ?? undefined,
+				effectiveFrom: selectedRule.effectiveFrom,
+				effectiveTo: selectedRule.effectiveTo ?? undefined,
+				isActive: selectedRule.isActive ?? true
+			});
+		}
+	}, [selectedRule, showEditForm]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -3264,18 +4317,6 @@ function EligibilityRulesTab({
 																setSelectedRule(rule);
 																setShowEditForm(true);
 																onCloseForm();
-																setForm({
-																	ruleType: rule.ruleType,
-																	ruleName: rule.ruleName,
-																	operator: rule.operator,
-																	ruleValue: rule.ruleValue,
-																	dataType: rule.dataType,
-																	isMandatory: rule.isMandatory,
-																	errorMessage: rule.errorMessage ?? undefined,
-																	effectiveFrom: rule.effectiveFrom,
-																	effectiveTo: rule.effectiveTo ?? undefined,
-																	isActive: rule.isActive
-																});
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -3287,9 +4328,7 @@ function EligibilityRulesTab({
 														<button
 															type="button"
 															onClick={() => {
-																if (confirm("Êtes-vous sûr de vouloir supprimer cette règle d'éligibilité ?")) {
-																	onDelete(rule.id);
-																}
+																onDelete(rule.id);
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
@@ -3313,69 +4352,154 @@ function EligibilityRulesTab({
 			{/* Modal pour voir les détails */}
 			{showViewModal && selectedRule && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
-					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails de la règle d'éligibilité</h3>
-							<button
-								type="button"
-								onClick={() => setShowViewModal(false)}
-								className="text-gray-400 hover:text-gray-600"
-							>
-								×
-							</button>
-						</div>
-						<div className="space-y-4">
-							<div className="grid grid-cols-2 gap-4">
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de règle</label>
-									<div className="mt-1 text-sm">{selectedRule.ruleType}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Nom</label>
-									<div className="mt-1 text-sm">{selectedRule.ruleName}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Opérateur</label>
-									<div className="mt-1 text-sm">{selectedRule.operator}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Valeur</label>
-									<div className="mt-1 text-sm">{selectedRule.ruleValue}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Type de données</label>
-									<div className="mt-1 text-sm">{selectedRule.dataType}</div>
-								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Obligatoire</label>
-									<div className="mt-1 text-sm">{selectedRule.isMandatory ? "Oui" : "Non"}</div>
-								</div>
-								{selectedRule.errorMessage && (
-									<div className="col-span-2">
-										<label className="text-sm font-medium text-gray-500">Message d'erreur</label>
-										<div className="mt-1 text-sm">{selectedRule.errorMessage}</div>
+					<div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+						{/* En-tête avec gradient */}
+						<div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+										<FileText className="h-6 w-6 text-white" />
 									</div>
-								)}
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
-									<div className="mt-1 text-sm">{selectedRule.effectiveFrom}</div>
+									<div>
+										<h3 className="text-xl font-bold text-white">Détails de la règle d'éligibilité</h3>
+										<p className="text-sm text-indigo-100 mt-0.5">{selectedRule.ruleName}</p>
+									</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Date de fin</label>
-									<div className="mt-1 text-sm">{selectedRule.effectiveTo ?? "-"}</div>
+								<button
+									type="button"
+									onClick={() => setShowViewModal(false)}
+									className="text-white hover:bg-white/20 rounded-lg p-1 transition-colors"
+								>
+									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						{/* Contenu scrollable */}
+						<div className="overflow-y-auto p-6 space-y-6">
+							{/* Informations principales */}
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+									<label className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Type de règle
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRule.ruleType}</div>
 								</div>
-								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
+								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+										</svg>
+										Nom
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRule.ruleName}</div>
+								</div>
+								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+										</svg>
+										Opérateur
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRule.operator}</div>
+								</div>
+								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+										</svg>
+										Valeur
+									</label>
+									<div className="mt-1 font-mono font-semibold text-gray-900 break-all">{selectedRule.ruleValue}</div>
+								</div>
+								<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
+									<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+										</svg>
+										Type de données
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedRule.dataType}</div>
+								</div>
+								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
+									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+										</svg>
+										Obligatoire
+									</label>
 									<div className="mt-1">
-										<Badge variant={selectedRule.isActive ? "success" : "neutral"}>
-											{selectedRule.isActive ? "Actif" : "Inactif"}
+										<Badge variant={selectedRule.isMandatory ? "warning" : "neutral"}>
+											{selectedRule.isMandatory ? "Oui" : "Non"}
 										</Badge>
 									</div>
 								</div>
 							</div>
+
+							{/* Message d'erreur */}
+							{selectedRule.errorMessage && (
+								<div className="bg-red-50 border-l-4 border-red-400 rounded-lg p-4">
+									<div className="flex items-start gap-3">
+										<svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										<div className="flex-1">
+											<label className="text-xs font-medium text-red-700 uppercase tracking-wide mb-1 block">Message d'erreur</label>
+											<div className="text-sm text-red-800 mt-1">{selectedRule.errorMessage}</div>
+										</div>
+									</div>
+								</div>
+							)}
+
+							{/* Dates et statut */}
+							<div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date d'effet
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedRule.effectiveFrom}</dd>
+								</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+										</svg>
+										Date de fin
+									</dt>
+									<dd className="font-semibold text-gray-900">{selectedRule.effectiveTo ?? "-"}</dd>
+								</div>
+								<div className="flex items-center justify-between py-2">
+									<dt className="text-sm text-gray-600 flex items-center gap-2">
+										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										Statut
+									</dt>
+									<dd>
+										<Badge variant={selectedRule.isActive ? "success" : "neutral"}>
+											{selectedRule.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</dd>
+								</div>
+							</div>
 						</div>
-						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+
+						{/* Footer */}
+						<div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)} className="flex items-center gap-2">
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+								Fermer
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -3383,7 +4507,32 @@ function EligibilityRulesTab({
 
 			{/* Formulaire de modification */}
 			{showEditForm && selectedRule && (
-				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updateEligibilityRule(productId, selectedRule.id, {
+							ruleType: editForm.ruleType,
+							ruleName: editForm.ruleName,
+							operator: editForm.operator,
+							ruleValue: editForm.ruleValue,
+							dataType: editForm.dataType,
+							isMandatory: editForm.isMandatory,
+							errorMessage: editForm.errorMessage,
+							effectiveFrom: editForm.effectiveFrom,
+							effectiveTo: editForm.effectiveTo,
+							isActive: editForm.isActive
+						});
+						setShowEditForm(false);
+						setSelectedRule(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
 						<h4 className="font-semibold">Modifier la règle d'éligibilité</h4>
 						<button
@@ -3391,22 +4540,147 @@ function EligibilityRulesTab({
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedRule(null);
+								setError(null);
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
 							×
 						</button>
 					</div>
-					<div className="text-sm text-amber-600 mb-4">
-						⚠️ La modification des règles d'éligibilité n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de règle *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.ruleType}
+								onChange={e => setEditForm({ ...editForm, ruleType: e.target.value as EligibilityRuleType })}
+								required
+							>
+								<option value="MIN_AGE">Âge minimum</option>
+								<option value="MAX_AGE">Âge maximum</option>
+								<option value="MIN_INCOME">Revenu minimum</option>
+								<option value="MIN_BALANCE">Solde minimum</option>
+								<option value="CLIENT_TYPE">Type de client</option>
+								<option value="CLIENT_STATUS">Statut client</option>
+								<option value="RESIDENCY">Résidence</option>
+								<option value="KYC_LEVEL">Niveau KYC</option>
+								<option value="RISK_SCORE">Score de risque</option>
+								<option value="PEP_FLAG">Flag PEP</option>
+								<option value="OTHER">Autre</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Nom de la règle *</label>
+							<Input
+								value={editForm.ruleName}
+								onChange={e => setEditForm({ ...editForm, ruleName: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Opérateur *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.operator}
+								onChange={e => setEditForm({ ...editForm, operator: e.target.value as EligibilityOperator })}
+								required
+							>
+								<option value="EQUALS">Égal à</option>
+								<option value="NOT_EQUALS">Différent de</option>
+								<option value="GREATER_THAN">Supérieur à</option>
+								<option value="GREATER_THAN_OR_EQUAL">Supérieur ou égal à</option>
+								<option value="LESS_THAN">Inférieur à</option>
+								<option value="LESS_THAN_OR_EQUAL">Inférieur ou égal à</option>
+								<option value="IN">Dans la liste</option>
+								<option value="NOT_IN">Pas dans la liste</option>
+								<option value="CONTAINS">Contient</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Type de données *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.dataType}
+								onChange={e => setEditForm({ ...editForm, dataType: e.target.value as EligibilityDataType })}
+								required
+							>
+								<option value="STRING">Chaîne</option>
+								<option value="NUMBER">Nombre</option>
+								<option value="BOOLEAN">Booléen</option>
+								<option value="DATE">Date</option>
+								<option value="ENUM">Énumération</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Valeur *</label>
+							<Input
+								value={editForm.ruleValue}
+								onChange={e => setEditForm({ ...editForm, ruleValue: e.target.value })}
+								placeholder={editForm.operator === "IN" || editForm.operator === "NOT_IN" ? '["valeur1", "valeur2"]' : "Valeur"}
+								required
+							/>
+							{editForm.operator === "IN" || editForm.operator === "NOT_IN" ? (
+								<p className="text-xs text-gray-500 mt-1">Format JSON: ["valeur1", "valeur2"]</p>
+							) : null}
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Obligatoire</label>
+							<input
+								type="checkbox"
+								checked={editForm.isMandatory ?? true}
+								onChange={e => setEditForm({ ...editForm, isMandatory: e.target.checked })}
+								className="rounded"
+							/>
+							<p className="text-xs text-gray-500 mt-1">Si coché, la règle doit être satisfaite</p>
+						</div>
+						<div className="col-span-2">
+							<label className="block text-sm mb-1">Message d'erreur</label>
+							<textarea
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.errorMessage ?? ""}
+								onChange={e => setEditForm({ ...editForm, errorMessage: e.target.value || undefined })}
+								rows={2}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date d'effet *</label>
+							<Input
+								type="date"
+								value={editForm.effectiveFrom}
+								onChange={e => setEditForm({ ...editForm, effectiveFrom: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date de fin</label>
+							<Input
+								type="date"
+								value={editForm.effectiveTo ?? ""}
+								onChange={e => setEditForm({ ...editForm, effectiveTo: e.target.value || undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.isActive ? "true" : "false"}
+								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={() => {
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedRule(null);
+							setError(null);
 						}}>Annuler</Button>
 					</div>
-				</div>
+				</form>
 			)}
 		</div>
 	);
