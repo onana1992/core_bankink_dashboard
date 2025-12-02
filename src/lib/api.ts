@@ -23,10 +23,30 @@ import type {
 	ProductPenalty,
 	CreateProductPenaltyRequest,
 	ProductEligibilityRule,
-	CreateProductEligibilityRuleRequest
+	CreateProductEligibilityRuleRequest,
+	Account,
+	OpenProductRequest,
+	CloseAccountRequest,
+	FreezeAccountRequest,
+	SuspendAccountRequest
 } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+// Validate and set API base URL
+const getApiBase = (): string => {
+	const envBase = process.env.NEXT_PUBLIC_API_BASE;
+	if (envBase && envBase.trim() !== "") {
+		// Ensure it starts with http:// or https://
+		const trimmed = envBase.trim();
+		if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+			return trimmed;
+		}
+		// If it doesn't have a scheme, add http://
+		return `http://${trimmed}`;
+	}
+	return "http://localhost:8080";
+};
+
+const API_BASE = getApiBase();
 
 async function handleJsonResponse<T>(res: Response): Promise<T> {
 	// Gérer les réponses vides (204 No Content, etc.) avant de vérifier res.ok
@@ -303,6 +323,15 @@ export const productsApi = {
 		return handleJsonResponse<ProductInterestRate>(res);
 	},
 
+	async updateInterestRate(id: number | string, rateId: number | string, payload: CreateProductInterestRateRequest): Promise<ProductInterestRate> {
+		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates/${rateId}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductInterestRate>(res);
+	},
+
 	async deleteInterestRate(id: number | string, rateId: number | string): Promise<void> {
 		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates/${rateId}`, {
 			method: "DELETE"
@@ -418,6 +447,86 @@ export const productsApi = {
 			method: "DELETE"
 		});
 		await handleJsonResponse(res);
+	}
+};
+
+export const accountsApi = {
+	async list(params?: { clientId?: number }): Promise<Account[]> {
+		const usp = new URLSearchParams();
+		if (params?.clientId) usp.set("clientId", String(params.clientId));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/accounts${query ? `?${query}` : ""}`, { cache: "no-store" });
+		return handleJsonResponse<Account[]>(res);
+	},
+
+	async get(id: number | string): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}`, { cache: "no-store" });
+		return handleJsonResponse<Account>(res);
+	},
+
+	async getByAccountNumber(accountNumber: string): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/by-number/${encodeURIComponent(accountNumber)}`, { cache: "no-store" });
+		return handleJsonResponse<Account>(res);
+	},
+
+	async getClientAccounts(clientId: number | string): Promise<Account[]> {
+		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/accounts`, { cache: "no-store" });
+		return handleJsonResponse<Account[]>(res);
+	},
+
+	async countClientAccounts(clientId: number | string): Promise<number> {
+		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/count`, { cache: "no-store" });
+		return handleJsonResponse<number>(res);
+	},
+
+	async openProduct(clientId: number | string, payload: OpenProductRequest): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/open-product`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async close(id: number | string, payload: CloseAccountRequest): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}/close`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async freeze(id: number | string, payload?: FreezeAccountRequest): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}/freeze`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: payload ? JSON.stringify(payload) : undefined
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async unfreeze(id: number | string): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}/unfreeze`, {
+			method: "POST"
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async suspend(id: number | string, payload?: SuspendAccountRequest): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}/suspend`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: payload ? JSON.stringify(payload) : undefined
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async unsuspend(id: number | string): Promise<Account> {
+		const res = await fetch(`${API_BASE}/api/accounts/${id}/unsuspend`, {
+			method: "POST"
+		});
+		return handleJsonResponse<Account>(res);
 	}
 };
 

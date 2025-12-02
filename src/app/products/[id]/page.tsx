@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
@@ -21,7 +21,9 @@ import {
 	Calendar,
 	FileText,
 	Trash2,
-	AlertCircle
+	AlertCircle,
+	MoreVertical,
+	Eye
 } from "lucide-react";
 import type {
 	Product,
@@ -861,6 +863,12 @@ function InterestRatesTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedRate, setSelectedRate] = useState<ProductInterestRate | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -892,10 +900,10 @@ function InterestRatesTab({
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<h3 className="text-lg font-semibold">Taux d'intérêt ({rates.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter un taux</Button>}
+				{!showForm && !showEditForm && <Button onClick={onAdd}>+ Ajouter un taux</Button>}
 			</div>
 
-			{showForm && (
+			{showForm && !showEditForm && (
 				<form onSubmit={handleSubmit} className="border rounded-md p-4 space-y-4 bg-gray-50">
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
@@ -1020,7 +1028,7 @@ function InterestRatesTab({
 			{rates.length === 0 ? (
 				<div className="text-sm text-gray-500 py-8 text-center">Aucun taux d'intérêt configuré</div>
 			) : (
-				<div className="overflow-x-auto">
+				<div className="overflow-x-auto overflow-y-visible">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
@@ -1033,7 +1041,7 @@ function InterestRatesTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="relative">
 							{rates.map(rate => (
 								<tr key={rate.id} className="border-t">
 									<td className="px-4 py-2">{rate.rateType}</td>
@@ -1057,14 +1065,337 @@ function InterestRatesTab({
 											{rate.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(rate.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[rate.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8, // 8px au-dessus du bouton (mb-1 = 4px + espacement)
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === rate.id ? null : rate.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === rate.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedRate(rate);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedRate(rate);
+																setShowEditForm(true);
+																onCloseForm(); // Fermer le formulaire d'ajout si ouvert
+																setForm({
+																	rateType: rate.rateType,
+																	rateValue: rate.rateValue,
+																	minAmount: rate.minAmount ?? undefined,
+																	maxAmount: rate.maxAmount ?? undefined,
+																	minPeriodDays: rate.minPeriodDays ?? undefined,
+																	maxPeriodDays: rate.maxPeriodDays ?? undefined,
+																	calculationMethod: rate.calculationMethod,
+																	compoundingFrequency: rate.compoundingFrequency ?? undefined,
+																	effectiveFrom: rate.effectiveFrom,
+																	effectiveTo: rate.effectiveTo ?? undefined,
+																	isActive: rate.isActive
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setOpenMenuId(null);
+																setMenuPosition(null);
+																onDelete(rate.id);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
 				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedRate && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails du taux d'intérêt</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de taux</label>
+									<div className="mt-1 text-sm">{selectedRate.rateType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Valeur du taux</label>
+									<div className="mt-1 text-sm font-semibold">{selectedRate.rateValue}%</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant minimum</label>
+									<div className="mt-1 text-sm">{selectedRate.minAmount != null ? `${selectedRate.minAmount}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant maximum</label>
+									<div className="mt-1 text-sm">{selectedRate.maxAmount != null ? `${selectedRate.maxAmount}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Période minimum (jours)</label>
+									<div className="mt-1 text-sm">{selectedRate.minPeriodDays != null ? `${selectedRate.minPeriodDays}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Période maximum (jours)</label>
+									<div className="mt-1 text-sm">{selectedRate.maxPeriodDays != null ? `${selectedRate.maxPeriodDays}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Méthode de calcul</label>
+									<div className="mt-1 text-sm">{selectedRate.calculationMethod}</div>
+								</div>
+								{selectedRate.compoundingFrequency && (
+									<div>
+										<label className="text-sm font-medium text-gray-500">Fréquence de capitalisation</label>
+										<div className="mt-1 text-sm">{selectedRate.compoundingFrequency}</div>
+									</div>
+								)}
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
+									<div className="mt-1 text-sm">{selectedRate.effectiveFrom}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date de fin</label>
+									<div className="mt-1 text-sm">{selectedRate.effectiveTo ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedRate.isActive ? "success" : "neutral"}>
+											{selectedRate.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedRate && (
+				<form onSubmit={async (e) => {
+					e.preventDefault();
+					setSubmitting(true);
+					setError(null);
+					try {
+						await productsApi.updateInterestRate(productId, selectedRate.id, form);
+						setShowEditForm(false);
+						setSelectedRate(null);
+						onRefresh();
+					} catch (e: any) {
+						setError(e?.message ?? "Erreur lors de la modification");
+					} finally {
+						setSubmitting(false);
+					}
+				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier le taux d'intérêt</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedRate(null);
+								setError(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					{error && <div className="text-sm text-red-600">{error}</div>}
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de taux *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.rateType}
+								onChange={e => setForm({ ...form, rateType: e.target.value as RateType })}
+								required
+							>
+								<option value="DEPOSIT">Dépôt</option>
+								<option value="LENDING">Prêt</option>
+								<option value="PENALTY">Pénalité</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Valeur du taux (%) *</label>
+							<Input
+								type="number"
+								step="0.0001"
+								value={form.rateValue}
+								onChange={e => setForm({ ...form, rateValue: parseFloat(e.target.value) || 0 })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant minimum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={form.minAmount ?? ""}
+								onChange={e => setForm({ ...form, minAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Montant maximum</label>
+							<Input
+								type="number"
+								step="0.01"
+								value={form.maxAmount ?? ""}
+								onChange={e => setForm({ ...form, maxAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Période min (jours)</label>
+							<Input
+								type="number"
+								value={form.minPeriodDays ?? ""}
+								onChange={e => setForm({ ...form, minPeriodDays: e.target.value ? parseInt(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Période max (jours)</label>
+							<Input
+								type="number"
+								value={form.maxPeriodDays ?? ""}
+								onChange={e => setForm({ ...form, maxPeriodDays: e.target.value ? parseInt(e.target.value) : undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Méthode de calcul *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.calculationMethod}
+								onChange={e => setForm({ ...form, calculationMethod: e.target.value as CalculationMethod })}
+								required
+							>
+								<option value="SIMPLE">Simple</option>
+								<option value="COMPOUND">Composé</option>
+								<option value="FLOATING">Flottant</option>
+							</select>
+						</div>
+						{form.calculationMethod === "COMPOUND" && (
+							<div>
+								<label className="block text-sm mb-1">Fréquence de capitalisation</label>
+								<select
+									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+									value={form.compoundingFrequency ?? ""}
+									onChange={e => setForm({ ...form, compoundingFrequency: e.target.value as CompoundingFrequency })}
+								>
+									<option value="">Sélectionner</option>
+									<option value="DAILY">Quotidienne</option>
+									<option value="MONTHLY">Mensuelle</option>
+									<option value="QUARTERLY">Trimestrielle</option>
+									<option value="YEARLY">Annuelle</option>
+								</select>
+							</div>
+						)}
+						<div>
+							<label className="block text-sm mb-1">Date d'effet *</label>
+							<Input
+								type="date"
+								value={form.effectiveFrom}
+								onChange={e => setForm({ ...form, effectiveFrom: e.target.value })}
+								required
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Date de fin</label>
+							<Input
+								type="date"
+								value={form.effectiveTo ?? ""}
+								onChange={e => setForm({ ...form, effectiveTo: e.target.value || undefined })}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Actif</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.isActive ? "true" : "false"}
+								onChange={e => setForm({ ...form, isActive: e.target.value === "true" })}
+							>
+								<option value="true">Oui</option>
+								<option value="false">Non</option>
+							</select>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="button" variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedRate(null);
+							setError(null);
+						}}>Annuler</Button>
+					</div>
+				</form>
 			)}
 		</div>
 	);
@@ -1099,6 +1430,12 @@ function FeesTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedFee, setSelectedFee] = useState<ProductFee | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -1282,13 +1619,206 @@ function FeesTab({
 											{fee.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(fee.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[fee.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8,
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === fee.id ? null : fee.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === fee.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedFee(fee);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedFee(fee);
+																setShowEditForm(true);
+																onCloseForm();
+																setForm({
+																	feeType: fee.feeType,
+																	feeName: fee.feeName,
+																	feeAmount: fee.feeAmount ?? undefined,
+																	feePercentage: fee.feePercentage ?? undefined,
+																	feeCalculationBase: fee.feeCalculationBase,
+																	minFee: fee.minFee ?? undefined,
+																	maxFee: fee.maxFee ?? undefined,
+																	currency: fee.currency,
+																	isWaivable: fee.isWaivable,
+																	effectiveFrom: fee.effectiveFrom,
+																	effectiveTo: fee.effectiveTo ?? undefined,
+																	isActive: fee.isActive
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																if (confirm("Êtes-vous sûr de vouloir supprimer ce frais ?")) {
+																	onDelete(fee.id);
+																}
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
+				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedFee && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails du frais</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de frais</label>
+									<div className="mt-1 text-sm">{selectedFee.feeType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Nom</label>
+									<div className="mt-1 text-sm">{selectedFee.feeName}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant fixe</label>
+									<div className="mt-1 text-sm">{selectedFee.feeAmount != null ? `${selectedFee.feeAmount} ${selectedFee.currency}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Pourcentage</label>
+									<div className="mt-1 text-sm">{selectedFee.feePercentage != null ? `${selectedFee.feePercentage}%` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Base de calcul</label>
+									<div className="mt-1 text-sm">{selectedFee.feeCalculationBase}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Dispensable</label>
+									<div className="mt-1 text-sm">{selectedFee.isWaivable ? "Oui" : "Non"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Frais minimum</label>
+									<div className="mt-1 text-sm">{selectedFee.minFee != null ? `${selectedFee.minFee}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Frais maximum</label>
+									<div className="mt-1 text-sm">{selectedFee.maxFee != null ? `${selectedFee.maxFee}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
+									<div className="mt-1 text-sm">{selectedFee.effectiveFrom}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date de fin</label>
+									<div className="mt-1 text-sm">{selectedFee.effectiveTo ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedFee.isActive ? "success" : "neutral"}>
+											{selectedFee.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedFee && (
+				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier le frais</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedFee(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					<div className="text-sm text-amber-600 mb-4">
+						⚠️ La modification des frais n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedFee(null);
+						}}>Annuler</Button>
+					</div>
 				</div>
 			)}
 		</div>
@@ -1323,6 +1853,12 @@ function LimitsTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedLimit, setSelectedLimit] = useState<ProductLimit | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -1459,13 +1995,181 @@ function LimitsTab({
 											{limit.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(limit.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[limit.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8,
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === limit.id ? null : limit.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === limit.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedLimit(limit);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedLimit(limit);
+																setShowEditForm(true);
+																onCloseForm();
+																setForm({
+																	limitType: limit.limitType,
+																	limitValue: limit.limitValue,
+																	currency: limit.currency,
+																	periodType: limit.periodType ?? undefined,
+																	effectiveFrom: limit.effectiveFrom,
+																	effectiveTo: limit.effectiveTo ?? undefined,
+																	isActive: limit.isActive
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																if (confirm("Êtes-vous sûr de vouloir supprimer cette limite ?")) {
+																	onDelete(limit.id);
+																}
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
+				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedLimit && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails de la limite</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de limite</label>
+									<div className="mt-1 text-sm">{selectedLimit.limitType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Valeur</label>
+									<div className="mt-1 text-sm font-semibold">{selectedLimit.limitValue} {selectedLimit.currency}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Période</label>
+									<div className="mt-1 text-sm">{selectedLimit.periodType ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
+									<div className="mt-1 text-sm">{selectedLimit.effectiveFrom}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date de fin</label>
+									<div className="mt-1 text-sm">{selectedLimit.effectiveTo ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedLimit.isActive ? "success" : "neutral"}>
+											{selectedLimit.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedLimit && (
+				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier la limite</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedLimit(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					<div className="text-sm text-amber-600 mb-4">
+						⚠️ La modification des limites n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedLimit(null);
+						}}>Annuler</Button>
+					</div>
 				</div>
 			)}
 		</div>
@@ -1500,6 +2204,12 @@ function PeriodsTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedPeriod, setSelectedPeriod] = useState<ProductPeriod | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -1650,13 +2360,199 @@ function PeriodsTab({
 											{period.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(period.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[period.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8,
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === period.id ? null : period.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === period.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedPeriod(period);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedPeriod(period);
+																setShowEditForm(true);
+																onCloseForm();
+																setForm({
+																	periodName: period.periodName,
+																	periodDays: period.periodDays,
+																	periodMonths: period.periodMonths ?? undefined,
+																	periodYears: period.periodYears ?? undefined,
+																	interestRate: period.interestRate ?? undefined,
+																	minAmount: period.minAmount ?? undefined,
+																	maxAmount: period.maxAmount ?? undefined,
+																	isActive: period.isActive,
+																	displayOrder: period.displayOrder
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																if (confirm("Êtes-vous sûr de vouloir supprimer cette période ?")) {
+																	onDelete(period.id);
+																}
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
+				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedPeriod && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails de la période</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Nom</label>
+									<div className="mt-1 text-sm">{selectedPeriod.periodName}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Durée (jours)</label>
+									<div className="mt-1 text-sm">{selectedPeriod.periodDays}</div>
+								</div>
+								{selectedPeriod.periodMonths && (
+									<div>
+										<label className="text-sm font-medium text-gray-500">Durée (mois)</label>
+										<div className="mt-1 text-sm">{selectedPeriod.periodMonths}</div>
+									</div>
+								)}
+								{selectedPeriod.periodYears && (
+									<div>
+										<label className="text-sm font-medium text-gray-500">Durée (années)</label>
+										<div className="mt-1 text-sm">{selectedPeriod.periodYears}</div>
+									</div>
+								)}
+								<div>
+									<label className="text-sm font-medium text-gray-500">Taux d'intérêt</label>
+									<div className="mt-1 text-sm">{selectedPeriod.interestRate != null ? `${selectedPeriod.interestRate}%` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant minimum</label>
+									<div className="mt-1 text-sm">{selectedPeriod.minAmount != null ? `${selectedPeriod.minAmount}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant maximum</label>
+									<div className="mt-1 text-sm">{selectedPeriod.maxAmount != null ? `${selectedPeriod.maxAmount}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Ordre d'affichage</label>
+									<div className="mt-1 text-sm">{selectedPeriod.displayOrder}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedPeriod.isActive ? "success" : "neutral"}>
+											{selectedPeriod.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedPeriod && (
+				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier la période</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedPeriod(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					<div className="text-sm text-amber-600 mb-4">
+						⚠️ La modification des périodes n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedPeriod(null);
+						}}>Annuler</Button>
+					</div>
 				</div>
 			)}
 		</div>
@@ -1692,6 +2588,12 @@ function PenaltiesTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedPenalty, setSelectedPenalty] = useState<ProductPenalty | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -1871,13 +2773,206 @@ function PenaltiesTab({
 											{penalty.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(penalty.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[penalty.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8,
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === penalty.id ? null : penalty.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === penalty.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedPenalty(penalty);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedPenalty(penalty);
+																setShowEditForm(true);
+																onCloseForm();
+																setForm({
+																	penaltyType: penalty.penaltyType,
+																	penaltyName: penalty.penaltyName,
+																	penaltyAmount: penalty.penaltyAmount ?? undefined,
+																	penaltyPercentage: penalty.penaltyPercentage ?? undefined,
+																	calculationBase: penalty.calculationBase,
+																	minPenalty: penalty.minPenalty ?? undefined,
+																	maxPenalty: penalty.maxPenalty ?? undefined,
+																	currency: penalty.currency,
+																	gracePeriodDays: penalty.gracePeriodDays ?? undefined,
+																	effectiveFrom: penalty.effectiveFrom,
+																	effectiveTo: penalty.effectiveTo ?? undefined,
+																	isActive: penalty.isActive
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																if (confirm("Êtes-vous sûr de vouloir supprimer cette pénalité ?")) {
+																	onDelete(penalty.id);
+																}
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
+				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedPenalty && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails de la pénalité</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de pénalité</label>
+									<div className="mt-1 text-sm">{selectedPenalty.penaltyType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Nom</label>
+									<div className="mt-1 text-sm">{selectedPenalty.penaltyName}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Montant fixe</label>
+									<div className="mt-1 text-sm">{selectedPenalty.penaltyAmount != null ? `${selectedPenalty.penaltyAmount} ${selectedPenalty.currency}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Pourcentage</label>
+									<div className="mt-1 text-sm">{selectedPenalty.penaltyPercentage != null ? `${selectedPenalty.penaltyPercentage}%` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Base de calcul</label>
+									<div className="mt-1 text-sm">{selectedPenalty.calculationBase}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Pénalité minimum</label>
+									<div className="mt-1 text-sm">{selectedPenalty.minPenalty != null ? `${selectedPenalty.minPenalty}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Pénalité maximum</label>
+									<div className="mt-1 text-sm">{selectedPenalty.maxPenalty != null ? `${selectedPenalty.maxPenalty}` : "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Période de grâce (jours)</label>
+									<div className="mt-1 text-sm">{selectedPenalty.gracePeriodDays ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
+									<div className="mt-1 text-sm">{selectedPenalty.effectiveFrom}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date de fin</label>
+									<div className="mt-1 text-sm">{selectedPenalty.effectiveTo ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedPenalty.isActive ? "success" : "neutral"}>
+											{selectedPenalty.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedPenalty && (
+				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier la pénalité</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedPenalty(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					<div className="text-sm text-amber-600 mb-4">
+						⚠️ La modification des pénalités n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedPenalty(null);
+						}}>Annuler</Button>
+					</div>
 				</div>
 			)}
 		</div>
@@ -1916,6 +3011,12 @@ function EligibilityRulesTab({
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [selectedRule, setSelectedRule] = useState<ProductEligibilityRule | null>(null);
+	const [showViewModal, setShowViewModal] = useState(false);
+	const [showEditForm, setShowEditForm] = useState(false);
+	const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -2109,13 +3210,202 @@ function EligibilityRulesTab({
 											{rule.isActive ? "Oui" : "Non"}
 										</Badge>
 									</td>
-									<td className="px-4 py-2">
-										<Button size="sm" variant="ghost" onClick={() => onDelete(rule.id)}>Supprimer</Button>
+									<td className="px-4 py-2 relative overflow-visible">
+										<div className="relative z-[9999]">
+											<button
+												ref={(el) => { buttonRefs.current[rule.id] = el; }}
+												type="button"
+												onClick={(e) => {
+													const button = e.currentTarget;
+													const rect = button.getBoundingClientRect();
+													setMenuPosition({
+														top: rect.top - 8,
+														right: window.innerWidth - rect.right
+													});
+													setOpenMenuId(openMenuId === rule.id ? null : rule.id);
+												}}
+												className="p-1 rounded-md hover:bg-gray-100 transition-colors relative z-[9999]"
+											>
+												<MoreVertical className="h-4 w-4 text-gray-600" />
+											</button>
+											{openMenuId === rule.id && menuPosition && (
+												<>
+													<div
+														className="fixed inset-0 z-[9998]"
+														onClick={() => {
+															setOpenMenuId(null);
+															setMenuPosition(null);
+														}}
+													/>
+													<div 
+														className="fixed w-48 bg-white rounded-md shadow-lg border border-gray-200 z-[9999]"
+														style={{
+															top: `${menuPosition.top}px`,
+															right: `${menuPosition.right}px`,
+															transform: 'translateY(-100%)'
+														}}
+													>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedRule(rule);
+																setShowViewModal(true);
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Eye className="h-4 w-4" />
+															Voir
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																setSelectedRule(rule);
+																setShowEditForm(true);
+																onCloseForm();
+																setForm({
+																	ruleType: rule.ruleType,
+																	ruleName: rule.ruleName,
+																	operator: rule.operator,
+																	ruleValue: rule.ruleValue,
+																	dataType: rule.dataType,
+																	isMandatory: rule.isMandatory,
+																	errorMessage: rule.errorMessage ?? undefined,
+																	effectiveFrom: rule.effectiveFrom,
+																	effectiveTo: rule.effectiveTo ?? undefined,
+																	isActive: rule.isActive
+																});
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+														>
+															<Edit2 className="h-4 w-4" />
+															Modifier
+														</button>
+														<button
+															type="button"
+															onClick={() => {
+																if (confirm("Êtes-vous sûr de vouloir supprimer cette règle d'éligibilité ?")) {
+																	onDelete(rule.id);
+																}
+																setOpenMenuId(null);
+																setMenuPosition(null);
+															}}
+															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+														>
+															<Trash2 className="h-4 w-4" />
+															Supprimer
+														</button>
+													</div>
+												</>
+											)}
+										</div>
 									</td>
 								</tr>
 							))}
 						</tbody>
 					</table>
+				</div>
+			)}
+
+			{/* Modal pour voir les détails */}
+			{showViewModal && selectedRule && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
+					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Détails de la règle d'éligibilité</h3>
+							<button
+								type="button"
+								onClick={() => setShowViewModal(false)}
+								className="text-gray-400 hover:text-gray-600"
+							>
+								×
+							</button>
+						</div>
+						<div className="space-y-4">
+							<div className="grid grid-cols-2 gap-4">
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de règle</label>
+									<div className="mt-1 text-sm">{selectedRule.ruleType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Nom</label>
+									<div className="mt-1 text-sm">{selectedRule.ruleName}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Opérateur</label>
+									<div className="mt-1 text-sm">{selectedRule.operator}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Valeur</label>
+									<div className="mt-1 text-sm">{selectedRule.ruleValue}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Type de données</label>
+									<div className="mt-1 text-sm">{selectedRule.dataType}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Obligatoire</label>
+									<div className="mt-1 text-sm">{selectedRule.isMandatory ? "Oui" : "Non"}</div>
+								</div>
+								{selectedRule.errorMessage && (
+									<div className="col-span-2">
+										<label className="text-sm font-medium text-gray-500">Message d'erreur</label>
+										<div className="mt-1 text-sm">{selectedRule.errorMessage}</div>
+									</div>
+								)}
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date d'effet</label>
+									<div className="mt-1 text-sm">{selectedRule.effectiveFrom}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Date de fin</label>
+									<div className="mt-1 text-sm">{selectedRule.effectiveTo ?? "-"}</div>
+								</div>
+								<div>
+									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<div className="mt-1">
+										<Badge variant={selectedRule.isActive ? "success" : "neutral"}>
+											{selectedRule.isActive ? "Actif" : "Inactif"}
+										</Badge>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div className="mt-6 flex justify-end">
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Formulaire de modification */}
+			{showEditForm && selectedRule && (
+				<div className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="font-semibold">Modifier la règle d'éligibilité</h4>
+						<button
+							type="button"
+							onClick={() => {
+								setShowEditForm(false);
+								setSelectedRule(null);
+							}}
+							className="text-gray-400 hover:text-gray-600"
+						>
+							×
+						</button>
+					</div>
+					<div className="text-sm text-amber-600 mb-4">
+						⚠️ La modification des règles d'éligibilité n'est pas encore implémentée dans l'API. Cette fonctionnalité sera disponible prochainement.
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={() => {
+							setShowEditForm(false);
+							setSelectedRule(null);
+						}}>Annuler</Button>
+					</div>
 				</div>
 			)}
 		</div>

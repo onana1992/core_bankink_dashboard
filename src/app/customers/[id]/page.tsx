@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
-import { customersApi } from "@/lib/api";
+import { customersApi, accountsApi } from "@/lib/api";
 import type {
 	AddAddressRequest,
 	AddRelatedPersonRequest,
@@ -15,7 +15,8 @@ import type {
 	Document,
 	DocumentType,
 	RelatedPerson,
-	RelatedPersonRole
+	RelatedPersonRole,
+	Account
 } from "@/types";
 
 export default function CustomerDetailPage() {
@@ -29,6 +30,7 @@ export default function CustomerDetailPage() {
 	const [addresses, setAddresses] = useState<Address[]>([]);
 	const [documents, setDocuments] = useState<Document[]>([]);
 	const [relatedPersons, setRelatedPersons] = useState<RelatedPerson[]>([]);
+	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [isEditing, setIsEditing] = useState(false);
 	const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 	const [formData, setFormData] = useState<{
@@ -128,6 +130,14 @@ export default function CustomerDetailPage() {
 			setCustomer(customerData);
 			setAddresses(addressesData);
 			setDocuments(documentsData);
+			
+			// Charger les comptes du client
+			try {
+				const accountsData = await accountsApi.getClientAccounts(id);
+				setAccounts(accountsData);
+			} catch (e) {
+				console.warn("Impossible de charger les comptes:", e);
+			}
 			
 			// Charger les personnes liées uniquement pour les clients BUSINESS
 			if (customerData.type === "BUSINESS") {
