@@ -6,8 +6,8 @@ import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
-import { accountsApi, customersApi } from "@/lib/api";
-import type { Account, AccountStatus, Customer } from "@/types";
+import { accountsApi, customersApi, productsApi } from "@/lib/api";
+import type { Account, AccountStatus, Customer, Product } from "@/types";
 
 export default function AccountsPage() {
 	const { t } = useTranslation();
@@ -15,6 +15,7 @@ export default function AccountsPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [customers, setCustomers] = useState<Customer[]>([]);
+	const [products, setProducts] = useState<Product[]>([]);
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -25,12 +26,34 @@ export default function AccountsPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [accountsData, customersData] = await Promise.all([
+			const [accountsData, customersData, productsData] = await Promise.all([
 				accountsApi.list(filterClientId ? { clientId: filterClientId } : undefined),
-				customersApi.list()
+				customersApi.list(),
+				productsApi.list()
 			]);
-			setAccounts(accountsData);
+			
+			// Enrichir les comptes avec les informations des produits
+			const enrichedAccounts = accountsData.map(account => {
+				if (account.productId && !account.product) {
+					const product = productsData.find(p => p.id === account.productId);
+					if (product) {
+						return {
+							...account,
+							product: {
+								id: product.id,
+								code: product.code,
+								name: product.name,
+								category: product.category
+							}
+						};
+					}
+				}
+				return account;
+			});
+			
+			setAccounts(enrichedAccounts);
 			setCustomers(customersData);
+			setProducts(productsData);
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement des comptes");
 		} finally {
@@ -297,18 +320,26 @@ export default function AccountsPage() {
 											</Link>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											{account.client ? (
-												<Link href={`/customers/${account.clientId}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-													{account.client.displayName}
+											{account.clientId ? (
+												<Link href={`/customers/${account.clientId}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono font-medium">
+													{account.clientId}
 												</Link>
 											) : (
 												<span className="text-gray-400">-</span>
 											)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											{account.product ? (
+											{account.product?.code ? (
+												<Link href={`/products/${account.productId}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono">
+													{account.product.code}
+												</Link>
+											) : account.product?.name ? (
 												<Link href={`/products/${account.productId}`} className="text-blue-600 hover:text-blue-800 hover:underline">
 													{account.product.name}
+												</Link>
+											) : account.productId ? (
+												<Link href={`/products/${account.productId}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-gray-600">
+													ID: {account.productId}
 												</Link>
 											) : (
 												<span className="text-gray-400">-</span>
