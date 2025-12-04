@@ -1,12 +1,25 @@
 "use client";
 
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/contexts/AuthContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import Button from "@/components/ui/Button";
 
 export default function AdminTopbar({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
 	// Force re-render when language changes by using i18n.language as dependency
 	const { t, i18n } = useTranslation();
+	const { logout, user } = useAuth();
+
+	async function handleLogout() {
+		try {
+			await logout();
+		} catch (e) {
+			// Ignorer les erreurs lors du logout
+		}
+		// Utiliser window.location.href pour forcer une navigation complète
+		window.location.href = "/login";
+	}
 
 	return (
 		<header className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
@@ -21,7 +34,21 @@ export default function AdminTopbar({ onToggleSidebar }: { onToggleSidebar?: () 
 					</button>
 				</div>
 				<div className="flex items-center gap-3">
+					{user && (
+						<span className="text-sm text-gray-700 hidden md:block">
+							{user.username}
+						</span>
+					)}
 					<LanguageSwitcher />
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={handleLogout}
+						className="flex items-center gap-2"
+					>
+						<LogOut className="h-4 w-4" />
+						<span className="hidden md:inline">Déconnexion</span>
+					</Button>
 				</div>
 			</div>
 		</header>

@@ -206,8 +206,9 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/users" label={t("common.users")} icon={Users} collapsed={collapsed} />
-							<NavLink href="/roles" label={t("sidebar.roles")} icon={KeyRound} collapsed={collapsed} />
+							<NavLink href="/users" label="Utilisateurs" icon={Users} collapsed={collapsed} />
+							<NavLink href="/roles" label="Rôles" icon={KeyRound} collapsed={collapsed} />
+							<NavLink href="/permissions" label="Permissions" icon={ShieldCheck} collapsed={collapsed} />
 							<NavLink href="/approvals" label={t("sidebar.approvals")} icon={CheckCircle} collapsed={collapsed} />
 						</div>
 					</details>
@@ -221,7 +222,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/audit/events" label={t("sidebar.auditEvents")} icon={ScrollText} collapsed={collapsed} />
+							<NavLink href="/audit" label="Événements d'audit" icon={ScrollText} collapsed={collapsed} />
 							<NavLink href="/audit/access" label={t("sidebar.accessLogs")} icon={ShieldCheck} collapsed={collapsed} />
 						</div>
 					</details>

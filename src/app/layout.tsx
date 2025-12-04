@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import AdminShell from "@/components/admin/AdminShell";
 import I18nProvider from "@/components/I18nProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
 	title: "Core Admin",
@@ -17,7 +18,9 @@ export default function RootLayout({
 		<html lang="en">
 			<body>
 				<I18nProvider>
-					<AdminShell>{children}</AdminShell>
+					<AuthProvider>
+						<AdminShell>{children}</AdminShell>
+					</AuthProvider>
 				</I18nProvider>
 			</body>
 		</html>
