@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
 export default function LoginPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { login, isAuthenticated } = useAuth();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
@@ -19,6 +20,16 @@ export default function LoginPage() {
 			router.push("/");
 		}
 	}, [isAuthenticated, router]);
+
+	useEffect(() => {
+		// Vérifier les paramètres d'erreur dans l'URL
+		const errorParam = searchParams?.get("error");
+		if (errorParam === "session_expired") {
+			setError("Votre session a expiré. Veuillez vous reconnecter.");
+		} else if (errorParam === "not_authenticated") {
+			setError("Vous devez être connecté pour accéder à cette page.");
+		}
+	}, [searchParams]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();

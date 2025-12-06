@@ -6,8 +6,8 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
-import { accountsApi, customersApi, productsApi } from "@/lib/api";
-import type { Account, AccountStatus, Customer, Product } from "@/types";
+import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi } from "@/lib/api";
+import type { Account, AccountStatus, Customer, Product, Transaction, Hold } from "@/types";
 
 export default function AccountDetailPage() {
 	const params = useParams();
@@ -28,6 +28,16 @@ export default function AccountDetailPage() {
 	const [closeReason, setCloseReason] = useState("");
 	const [freezeReason, setFreezeReason] = useState("");
 	const [suspendReason, setSuspendReason] = useState("");
+	
+	// Transactions et réservations
+	const [transactions, setTransactions] = useState<Transaction[]>([]);
+	const [holds, setHolds] = useState<Hold[]>([]);
+	const [transactionsLoading, setTransactionsLoading] = useState(false);
+	const [holdsLoading, setHoldsLoading] = useState(false);
+	const [showCreateHoldModal, setShowCreateHoldModal] = useState(false);
+	const [holdAmount, setHoldAmount] = useState("");
+	const [holdReason, setHoldReason] = useState("");
+	const [holdExpiresAt, setHoldExpiresAt] = useState("");
 
 	async function load() {
 		setLoading(true);
@@ -64,6 +74,10 @@ export default function AccountDetailPage() {
 			
 			// Attendre que tous les chargements soient terminés
 			await Promise.allSettled(promises);
+			
+			// Charger les transactions et réservations
+			loadTransactions();
+			loadHolds();
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement du compte");
 		} finally {
@@ -76,6 +90,72 @@ export default function AccountDetailPage() {
 			load();
 		}
 	}, [accountId]);
+
+	async function loadTransactions() {
+		if (!accountId) return;
+		setTransactionsLoading(true);
+		try {
+			const response = await transactionsApi.getAccountTransactions(accountId, 0, 10);
+			setTransactions(response.content || []);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement des transactions:", e);
+		} finally {
+			setTransactionsLoading(false);
+		}
+	}
+
+	async function loadHolds() {
+		if (!accountId) return;
+		setHoldsLoading(true);
+		try {
+			const data = await holdsApi.list(accountId);
+			setHolds(data);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement des réservations:", e);
+		} finally {
+			setHoldsLoading(false);
+		}
+	}
+
+	async function handleCreateHold() {
+		if (!holdAmount || !holdReason || !account) {
+			alert("Veuillez remplir tous les champs requis");
+			return;
+		}
+		setActionLoading(true);
+		try {
+			await holdsApi.create(accountId, {
+				amount: parseFloat(holdAmount),
+				currency: account.currency,
+				reason: holdReason,
+				expiresAt: holdExpiresAt || undefined
+			});
+			setShowCreateHoldModal(false);
+			setHoldAmount("");
+			setHoldReason("");
+			setHoldExpiresAt("");
+			await loadHolds();
+			await load(); // Recharger le compte pour mettre à jour le solde disponible
+		} catch (e: any) {
+			alert(e?.message ?? "Erreur lors de la création de la réservation");
+		} finally {
+			setActionLoading(false);
+		}
+	}
+
+	async function handleReleaseHold(holdId: number) {
+		if (!confirm("Êtes-vous sûr de vouloir libérer cette réservation ?")) return;
+		setActionLoading(true);
+		try {
+			await holdsApi.release(holdId);
+			await loadHolds();
+			await load();
+		} catch (e: any) {
+			alert(e?.message ?? "Erreur lors de la libération de la réservation");
+		} finally {
+			setActionLoading(false);
+		}
+	}
 
 	async function handleClose() {
 		if (!closeReason.trim()) {
@@ -647,6 +727,139 @@ export default function AccountDetailPage() {
 				</div>
 			</div>
 
+			{/* Transactions récentes */}
+			<div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Transactions récentes</h2>
+					<div className="flex gap-2">
+						<Link href={`/transactions?accountId=${accountId}`}>
+							<Button variant="outline" size="sm">Voir toutes</Button>
+						</Link>
+						<Link href={`/transactions/new?accountId=${accountId}`}>
+							<Button size="sm">Nouvelle transaction</Button>
+						</Link>
+					</div>
+				</div>
+				{transactionsLoading ? (
+					<div className="text-center py-4 text-gray-500">Chargement...</div>
+				) : transactions.length === 0 ? (
+					<div className="text-center py-4 text-gray-500">Aucune transaction</div>
+				) : (
+					<div className="overflow-x-auto">
+						<table className="w-full">
+							<thead className="bg-gray-50">
+								<tr>
+									<th className="px-4 py-2 text-left text-sm font-medium">Numéro</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Type</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Montant</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Statut</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Date</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Actions</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y">
+								{transactions.map((txn) => (
+									<tr key={txn.id} className="hover:bg-gray-50">
+										<td className="px-4 py-2 text-sm">
+											<Link href={`/transactions/${txn.id}`} className="text-blue-600 hover:underline">
+												{txn.transactionNumber}
+											</Link>
+										</td>
+										<td className="px-4 py-2 text-sm">{txn.type}</td>
+										<td className="px-4 py-2 text-sm font-medium">
+											{formatCurrency(txn.amount, txn.currency)}
+										</td>
+										<td className="px-4 py-2 text-sm">
+											<Badge className={
+												txn.status === "COMPLETED" ? "bg-green-100 text-green-800" :
+												txn.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+												txn.status === "FAILED" ? "bg-red-100 text-red-800" :
+												"bg-gray-100 text-gray-800"
+											}>
+												{txn.status}
+											</Badge>
+										</td>
+										<td className="px-4 py-2 text-sm text-gray-600">
+											{new Date(txn.transactionDate).toLocaleDateString("fr-FR")}
+										</td>
+										<td className="px-4 py-2 text-sm">
+											<Link href={`/transactions/${txn.id}`} className="text-blue-600 hover:underline">
+												Voir
+											</Link>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+			</div>
+
+			{/* Réservations */}
+			<div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Réservations</h2>
+					{account?.status === "ACTIVE" && (
+						<Button size="sm" onClick={() => setShowCreateHoldModal(true)}>
+							Créer une réservation
+						</Button>
+					)}
+				</div>
+				{holdsLoading ? (
+					<div className="text-center py-4 text-gray-500">Chargement...</div>
+				) : holds.length === 0 ? (
+					<div className="text-center py-4 text-gray-500">Aucune réservation</div>
+				) : (
+					<div className="overflow-x-auto">
+						<table className="w-full">
+							<thead className="bg-gray-50">
+								<tr>
+									<th className="px-4 py-2 text-left text-sm font-medium">Montant</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Raison</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Statut</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Expire le</th>
+									<th className="px-4 py-2 text-left text-sm font-medium">Actions</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y">
+								{holds.map((hold) => (
+									<tr key={hold.id} className="hover:bg-gray-50">
+										<td className="px-4 py-2 text-sm font-medium">
+											{formatCurrency(hold.amount, hold.currency)}
+										</td>
+										<td className="px-4 py-2 text-sm">{hold.reason}</td>
+										<td className="px-4 py-2 text-sm">
+											<Badge className={
+												hold.status === "PENDING" ? "bg-yellow-100 text-yellow-800" :
+												hold.status === "APPLIED" ? "bg-green-100 text-green-800" :
+												hold.status === "RELEASED" ? "bg-gray-100 text-gray-800" :
+												"bg-red-100 text-red-800"
+											}>
+												{hold.status}
+											</Badge>
+										</td>
+										<td className="px-4 py-2 text-sm text-gray-600">
+											{hold.expiresAt ? new Date(hold.expiresAt).toLocaleDateString("fr-FR") : "—"}
+										</td>
+										<td className="px-4 py-2 text-sm">
+											{hold.status === "PENDING" && (
+												<button
+													onClick={() => handleReleaseHold(hold.id)}
+													className="text-red-600 hover:underline"
+													disabled={actionLoading}
+												>
+													Libérer
+												</button>
+											)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				)}
+			</div>
+
 			{/* Modales */}
 			{showCloseModal && (
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -728,6 +941,59 @@ export default function AccountDetailPage() {
 								</Button>
 								<Button onClick={handleSuspend} disabled={actionLoading}>
 									Suspendre le compte
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Modal de création de réservation */}
+			{showCreateHoldModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold mb-4">Créer une réservation</h3>
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium mb-1">Montant *</label>
+								<Input
+									type="number"
+									step="0.01"
+									min="0.01"
+									value={holdAmount}
+									onChange={(e) => setHoldAmount(e.target.value)}
+									placeholder="0.00"
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1">Raison *</label>
+								<textarea
+									value={holdReason}
+									onChange={(e) => setHoldReason(e.target.value)}
+									className="w-full rounded border px-3 py-2"
+									rows={3}
+									placeholder="Raison de la réservation..."
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1">Date d'expiration (optionnel)</label>
+								<Input
+									type="datetime-local"
+									value={holdExpiresAt}
+									onChange={(e) => setHoldExpiresAt(e.target.value)}
+								/>
+							</div>
+							<div className="flex gap-2 justify-end">
+								<Button variant="outline" onClick={() => {
+									setShowCreateHoldModal(false);
+									setHoldAmount("");
+									setHoldReason("");
+									setHoldExpiresAt("");
+								}} disabled={actionLoading}>
+									Annuler
+								</Button>
+								<Button onClick={handleCreateHold} disabled={actionLoading || !holdAmount || !holdReason}>
+									Créer la réservation
 								</Button>
 							</div>
 						</div>

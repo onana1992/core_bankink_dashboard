@@ -43,7 +43,15 @@ import type {
 	CreatePermissionRequest,
 	AssignRoleRequest,
 	AssignPermissionsRequest,
-	UserStatus
+	UserStatus,
+	Transaction,
+	TransactionEntry,
+	Hold,
+	CreateTransactionRequest,
+	ReverseTransactionRequest,
+	CreateHoldRequest,
+	TransactionType,
+	TransactionStatus
 } from "@/types";
 
 // Validate and set API base URL
@@ -70,9 +78,91 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 	}
 
 	if (!res.ok) {
+		// Cloner la réponse pour pouvoir lire le body plusieurs fois si nécessaire
+		const clonedRes = res.clone();
+		
+		// Gérer les erreurs d'authentification (401) - essayer de rafraîchir le token
+		if (res.status === 401 && typeof window !== 'undefined') {
+			const refreshToken = localStorage.getItem('refreshToken');
+			if (refreshToken) {
+				try {
+					const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ refreshToken })
+					});
+					
+					if (!refreshRes.ok) {
+						// Le refresh a échoué, déconnecter l'utilisateur
+						localStorage.removeItem('accessToken');
+						localStorage.removeItem('refreshToken');
+						if (window.location.pathname !== '/login') {
+							window.location.href = '/login?error=session_expired';
+							// Retourner undefined pour éviter de lancer l'erreur
+							// La redirection va se produire, donc on ne continuera pas
+							return undefined as T;
+						}
+					} else {
+						const refreshData = await refreshRes.json();
+						localStorage.setItem('accessToken', refreshData.accessToken);
+						if (refreshData.refreshToken) {
+							localStorage.setItem('refreshToken', refreshData.refreshToken);
+						}
+						// Le token a été rafraîchi, mais on ne peut pas réessayer automatiquement
+						// Lancer une erreur pour que l'appelant sache qu'il doit réessayer
+						throw new Error("Session expirée. Le token a été rafraîchi. Veuillez réessayer l'opération.");
+					}
+				} catch (e) {
+					// Si c'est déjà une Error qu'on a lancée, la relancer
+					if (e instanceof Error) {
+						throw e;
+					}
+					// Erreur lors du refresh, déconnecter
+					localStorage.removeItem('accessToken');
+					localStorage.removeItem('refreshToken');
+					if (window.location.pathname !== '/login') {
+						window.location.href = '/login?error=session_expired';
+						return undefined as T;
+					}
+				}
+			} else {
+				// Pas de refresh token, rediriger vers login
+				if (window.location.pathname !== '/login') {
+					window.location.href = '/login?error=not_authenticated';
+					return undefined as T;
+				}
+			}
+		}
+
+		// Gérer les erreurs d'autorisation (403)
+		if (res.status === 403) {
+			let errorMessage = "Accès refusé. Vous n'avez pas les permissions nécessaires pour effectuer cette action.";
+			try {
+				const text = await clonedRes.text();
+				if (text) {
+					try {
+						const json = JSON.parse(text);
+						if (json.message) {
+							errorMessage = json.message;
+						} else if (json.error) {
+							errorMessage = json.error;
+						} else {
+							errorMessage = text;
+						}
+					} catch {
+						errorMessage = text || errorMessage;
+					}
+				}
+			} catch {
+				// Utiliser le message par défaut si la lecture échoue
+			}
+			throw new Error(errorMessage);
+		}
+
+		// Gérer les autres erreurs
 		let errorMessage = `HTTP ${res.status}`;
 		try {
-			const text = await res.text();
+			const text = await clonedRes.text();
 			if (text) {
 				// Essayer de parser comme JSON pour les erreurs de validation
 				try {
@@ -96,7 +186,7 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 				}
 			}
 		} catch {
-			// Ignorer les erreurs de lecture
+			// Ignorer les erreurs de lecture, utiliser le message par défaut
 		}
 		throw new Error(errorMessage);
 	}
@@ -894,6 +984,134 @@ export const auditApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<AuditEvent[]>(res);
+	}
+};
+
+export const transactionsApi = {
+	async list(params?: {
+		accountId?: number;
+		type?: TransactionType;
+		status?: TransactionStatus;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.accountId) usp.set("accountId", String(params.accountId));
+		if (params?.type) usp.set("type", params.type);
+		if (params?.status) usp.set("status", params.status);
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transactions${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse(res);
+	},
+
+	async get(id: number | string): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getByNumber(transactionNumber: string): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/by-number/${encodeURIComponent(transactionNumber)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async create(payload: CreateTransactionRequest, idempotencyKey?: string): Promise<Transaction> {
+		const headers = getAuthHeaders();
+		if (idempotencyKey) {
+			(headers as any)["Idempotency-Key"] = idempotencyKey;
+		}
+		const res = await fetch(`${API_BASE}/api/transactions`, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getEntries(transactionId: number | string): Promise<TransactionEntry[]> {
+		const res = await fetch(`${API_BASE}/api/transactions/${transactionId}/entries`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<TransactionEntry[]>(res);
+	},
+
+	async reverse(transactionId: number | string, payload: ReverseTransactionRequest): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/${transactionId}/reverse`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getAccountTransactions(accountId: number | string, page?: number, size?: number): Promise<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (page !== undefined) usp.set("page", String(page));
+		if (size !== undefined) usp.set("size", String(size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse(res);
+	}
+};
+
+export const holdsApi = {
+	async list(accountId: number | string): Promise<Hold[]> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/holds`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Hold[]>(res);
+	},
+
+	async get(id: number | string): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Hold>(res);
+	},
+
+	async create(accountId: number | string, payload: CreateHoldRequest): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/holds`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Hold>(res);
+	},
+
+	async release(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	},
+
+	async apply(holdId: number | string, transactionId: number | string): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/transactions/holds/${holdId}/apply?transactionId=${transactionId}`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<Hold>(res);
 	}
 };
 

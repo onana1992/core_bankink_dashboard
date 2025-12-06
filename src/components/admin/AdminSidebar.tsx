@@ -28,7 +28,14 @@ import {
 	Bell,
 	BarChart3,
 	Settings,
-	ChevronRight
+	ChevronRight,
+	TrendingUp,
+	TrendingDown,
+	Move,
+	DollarSign,
+	Sparkles,
+	Settings2,
+	RotateCcw
 } from "lucide-react";
 
 function Chevron() {
@@ -95,6 +102,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 
 					<NavLink href="/products" label={t("sidebar.productCatalog")} icon={Package} collapsed={collapsed} />
 
+					<NavLink href="/transactions" label="Transactions" icon={ArrowLeftRight} collapsed={collapsed} />
 
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
@@ -111,7 +119,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</div>
 					</details>
 
-					<details className="group rounded-md">
+					<details className="group rounded-md" open>
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
 							<span className="flex items-center gap-2">
 								<Repeat className="h-4 w-4 text-gray-700" />
@@ -120,8 +128,15 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
+							<NavLink href="/transactions" label="Toutes les transactions" icon={Repeat} collapsed={collapsed} />
+							<NavLink href="/transactions/deposit" label="Dépôts" icon={TrendingUp} collapsed={collapsed} />
+							<NavLink href="/transactions/withdrawal" label="Retraits" icon={TrendingDown} collapsed={collapsed} />
+							<NavLink href="/transactions/transfer" label="Virements" icon={Move} collapsed={collapsed} />
+							<NavLink href="/transactions/fee" label="Frais" icon={DollarSign} collapsed={collapsed} />
+							<NavLink href="/transactions/interest" label="Intérêts" icon={Sparkles} collapsed={collapsed} />
+							<NavLink href="/transactions/adjustment" label="Ajustements" icon={Settings2} collapsed={collapsed} />
+							<NavLink href="/transactions/reversal" label="Réversions" icon={RotateCcw} collapsed={collapsed} />
 							<NavLink href="/transactions/journal" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
-							<NavLink href="/transfers" label={t("sidebar.transfers")} icon={ArrowLeftRight} collapsed={collapsed} />
 							<NavLink href="/holds" label={t("sidebar.holds")} icon={CheckCircle} collapsed={collapsed} />
 						</div>
 					</details>
