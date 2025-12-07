@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -46,6 +46,10 @@ export default function TransactionListByType({
 	const [size, setSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalElements, setTotalElements] = useState(0);
+	
+	// Tri
+	const [sortBy, setSortBy] = useState<"transactionDate" | "amount" | "transactionNumber">("transactionDate");
+	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
 	useEffect(() => {
 		async function load() {
@@ -65,7 +69,22 @@ export default function TransactionListByType({
 			setError(null);
 			try {
 				const response = await transactionsApi.list({ type: transactionType, page, size });
-				setTransactions(response.content || []);
+				let sortedTransactions = [...(response.content || [])];
+				
+				// Tri côté client (en complément du tri backend)
+				sortedTransactions.sort((a, b) => {
+					let comparison = 0;
+					if (sortBy === "transactionDate") {
+						comparison = new Date(a.transactionDate).getTime() - new Date(b.transactionDate).getTime();
+					} else if (sortBy === "amount") {
+						comparison = a.amount - b.amount;
+					} else if (sortBy === "transactionNumber") {
+						comparison = a.transactionNumber.localeCompare(b.transactionNumber);
+					}
+					return sortDirection === "asc" ? comparison : -comparison;
+				});
+				
+				setTransactions(sortedTransactions);
 				setTotalPages(response.totalPages || 0);
 				setTotalElements(response.totalElements || 0);
 			} catch (e: any) {
@@ -75,7 +94,27 @@ export default function TransactionListByType({
 			}
 		}
 		loadTransactions();
-	}, [page, size, transactionType]);
+	}, [page, size, transactionType, sortBy, sortDirection]);
+
+	const stats = useMemo(() => {
+		const total = totalElements;
+		const by: Record<string, number> = {};
+		let totalAmount = 0;
+		transactions.forEach(txn => {
+			by[txn.status] = (by[txn.status] ?? 0) + 1;
+			if (txn.status === "COMPLETED") {
+				totalAmount += Math.abs(txn.amount);
+			}
+		});
+		return {
+			total,
+			completed: by["COMPLETED"] ?? 0,
+			pending: by["PENDING"] ?? 0,
+			failed: by["FAILED"] ?? 0,
+			processing: by["PROCESSING"] ?? 0,
+			totalAmount
+		};
+	}, [transactions, totalElements]);
 
 	function formatAmount(amount: number, currency: string): string {
 		return new Intl.NumberFormat("fr-FR", {
@@ -126,6 +165,94 @@ export default function TransactionListByType({
 				</div>
 			)}
 
+			{/* Statistiques */}
+			<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-blue-700 mb-1">Total</div>
+							<div className="text-3xl font-bold text-blue-900">{stats.total}</div>
+						</div>
+						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+							</svg>
+						</div>
+					</div>
+				</div>
+				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-green-700 mb-1">Terminées</div>
+							<div className="text-3xl font-bold text-green-900">{stats.completed}</div>
+						</div>
+						<div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+					</div>
+				</div>
+				<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-5 rounded-xl shadow-sm border border-yellow-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-yellow-700 mb-1">En attente</div>
+							<div className="text-3xl font-bold text-yellow-900">{stats.pending}</div>
+						</div>
+						<div className="w-12 h-12 bg-yellow-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+					</div>
+				</div>
+				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-blue-700 mb-1">En traitement</div>
+							<div className="text-3xl font-bold text-blue-900">{stats.processing}</div>
+						</div>
+						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+							</svg>
+						</div>
+					</div>
+				</div>
+				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-red-700 mb-1">Échouées</div>
+							<div className="text-3xl font-bold text-red-900">{stats.failed}</div>
+						</div>
+						<div className="w-12 h-12 bg-red-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Montant total */}
+			{stats.completed > 0 && (
+				<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-5 rounded-xl shadow-sm border border-indigo-200">
+					<div className="flex items-center justify-between">
+						<div>
+							<div className="text-sm font-medium text-indigo-700 mb-1">Montant total (terminées)</div>
+							<div className="text-2xl font-bold text-indigo-900">
+								{formatAmount(stats.totalAmount, transactions[0]?.currency || "XAF")}
+							</div>
+						</div>
+						<div className="w-12 h-12 bg-indigo-200 rounded-lg flex items-center justify-center">
+							<svg className="w-6 h-6 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{loading ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -144,11 +271,68 @@ export default function TransactionListByType({
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Numéro</th>
+									<th 
+										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										onClick={() => {
+											if (sortBy === "transactionNumber") {
+												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+											} else {
+												setSortBy("transactionNumber");
+												setSortDirection("desc");
+											}
+										}}
+									>
+										<div className="flex items-center gap-2">
+											Numéro
+											{sortBy === "transactionNumber" && (
+												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+												</svg>
+											)}
+										</div>
+									</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
+									<th 
+										className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										onClick={() => {
+											if (sortBy === "amount") {
+												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+											} else {
+												setSortBy("amount");
+												setSortDirection("desc");
+											}
+										}}
+									>
+										<div className="flex items-center justify-end gap-2">
+											Montant
+											{sortBy === "amount" && (
+												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+												</svg>
+											)}
+										</div>
+									</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+									<th 
+										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										onClick={() => {
+											if (sortBy === "transactionDate") {
+												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+											} else {
+												setSortBy("transactionDate");
+												setSortDirection("desc");
+											}
+										}}
+									>
+										<div className="flex items-center gap-2">
+											Date
+											{sortBy === "transactionDate" && (
+												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+												</svg>
+											)}
+										</div>
+									</th>
 									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
 								</tr>
 							</thead>

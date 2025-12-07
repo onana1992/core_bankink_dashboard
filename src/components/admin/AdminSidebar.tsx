@@ -102,8 +102,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 
 					<NavLink href="/products" label={t("sidebar.productCatalog")} icon={Package} collapsed={collapsed} />
 
-					<NavLink href="/transactions" label="Transactions" icon={ArrowLeftRight} collapsed={collapsed} />
-
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
 							<span className="flex items-center gap-2">
