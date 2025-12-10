@@ -148,6 +148,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
+							<NavLink href="/transfers" label="Transferts internes" icon={ArrowLeftRight} collapsed={collapsed} />
 							<NavLink href="/payments/outgoing" label={t("sidebar.outgoingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
 							<NavLink href="/payments/incoming" label={t("sidebar.incomingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
 						</div>

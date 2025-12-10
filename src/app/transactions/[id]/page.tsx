@@ -6,8 +6,8 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
-import { transactionsApi, accountsApi } from "@/lib/api";
-import type { Transaction, TransactionEntry, TransactionStatus, Account } from "@/types";
+import { transactionsApi, accountsApi, transfersApi, customersApi } from "@/lib/api";
+import type { Transaction, TransactionEntry, TransactionStatus, Account, Transfer, Customer } from "@/types";
 
 const TRANSACTION_TYPE_LABELS: Record<string, string> = {
 	DEPOSIT: "Dépôt",
@@ -49,6 +49,11 @@ export default function TransactionDetailPage() {
 	const [transaction, setTransaction] = useState<Transaction | null>(null);
 	const [entries, setEntries] = useState<TransactionEntry[]>([]);
 	const [account, setAccount] = useState<Account | null>(null);
+	const [transfer, setTransfer] = useState<Transfer | null>(null);
+	const [fromAccount, setFromAccount] = useState<Account | null>(null);
+	const [toAccount, setToAccount] = useState<Account | null>(null);
+	const [fromClient, setFromClient] = useState<Customer | null>(null);
+	const [toClient, setToClient] = useState<Customer | null>(null);
 	
 	// Réversal
 	const [showReverseModal, setShowReverseModal] = useState(false);
@@ -72,6 +77,44 @@ export default function TransactionDetailPage() {
 					setAccount(accountData);
 				} catch (e) {
 					console.error("Erreur lors du chargement du compte:", e);
+				}
+			}
+
+			// Si c'est une transaction liée à un transfert, charger les informations du transfert
+			if (txnData.referenceType === "TRANSFER" && txnData.referenceId) {
+				try {
+					const transferData = await transfersApi.get(txnData.referenceId);
+					setTransfer(transferData);
+					
+					// Charger les comptes source et destination
+					const [fromAccData, toAccData] = await Promise.all([
+						accountsApi.get(transferData.fromAccountId).catch(() => null),
+						accountsApi.get(transferData.toAccountId).catch(() => null)
+					]);
+					
+					if (fromAccData) {
+						setFromAccount(fromAccData);
+						// Charger le client source
+						try {
+							const clientData = await customersApi.get(fromAccData.clientId);
+							setFromClient(clientData);
+						} catch (e) {
+							console.error("Erreur lors du chargement du client source:", e);
+						}
+					}
+					
+					if (toAccData) {
+						setToAccount(toAccData);
+						// Charger le client destination
+						try {
+							const clientData = await customersApi.get(toAccData.clientId);
+							setToClient(clientData);
+						} catch (e) {
+							console.error("Erreur lors du chargement du client destination:", e);
+						}
+					}
+				} catch (e) {
+					console.error("Erreur lors du chargement du transfert:", e);
 				}
 			}
 		} catch (e: any) {
@@ -257,6 +300,19 @@ export default function TransactionDetailPage() {
 								<dd className="text-sm text-gray-700">{transaction.description}</dd>
 							</div>
 						)}
+						{transfer && (
+							<div className="bg-white rounded-lg p-4 border border-blue-200">
+								<dt className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Transfert interne</dt>
+								<dd className="text-sm">
+									<Link
+										href={`/transfers/${transfer.id}`}
+										className="text-blue-600 hover:text-blue-800 hover:underline font-mono font-medium"
+									>
+										{transfer.transferNumber}
+									</Link>
+								</dd>
+							</div>
+						)}
 					</div>
 				</div>
 
@@ -315,6 +371,122 @@ export default function TransactionDetailPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Informations émetteur/destinataire pour les transferts */}
+			{transfer && (fromAccount || toAccount) && (
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					<div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-6 py-4 border-b border-gray-200">
+						<div className="flex items-center gap-3">
+							<div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center">
+								<svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+								</svg>
+							</div>
+							<div>
+								<h2 className="text-lg font-bold text-gray-900">Informations du transfert</h2>
+								<p className="text-xs text-gray-600">Émetteur et destinataire</p>
+							</div>
+						</div>
+					</div>
+					<div className="p-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* Émetteur */}
+							<div className="bg-red-50 border border-red-200 rounded-lg p-4">
+								<div className="flex items-center gap-2 mb-3">
+									<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+									</svg>
+									<h3 className="font-semibold text-red-900">Émetteur</h3>
+								</div>
+								{fromClient && (
+									<div className="mb-3">
+										<div className="text-xs text-gray-600 mb-1">Client</div>
+										<div className="font-semibold text-gray-900">
+											<Link
+												href={`/customers/${fromClient.id}`}
+												className="text-blue-600 hover:text-blue-800 hover:underline"
+											>
+												{fromClient.displayName}
+											</Link>
+										</div>
+										{fromClient.email && (
+											<div className="text-sm text-gray-600 mt-1">{fromClient.email}</div>
+										)}
+									</div>
+								)}
+								{fromAccount && (
+									<div>
+										<div className="text-xs text-gray-600 mb-1">Compte</div>
+										<div className="font-mono font-semibold text-gray-900">
+											<Link
+												href={`/accounts/${fromAccount.id}`}
+												className="text-blue-600 hover:text-blue-800 hover:underline"
+											>
+												{fromAccount.accountNumber}
+											</Link>
+										</div>
+										<div className="text-sm text-gray-600 mt-1">
+											Solde: {formatAmount(fromAccount.balance, fromAccount.currency)}
+										</div>
+									</div>
+								)}
+							</div>
+
+							{/* Destinataire */}
+							<div className="bg-green-50 border border-green-200 rounded-lg p-4">
+								<div className="flex items-center gap-2 mb-3">
+									<svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+									</svg>
+									<h3 className="font-semibold text-green-900">Destinataire</h3>
+								</div>
+								{toClient && (
+									<div className="mb-3">
+										<div className="text-xs text-gray-600 mb-1">Client</div>
+										<div className="font-semibold text-gray-900">
+											<Link
+												href={`/customers/${toClient.id}`}
+												className="text-blue-600 hover:text-blue-800 hover:underline"
+											>
+												{toClient.displayName}
+											</Link>
+										</div>
+										{toClient.email && (
+											<div className="text-sm text-gray-600 mt-1">{toClient.email}</div>
+										)}
+									</div>
+								)}
+								{toAccount && (
+									<div>
+										<div className="text-xs text-gray-600 mb-1">Compte</div>
+										<div className="font-mono font-semibold text-gray-900">
+											<Link
+												href={`/accounts/${toAccount.id}`}
+												className="text-blue-600 hover:text-blue-800 hover:underline"
+											>
+												{toAccount.accountNumber}
+											</Link>
+										</div>
+										<div className="text-sm text-gray-600 mt-1">
+											Solde: {formatAmount(toAccount.balance, toAccount.currency)}
+										</div>
+									</div>
+								)}
+							</div>
+						</div>
+						{transfer.feeAmount > 0 && (
+							<div className="mt-4 pt-4 border-t border-gray-200">
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-gray-600">Frais de transfert:</span>
+									<span className="font-semibold text-orange-600">
+										{formatAmount(transfer.feeAmount, transfer.currency)}
+									</span>
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 
 			{/* Écritures comptables */}
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

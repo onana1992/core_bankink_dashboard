@@ -51,7 +51,11 @@ import type {
 	ReverseTransactionRequest,
 	CreateHoldRequest,
 	TransactionType,
-	TransactionStatus
+	TransactionStatus,
+	Transfer,
+	CreateTransferRequest,
+	CancelTransferRequest,
+	TransferStatus
 } from "@/types";
 
 // Validate and set API base URL
@@ -1112,6 +1116,89 @@ export const holdsApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<Hold>(res);
+	}
+};
+
+export const transfersApi = {
+	async list(params?: {
+		fromAccountId?: number;
+		toAccountId?: number;
+		status?: TransferStatus;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Transfer[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.fromAccountId) usp.set("fromAccountId", String(params.fromAccountId));
+		if (params?.toAccountId) usp.set("toAccountId", String(params.toAccountId));
+		if (params?.status) usp.set("status", params.status);
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transfers${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse(res);
+	},
+
+	async get(id: number | string): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async getByNumber(transferNumber: string): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/by-number/${encodeURIComponent(transferNumber)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async create(payload: CreateTransferRequest, idempotencyKey?: string): Promise<Transfer> {
+		const headers = getAuthHeaders();
+		if (idempotencyKey) {
+			(headers as any)["Idempotency-Key"] = idempotencyKey;
+		}
+		const res = await fetch(`${API_BASE}/api/transfers`, {
+			method: "POST",
+			headers: {
+				...headers,
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async cancel(id: number | string, payload: CancelTransferRequest): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/${id}/cancel`, {
+			method: "POST",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async getAccountTransfers(accountId: number | string, page?: number, size?: number): Promise<{ content: Transfer[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (page !== undefined) usp.set("page", String(page));
+		if (size !== undefined) usp.set("size", String(size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/transfers${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse(res);
 	}
 };
 
