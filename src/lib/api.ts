@@ -85,6 +85,30 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 		// Cloner la réponse pour pouvoir lire le body plusieurs fois si nécessaire
 		const clonedRes = res.clone();
 		
+		// Fonction helper pour extraire le message d'erreur depuis la réponse
+		async function extractErrorMessage(defaultMessage: string): Promise<string> {
+			try {
+				const text = await clonedRes.text();
+				if (text) {
+					try {
+						const json = JSON.parse(text);
+						if (json.message) {
+							return json.message;
+						} else if (json.error) {
+							return json.error;
+						} else {
+							return text;
+						}
+					} catch {
+						return text || defaultMessage;
+					}
+				}
+			} catch {
+				// Utiliser le message par défaut si la lecture échoue
+			}
+			return defaultMessage;
+		}
+		
 		// Gérer les erreurs d'authentification (401) - essayer de rafraîchir le token
 		if (res.status === 401 && typeof window !== 'undefined') {
 			const refreshToken = localStorage.getItem('refreshToken');
@@ -139,27 +163,69 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 		}
 
 		// Gérer les erreurs d'autorisation (403)
-		if (res.status === 403) {
-			let errorMessage = "Accès refusé. Vous n'avez pas les permissions nécessaires pour effectuer cette action.";
-			try {
-				const text = await clonedRes.text();
-				if (text) {
+		// Parfois Spring Security retourne 403 au lieu de 401 pour les tokens invalides/expirés
+		if (res.status === 403 && typeof window !== 'undefined') {
+			const token = localStorage.getItem('accessToken');
+			// Si on a un token mais qu'on reçoit 403, c'est probablement un problème d'authentification
+			// Essayer de rafraîchir le token
+			if (token) {
+				const refreshToken = localStorage.getItem('refreshToken');
+				if (refreshToken) {
 					try {
-						const json = JSON.parse(text);
-						if (json.message) {
-							errorMessage = json.message;
-						} else if (json.error) {
-							errorMessage = json.error;
+						const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ refreshToken })
+						});
+						
+						if (refreshRes.ok) {
+							const refreshData = await refreshRes.json();
+							localStorage.setItem('accessToken', refreshData.accessToken);
+							if (refreshData.refreshToken) {
+								localStorage.setItem('refreshToken', refreshData.refreshToken);
+							}
+							// Le token a été rafraîchi, mais on ne peut pas réessayer automatiquement
+							throw new Error("Session expirée. Le token a été rafraîchi. Veuillez réessayer l'opération.");
 						} else {
-							errorMessage = text;
+							// Le refresh a échoué, déconnecter l'utilisateur
+							localStorage.removeItem('accessToken');
+							localStorage.removeItem('refreshToken');
+							if (window.location.pathname !== '/login') {
+								window.location.href = '/login?error=session_expired';
+								return undefined as T;
+							}
 						}
-					} catch {
-						errorMessage = text || errorMessage;
+					} catch (e) {
+						// Si c'est déjà une Error qu'on a lancée, la relancer
+						if (e instanceof Error) {
+							throw e;
+						}
+						// Erreur lors du refresh, déconnecter
+						localStorage.removeItem('accessToken');
+						localStorage.removeItem('refreshToken');
+						if (window.location.pathname !== '/login') {
+							window.location.href = '/login?error=session_expired';
+							return undefined as T;
+						}
+					}
+				} else {
+					// Pas de refresh token, rediriger vers login
+					localStorage.removeItem('accessToken');
+					if (window.location.pathname !== '/login') {
+						window.location.href = '/login?error=not_authenticated';
+						return undefined as T;
 					}
 				}
-			} catch {
-				// Utiliser le message par défaut si la lecture échoue
 			}
+			
+			// Si on arrive ici, c'est vraiment un problème de permissions
+			const errorMessage = await extractErrorMessage("Accès refusé. Vous n'avez pas les permissions nécessaires pour effectuer cette action.");
+			throw new Error(errorMessage);
+		}
+
+		// Gérer les erreurs "non trouvé" (404)
+		if (res.status === 404) {
+			const errorMessage = await extractErrorMessage("Ressource non trouvée");
 			throw new Error(errorMessage);
 		}
 
