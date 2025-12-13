@@ -1,3 +1,5 @@
+import type { TransactionType } from './transaction';
+
 export type ProductCategory = "CURRENT_ACCOUNT" | "SAVINGS_ACCOUNT" | "TERM_DEPOSIT" | "LOAN" | "CARD";
 export type ProductStatus = "ACTIVE" | "INACTIVE" | "DRAFT";
 
@@ -83,6 +85,7 @@ export interface ProductFee {
 	id: number;
 	productId: number;
 	feeType: FeeType;
+	transactionType?: TransactionType | null; // Optionnel : pour associer un frais TRANSACTION à un type de transaction spécifique
 	feeName: string;
 	feeAmount?: number | null;
 	feePercentage?: number | null;
@@ -100,6 +103,7 @@ export interface ProductFee {
 
 export interface CreateProductFeeRequest {
 	feeType: FeeType;
+	transactionType?: TransactionType | null; // Optionnel : pour associer un frais TRANSACTION à un type de transaction spécifique
 	feeName: string;
 	feeAmount?: number;
 	feePercentage?: number;

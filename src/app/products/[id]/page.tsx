@@ -48,6 +48,7 @@ import type {
 	LimitType,
 	PeriodType,
 	PenaltyType,
+	TransactionType,
 	PenaltyCalculationBase,
 	EligibilityRuleType,
 	EligibilityOperator,
@@ -1629,6 +1630,7 @@ function FeesTab({
 }) {
 	const [form, setForm] = useState<CreateProductFeeRequest>({
 		feeType: "MONTHLY",
+		transactionType: null,
 		feeName: "",
 		feeCalculationBase: "FIXED",
 		effectiveFrom: new Date().toISOString().split('T')[0],
@@ -1648,10 +1650,19 @@ function FeesTab({
 		setSubmitting(true);
 		setError(null);
 		try {
-			await productsApi.addFee(productId, form);
+			// Préparer les données en mettant à null les champs non pertinents
+			const submitData: CreateProductFeeRequest = {
+				...form,
+				// Si base de calcul est FIXED, mettre feePercentage à null
+				feePercentage: form.feeCalculationBase === "FIXED" ? undefined : form.feePercentage,
+				// Si base de calcul est TRANSACTION_AMOUNT, mettre feeAmount à null
+				feeAmount: form.feeCalculationBase === "TRANSACTION_AMOUNT" ? undefined : form.feeAmount
+			};
+			await productsApi.addFee(productId, submitData);
 			onCloseForm();
 			setForm({
 				feeType: "MONTHLY",
+				transactionType: null,
 				feeName: "",
 				feeCalculationBase: "FIXED",
 				effectiveFrom: new Date().toISOString().split('T')[0],
@@ -1685,7 +1696,25 @@ function FeesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeType}
-								onChange={e => setForm({ ...form, feeType: e.target.value as FeeType })}
+								onChange={e => {
+									const newFeeType = e.target.value as FeeType;
+									// Réinitialiser transactionType si on change de type de frais
+									const newTransactionType = newFeeType === "TRANSACTION" ? form.transactionType : null;
+									// Si le type de transaction devient TRANSFER, ajuster la base de calcul si nécessaire
+									let newCalculationBase = form.feeCalculationBase;
+									if (newFeeType === "TRANSACTION" && newTransactionType === "TRANSFER") {
+										// Si la base de calcul actuelle n'est pas valide pour TRANSFER, la réinitialiser à FIXED
+										if (newCalculationBase !== "FIXED" && newCalculationBase !== "TRANSACTION_AMOUNT") {
+											newCalculationBase = "FIXED";
+										}
+									}
+									setForm({ 
+										...form, 
+										feeType: newFeeType,
+										transactionType: newTransactionType,
+										feeCalculationBase: newCalculationBase
+									});
+								}}
 								required
 							>
 								<option value="OPENING">Ouverture</option>
@@ -1701,6 +1730,43 @@ function FeesTab({
 								<option value="OTHER">Autre</option>
 							</select>
 						</div>
+						{form.feeType === "TRANSACTION" && (
+							<div>
+								<label className="block text-sm mb-1">Type de transaction</label>
+								<select
+									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+									value={form.transactionType ?? ""}
+									onChange={e => {
+										const newTransactionType = e.target.value ? (e.target.value as TransactionType) : null;
+										// Si le type de transaction devient TRANSFER, ajuster la base de calcul si nécessaire
+										let newCalculationBase = form.feeCalculationBase;
+										if (newTransactionType === "TRANSFER") {
+											// Si la base de calcul actuelle n'est pas valide pour TRANSFER, la réinitialiser à FIXED
+											if (newCalculationBase !== "FIXED" && newCalculationBase !== "TRANSACTION_AMOUNT") {
+												newCalculationBase = "FIXED";
+											}
+										}
+										setForm({ 
+											...form, 
+											transactionType: newTransactionType,
+											feeCalculationBase: newCalculationBase
+										});
+									}}
+								>
+									<option value="">Tous les types (NULL)</option>
+									<option value="DEPOSIT">Dépôt</option>
+									<option value="WITHDRAWAL">Retrait</option>
+									<option value="TRANSFER">Virement</option>
+									<option value="FEE">Frais</option>
+									<option value="INTEREST">Intérêt</option>
+									<option value="ADJUSTMENT">Ajustement</option>
+									<option value="REVERSAL">Réversion</option>
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Laissez vide pour que le frais s'applique à tous les types de transactions
+								</p>
+							</div>
+						)}
 						<div>
 							<label className="block text-sm mb-1">Nom du frais *</label>
 							<Input
@@ -1714,13 +1780,33 @@ function FeesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeCalculationBase}
-								onChange={e => setForm({ ...form, feeCalculationBase: e.target.value as FeeCalculationBase })}
+								onChange={e => {
+									const newBase = e.target.value as FeeCalculationBase;
+									// Mettre à null les champs non pertinents selon la base de calcul
+									if (newBase === "FIXED") {
+										setForm({ ...form, feeCalculationBase: newBase, feePercentage: undefined });
+									} else if (newBase === "TRANSACTION_AMOUNT") {
+										setForm({ ...form, feeCalculationBase: newBase, feeAmount: undefined });
+									} else {
+										setForm({ ...form, feeCalculationBase: newBase });
+									}
+								}}
 								required
 							>
-								<option value="FIXED">Fixe</option>
-								<option value="BALANCE">Solde</option>
-								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
-								<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+								{/* Si type de transaction est TRANSFER, afficher uniquement FIXED et TRANSACTION_AMOUNT */}
+								{form.feeType === "TRANSACTION" && form.transactionType === "TRANSFER" ? (
+									<>
+										<option value="FIXED">Fixe</option>
+										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+									</>
+								) : (
+									<>
+										<option value="FIXED">Fixe</option>
+										<option value="BALANCE">Solde</option>
+										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+										<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+									</>
+								)}
 							</select>
 						</div>
 						<div>
@@ -1730,7 +1816,12 @@ function FeesTab({
 								step="0.01"
 								value={form.feeAmount ?? ""}
 								onChange={e => setForm({ ...form, feeAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+								disabled={form.feeCalculationBase === "TRANSACTION_AMOUNT"}
+								className={form.feeCalculationBase === "TRANSACTION_AMOUNT" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
+							{form.feeCalculationBase === "TRANSACTION_AMOUNT" && (
+								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Montant transaction"</p>
+							)}
 						</div>
 						<div>
 							<label className="block text-sm mb-1">Pourcentage</label>
@@ -1739,7 +1830,12 @@ function FeesTab({
 								step="0.0001"
 								value={form.feePercentage ?? ""}
 								onChange={e => setForm({ ...form, feePercentage: e.target.value ? parseFloat(e.target.value) : undefined })}
+								disabled={form.feeCalculationBase === "FIXED"}
+								className={form.feeCalculationBase === "FIXED" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
+							{form.feeCalculationBase === "FIXED" && (
+								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Fixe"</p>
+							)}
 						</div>
 						<div>
 							<label className="block text-sm mb-1">Frais minimum</label>
@@ -1812,7 +1908,12 @@ function FeesTab({
 						<tbody>
 							{fees.map(fee => (
 								<tr key={fee.id} className="border-t">
-									<td className="px-4 py-2">{fee.feeType}</td>
+									<td className="px-4 py-2">
+										{fee.feeType}
+										{fee.feeType === "TRANSACTION" && fee.transactionType && (
+											<span className="text-xs text-gray-500 ml-1">({fee.transactionType})</span>
+										)}
+									</td>
 									<td className="px-4 py-2">{fee.feeName}</td>
 									<td className="px-4 py-2">
 										{fee.feeAmount != null ? `${fee.feeAmount} ${fee.currency}` : ""}
@@ -1881,9 +1982,12 @@ function FeesTab({
 																onCloseForm();
 																setForm({
 																	feeType: fee.feeType,
+																	transactionType: fee.transactionType ?? null,
 																	feeName: fee.feeName,
-																	feeAmount: fee.feeAmount ?? undefined,
-																	feePercentage: fee.feePercentage ?? undefined,
+																	// Mettre feeAmount à null si la base de calcul est TRANSACTION_AMOUNT
+																	feeAmount: fee.feeCalculationBase === "TRANSACTION_AMOUNT" ? undefined : (fee.feeAmount ?? undefined),
+																	// Mettre feePercentage à null si la base de calcul est FIXED
+																	feePercentage: fee.feeCalculationBase === "FIXED" ? undefined : (fee.feePercentage ?? undefined),
 																	feeCalculationBase: fee.feeCalculationBase,
 																	minFee: fee.minFee ?? undefined,
 																	maxFee: fee.maxFee ?? undefined,
@@ -1964,8 +2068,26 @@ function FeesTab({
 										</svg>
 										Type de frais
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeType}</div>
+									<div className="mt-1 font-semibold text-gray-900">
+										{selectedFee.feeType}
+										{selectedFee.feeType === "TRANSACTION" && selectedFee.transactionType && (
+											<span className="text-xs text-gray-500 ml-2">({selectedFee.transactionType})</span>
+										)}
+									</div>
 								</div>
+								{selectedFee.feeType === "TRANSACTION" && (
+									<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
+										<label className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+											</svg>
+											Type de transaction
+										</label>
+										<div className="mt-1 font-semibold text-gray-900">
+											{selectedFee.transactionType || "Tous les types"}
+										</div>
+									</div>
+								)}
 								<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
 									<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2121,7 +2243,15 @@ function FeesTab({
 					setSubmitting(true);
 					setError(null);
 					try {
-						await productsApi.updateFee(productId, selectedFee.id, form);
+						// Préparer les données en mettant à null les champs non pertinents
+						const submitData: CreateProductFeeRequest = {
+							...form,
+							// Si base de calcul est FIXED, mettre feePercentage à null
+							feePercentage: form.feeCalculationBase === "FIXED" ? undefined : form.feePercentage,
+							// Si base de calcul est TRANSACTION_AMOUNT, mettre feeAmount à null
+							feeAmount: form.feeCalculationBase === "TRANSACTION_AMOUNT" ? undefined : form.feeAmount
+						};
+						await productsApi.updateFee(productId, selectedFee.id, submitData);
 						setShowEditForm(false);
 						setSelectedFee(null);
 						onRefresh();
@@ -2152,7 +2282,15 @@ function FeesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeType}
-								onChange={e => setForm({ ...form, feeType: e.target.value as FeeType })}
+								onChange={e => {
+									const newFeeType = e.target.value as FeeType;
+									setForm({ 
+										...form, 
+										feeType: newFeeType,
+										// Réinitialiser transactionType si on change de type de frais
+										transactionType: newFeeType === "TRANSACTION" ? form.transactionType : null
+									});
+								}}
 								required
 							>
 								<option value="OPENING">Ouverture</option>
@@ -2168,6 +2306,43 @@ function FeesTab({
 								<option value="OTHER">Autre</option>
 							</select>
 						</div>
+						{form.feeType === "TRANSACTION" && (
+							<div>
+								<label className="block text-sm mb-1">Type de transaction</label>
+								<select
+									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+									value={form.transactionType ?? ""}
+									onChange={e => {
+										const newTransactionType = e.target.value ? (e.target.value as TransactionType) : null;
+										// Si le type de transaction devient TRANSFER, ajuster la base de calcul si nécessaire
+										let newCalculationBase = form.feeCalculationBase;
+										if (newTransactionType === "TRANSFER") {
+											// Si la base de calcul actuelle n'est pas valide pour TRANSFER, la réinitialiser à FIXED
+											if (newCalculationBase !== "FIXED" && newCalculationBase !== "TRANSACTION_AMOUNT") {
+												newCalculationBase = "FIXED";
+											}
+										}
+										setForm({ 
+											...form, 
+											transactionType: newTransactionType,
+											feeCalculationBase: newCalculationBase
+										});
+									}}
+								>
+									<option value="">Tous les types (NULL)</option>
+									<option value="DEPOSIT">Dépôt</option>
+									<option value="WITHDRAWAL">Retrait</option>
+									<option value="TRANSFER">Virement</option>
+									<option value="FEE">Frais</option>
+									<option value="INTEREST">Intérêt</option>
+									<option value="ADJUSTMENT">Ajustement</option>
+									<option value="REVERSAL">Réversion</option>
+								</select>
+								<p className="text-xs text-gray-500 mt-1">
+									Laissez vide pour que le frais s'applique à tous les types de transactions
+								</p>
+							</div>
+						)}
 						<div>
 							<label className="block text-sm mb-1">Nom du frais *</label>
 							<Input
@@ -2181,13 +2356,33 @@ function FeesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeCalculationBase}
-								onChange={e => setForm({ ...form, feeCalculationBase: e.target.value as FeeCalculationBase })}
+								onChange={e => {
+									const newBase = e.target.value as FeeCalculationBase;
+									// Mettre à null les champs non pertinents selon la base de calcul
+									if (newBase === "FIXED") {
+										setForm({ ...form, feeCalculationBase: newBase, feePercentage: undefined });
+									} else if (newBase === "TRANSACTION_AMOUNT") {
+										setForm({ ...form, feeCalculationBase: newBase, feeAmount: undefined });
+									} else {
+										setForm({ ...form, feeCalculationBase: newBase });
+									}
+								}}
 								required
 							>
-								<option value="FIXED">Fixe</option>
-								<option value="BALANCE">Solde</option>
-								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
-								<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+								{/* Si type de transaction est TRANSFER, afficher uniquement FIXED et TRANSACTION_AMOUNT */}
+								{form.feeType === "TRANSACTION" && form.transactionType === "TRANSFER" ? (
+									<>
+										<option value="FIXED">Fixe</option>
+										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+									</>
+								) : (
+									<>
+										<option value="FIXED">Fixe</option>
+										<option value="BALANCE">Solde</option>
+										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+										<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+									</>
+								)}
 							</select>
 						</div>
 						<div>
@@ -2197,7 +2392,12 @@ function FeesTab({
 								step="0.01"
 								value={form.feeAmount ?? ""}
 								onChange={e => setForm({ ...form, feeAmount: e.target.value ? parseFloat(e.target.value) : undefined })}
+								disabled={form.feeCalculationBase === "TRANSACTION_AMOUNT"}
+								className={form.feeCalculationBase === "TRANSACTION_AMOUNT" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
+							{form.feeCalculationBase === "TRANSACTION_AMOUNT" && (
+								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Montant transaction"</p>
+							)}
 						</div>
 						<div>
 							<label className="block text-sm mb-1">Pourcentage</label>
@@ -2206,7 +2406,12 @@ function FeesTab({
 								step="0.0001"
 								value={form.feePercentage ?? ""}
 								onChange={e => setForm({ ...form, feePercentage: e.target.value ? parseFloat(e.target.value) : undefined })}
+								disabled={form.feeCalculationBase === "FIXED"}
+								className={form.feeCalculationBase === "FIXED" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
+							{form.feeCalculationBase === "FIXED" && (
+								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Fixe"</p>
+							)}
 						</div>
 						<div>
 							<label className="block text-sm mb-1">Frais minimum</label>
