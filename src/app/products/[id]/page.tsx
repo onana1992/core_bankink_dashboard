@@ -63,7 +63,7 @@ export default function ProductDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [product, setProduct] = useState<Product | null>(null);
-	const [activeTab, setActiveTab] = useState<"overview" | "rates" | "fees" | "limits" | "periods" | "penalties" | "eligibility">("overview");
+	const [activeTab, setActiveTab] = useState<"overview" | "rates" | "fees" | "limits" | "periods" | "penalties" | "eligibility" | "gl-mappings">("overview");
 
 	// Data states
 	const [interestRates, setInterestRates] = useState<ProductInterestRate[]>([]);
@@ -72,6 +72,7 @@ export default function ProductDetailPage() {
 	const [periods, setPeriods] = useState<ProductPeriod[]>([]);
 	const [penalties, setPenalties] = useState<ProductPenalty[]>([]);
 	const [eligibilityRules, setEligibilityRules] = useState<ProductEligibilityRule[]>([]);
+	const [glMappings, setGlMappings] = useState<import("@/types").ProductGLMapping[]>([]);
 	const [loadingConfigs, setLoadingConfigs] = useState(false);
 
 	// Form states
@@ -81,6 +82,7 @@ export default function ProductDetailPage() {
 	const [showPeriodForm, setShowPeriodForm] = useState(false);
 	const [showPenaltyForm, setShowPenaltyForm] = useState(false);
 	const [showRuleForm, setShowRuleForm] = useState(false);
+	const [showMappingForm, setShowMappingForm] = useState(false);
 
 	async function load() {
 		setLoading(true);
@@ -100,7 +102,8 @@ export default function ProductDetailPage() {
 		setLoadingConfigs(true);
 		try {
 			console.log("Chargement des configurations pour le produit:", id);
-			const [ratesData, feesData, limitsData, periodsData, penaltiesData, rulesData] = await Promise.all([
+			const { productGLMappingsApi } = await import("@/lib/api");
+			const [ratesData, feesData, limitsData, periodsData, penaltiesData, rulesData, mappingsData] = await Promise.all([
 				productsApi.getInterestRates(id).catch(e => {
 					console.error("Erreur lors du chargement des taux d'intérêt:", e);
 					return [];
@@ -124,6 +127,10 @@ export default function ProductDetailPage() {
 				productsApi.getEligibilityRules(id).catch(e => {
 					console.error("Erreur lors du chargement des règles d'éligibilité:", e);
 					return [];
+				}),
+				productGLMappingsApi.list(id).catch(e => {
+					console.error("Erreur lors du chargement des mappings GL:", e);
+					return [];
 				})
 			]);
 			console.log("Données chargées:", {
@@ -140,6 +147,7 @@ export default function ProductDetailPage() {
 			setPeriods(periodsData || []);
 			setPenalties(penaltiesData || []);
 			setEligibilityRules(rulesData || []);
+			setGlMappings(mappingsData || []);
 		} catch (e: any) {
 			console.error("Erreur lors du chargement des configurations:", e);
 			// S'assurer que les états sont initialisés même en cas d'erreur
@@ -149,6 +157,7 @@ export default function ProductDetailPage() {
 			setPeriods([]);
 			setPenalties([]);
 			setEligibilityRules([]);
+			setGlMappings([]);
 		} finally {
 			setLoadingConfigs(false);
 		}
@@ -335,7 +344,8 @@ export default function ProductDetailPage() {
 		{ id: "limits" as const, label: `Limites (${limits.length})` },
 		{ id: "periods" as const, label: `Périodes (${periods.length})` },
 		{ id: "penalties" as const, label: `Pénalités (${penalties.length})` },
-		{ id: "eligibility" as const, label: `Règles d'éligibilité (${eligibilityRules.length})` }
+		{ id: "eligibility" as const, label: `Règles d'éligibilité (${eligibilityRules.length})` },
+		{ id: "gl-mappings" as const, label: `Mappings GL (${glMappings.length})` }
 	];
 
 	return (
@@ -508,6 +518,19 @@ export default function ProductDetailPage() {
 						onRefresh={loadAllConfigurations}
 						showForm={showRuleForm}
 						onCloseForm={() => setShowRuleForm(false)}
+					/>
+				)}
+
+				{activeTab === "gl-mappings" && (
+					<ProductGLMappingsTab
+						productId={id}
+						mappings={glMappings}
+						loading={loadingConfigs}
+						onAdd={() => setShowMappingForm(true)}
+						onDelete={handleDeleteMapping}
+						onRefresh={loadAllConfigurations}
+						showForm={showMappingForm}
+						onCloseForm={() => setShowMappingForm(false)}
 					/>
 				)}
 			</div>
@@ -4886,6 +4909,357 @@ function EligibilityRulesTab({
 						}}>Annuler</Button>
 					</div>
 				</form>
+			)}
+		</div>
+	);
+}
+
+// Component for Product GL Mappings Tab
+function ProductGLMappingsTab({
+	productId,
+	mappings,
+	loading,
+	onAdd,
+	onDelete,
+	onRefresh,
+	showForm,
+	onCloseForm
+}: {
+	productId: string;
+	mappings: import("@/types").ProductGLMapping[];
+	loading?: boolean;
+	onAdd: () => void;
+	onDelete: (id: number) => void;
+	onRefresh: () => void;
+	showForm: boolean;
+	onCloseForm: () => void;
+}) {
+	const [form, setForm] = useState<import("@/types").CreateProductGLMappingRequest>({
+		mappingType: "ASSET_ACCOUNT",
+		ledgerAccountId: 0
+	});
+	const [editingMapping, setEditingMapping] = useState<import("@/types").ProductGLMapping | null>(null);
+	const [ledgerAccounts, setLedgerAccounts] = useState<import("@/types").LedgerAccount[]>([]);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+	useEffect(() => {
+		if (showForm) {
+			loadLedgerAccounts();
+		}
+	}, [showForm]);
+
+	useEffect(() => {
+		if (editingMapping) {
+			setForm({
+				mappingType: editingMapping.mappingType,
+				ledgerAccountId: editingMapping.ledgerAccountId
+			});
+			onAdd(); // Ouvrir le formulaire
+		}
+	}, [editingMapping]);
+
+	async function loadLedgerAccounts() {
+		try {
+			const { ledgerAccountsApi } = await import("@/lib/api");
+			const data = await ledgerAccountsApi.list({ status: "ACTIVE" });
+			setLedgerAccounts(data);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement des comptes GL:", e);
+		}
+	}
+
+	function validateForm(): boolean {
+		const errors: Record<string, string> = {};
+
+		if (!form.ledgerAccountId || form.ledgerAccountId === 0) {
+			errors.ledgerAccountId = "Un compte GL doit être sélectionné";
+		} else {
+			const selectedAccount = ledgerAccounts.find(a => a.id === form.ledgerAccountId);
+			if (!selectedAccount) {
+				errors.ledgerAccountId = "Le compte GL sélectionné n'existe pas";
+			} else if (selectedAccount.status !== "ACTIVE") {
+				errors.ledgerAccountId = "Le compte GL doit être actif";
+			} else {
+				// Vérifier la cohérence du type
+				const requiredTypes: Record<import("@/types").MappingType, import("@/types").AccountType[]> = {
+					ASSET_ACCOUNT: ["ASSET"],
+					LIABILITY_ACCOUNT: ["LIABILITY"],
+					FEE_ACCOUNT: ["EXPENSE", "REVENUE"],
+					INTEREST_ACCOUNT: ["EXPENSE", "REVENUE"],
+					REVENUE_ACCOUNT: ["REVENUE"],
+					EXPENSE_ACCOUNT: ["EXPENSE"]
+				};
+
+				const allowedTypes = requiredTypes[form.mappingType];
+				if (!allowedTypes.includes(selectedAccount.accountType)) {
+					errors.ledgerAccountId = `Le compte GL doit être de type ${allowedTypes.join(" ou ")} pour un mapping ${form.mappingType}`;
+				}
+			}
+		}
+
+		// Vérifier l'unicité du type de mapping
+		const existingMapping = mappings.find(m => m.mappingType === form.mappingType && (!editingMapping || m.id !== editingMapping.id));
+		if (existingMapping) {
+			errors.mappingType = "Un mapping de ce type existe déjà pour ce produit";
+		}
+
+		setValidationErrors(errors);
+		return Object.keys(errors).length === 0;
+	}
+
+	async function handleSubmit(e: React.FormEvent) {
+		e.preventDefault();
+		if (!validateForm()) {
+			return;
+		}
+
+		setSubmitting(true);
+		setError(null);
+		setValidationErrors({});
+		try {
+			const { productGLMappingsApi } = await import("@/lib/api");
+			if (editingMapping) {
+				await productGLMappingsApi.update(productId, editingMapping.id, {
+					mappingType: form.mappingType,
+					ledgerAccountId: form.ledgerAccountId
+				});
+			} else {
+				await productGLMappingsApi.create(productId, form);
+			}
+			setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+			setEditingMapping(null);
+			onCloseForm();
+			onRefresh();
+		} catch (e: any) {
+			setError(e?.message ?? `Erreur lors de la ${editingMapping ? "modification" : "création"}`);
+		} finally {
+			setSubmitting(false);
+		}
+	}
+
+	function getRequiredAccountTypes(mappingType: import("@/types").MappingType): string {
+		const types: Record<import("@/types").MappingType, string> = {
+			ASSET_ACCOUNT: "ASSET",
+			LIABILITY_ACCOUNT: "LIABILITY",
+			FEE_ACCOUNT: "EXPENSE ou REVENUE",
+			INTEREST_ACCOUNT: "EXPENSE ou REVENUE",
+			REVENUE_ACCOUNT: "REVENUE",
+			EXPENSE_ACCOUNT: "EXPENSE"
+		};
+		return types[mappingType] || "";
+	}
+
+	function filterLedgerAccountsByMappingType(mappingType: import("@/types").MappingType): import("@/types").LedgerAccount[] {
+		const requiredTypes: Record<import("@/types").MappingType, import("@/types").AccountType[]> = {
+			ASSET_ACCOUNT: ["ASSET"],
+			LIABILITY_ACCOUNT: ["LIABILITY"],
+			FEE_ACCOUNT: ["EXPENSE", "REVENUE"],
+			INTEREST_ACCOUNT: ["EXPENSE", "REVENUE"],
+			REVENUE_ACCOUNT: ["REVENUE"],
+			EXPENSE_ACCOUNT: ["EXPENSE"]
+		};
+
+		const allowedTypes = requiredTypes[mappingType] || [];
+		return ledgerAccounts.filter(account => 
+			account.status === "ACTIVE" && allowedTypes.includes(account.accountType)
+		);
+	}
+
+	function getMappingTypeLabel(type: import("@/types").MappingType) {
+		const labels: Record<import("@/types").MappingType, string> = {
+			ASSET_ACCOUNT: "Compte actif",
+			LIABILITY_ACCOUNT: "Compte passif",
+			FEE_ACCOUNT: "Compte frais",
+			INTEREST_ACCOUNT: "Compte intérêts",
+			REVENUE_ACCOUNT: "Compte revenus",
+			EXPENSE_ACCOUNT: "Compte charges"
+		};
+		return labels[type] || type;
+	}
+
+	if (loading) {
+		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+	}
+
+	// Validation des mappings obligatoires
+	const requiredMappings: import("@/types").MappingType[] = ["LIABILITY_ACCOUNT"]; // Exemple: les comptes courants nécessitent un LIABILITY_ACCOUNT
+	const missingMappings = requiredMappings.filter(
+		reqType => !mappings.some(m => m.mappingType === reqType)
+	);
+
+	return (
+		<div className="space-y-4">
+			<div className="flex justify-between items-center">
+				<div>
+					<h3 className="text-lg font-semibold">Mappings Grand Livre</h3>
+					{missingMappings.length > 0 && (
+						<p className="text-sm text-orange-600 mt-1">
+							⚠️ Mappings manquants: {missingMappings.map(t => getMappingTypeLabel(t)).join(", ")}
+						</p>
+					)}
+				</div>
+				{!showForm && (
+					<Button onClick={onAdd}>Ajouter un mapping</Button>
+				)}
+			</div>
+
+			{error && (
+				<div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+					{error}
+				</div>
+			)}
+
+			{showForm && (
+				<form onSubmit={handleSubmit} className="border rounded-md p-4 space-y-4 bg-gray-50">
+					<div className="flex justify-between items-center mb-4">
+						<h4 className="font-semibold">
+							{editingMapping ? "Modifier le mapping GL" : "Nouveau mapping GL"}
+						</h4>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => {
+								onCloseForm();
+								setEditingMapping(null);
+								setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+								setValidationErrors({});
+							}}
+						>
+							✕
+						</Button>
+					</div>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm mb-1">Type de mapping *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.mappingType}
+								onChange={e => {
+									const newType = e.target.value as import("@/types").MappingType;
+									setForm({ ...form, mappingType: newType, ledgerAccountId: 0 }); // Réinitialiser le compte GL
+									if (validationErrors.mappingType) {
+										setValidationErrors({ ...validationErrors, mappingType: "" });
+									}
+								}}
+								required
+								disabled={!!editingMapping}
+								className={editingMapping ? "bg-gray-100" : ""}
+							>
+								<option value="ASSET_ACCOUNT">Compte actif</option>
+								<option value="LIABILITY_ACCOUNT">Compte passif</option>
+								<option value="FEE_ACCOUNT">Compte frais</option>
+								<option value="INTEREST_ACCOUNT">Compte intérêts</option>
+								<option value="REVENUE_ACCOUNT">Compte revenus</option>
+								<option value="EXPENSE_ACCOUNT">Compte charges</option>
+							</select>
+							{validationErrors.mappingType && (
+								<p className="text-xs text-red-600 mt-1">{validationErrors.mappingType}</p>
+							)}
+							<p className="text-xs text-gray-500 mt-1">
+								Comptes GL requis: {getRequiredAccountTypes(form.mappingType)}
+							</p>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">Compte GL *</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.ledgerAccountId}
+								onChange={e => {
+									setForm({ ...form, ledgerAccountId: parseInt(e.target.value) });
+									if (validationErrors.ledgerAccountId) {
+										setValidationErrors({ ...validationErrors, ledgerAccountId: "" });
+									}
+								}}
+								required
+							>
+								<option value={0}>Sélectionner un compte GL</option>
+								{filterLedgerAccountsByMappingType(form.mappingType).map(account => (
+									<option key={account.id} value={account.id}>
+										{account.code} - {account.name} ({account.currency}) - {account.accountType}
+									</option>
+								))}
+							</select>
+							{validationErrors.ledgerAccountId && (
+								<p className="text-xs text-red-600 mt-1">{validationErrors.ledgerAccountId}</p>
+							)}
+							{filterLedgerAccountsByMappingType(form.mappingType).length === 0 && (
+								<p className="text-xs text-orange-600 mt-1">
+									Aucun compte GL actif disponible pour ce type de mapping
+								</p>
+							)}
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button type="submit" disabled={submitting}>
+							{submitting ? (editingMapping ? "Modification..." : "Création...") : (editingMapping ? "Modifier" : "Créer")}
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => {
+								onCloseForm();
+								setEditingMapping(null);
+								setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+								setValidationErrors({});
+							}}
+						>
+							Annuler
+						</Button>
+					</div>
+				</form>
+			)}
+
+			{mappings.length === 0 ? (
+				<div className="text-center py-8 text-gray-500">Aucun mapping GL configuré</div>
+			) : (
+				<div className="bg-white rounded-lg shadow overflow-hidden">
+					<table className="min-w-full divide-y divide-gray-200">
+						<thead className="bg-gray-50">
+							<tr>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type de mapping</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compte GL</th>
+								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+							</tr>
+						</thead>
+						<tbody className="bg-white divide-y divide-gray-200">
+							{mappings.map(mapping => {
+								const account = ledgerAccounts.find(a => a.id === mapping.ledgerAccountId);
+								return (
+									<tr key={mapping.id} className="hover:bg-gray-50">
+										<td className="px-4 py-3 text-sm">
+											<Badge>{getMappingTypeLabel(mapping.mappingType)}</Badge>
+										</td>
+										<td className="px-4 py-3 text-sm text-gray-900">
+											{account ? `${account.code} - ${account.name}` : `ID: ${mapping.ledgerAccountId}`}
+										</td>
+										<td className="px-4 py-3 text-sm">
+											<div className="flex gap-2">
+												<button
+													onClick={() => setEditingMapping(mapping)}
+													className="text-green-600 hover:text-green-800"
+												>
+													Modifier
+												</button>
+												<button
+													onClick={() => {
+														if (confirm("Êtes-vous sûr de vouloir supprimer ce mapping ?")) {
+															onDelete(mapping.id);
+														}
+													}}
+													className="text-red-600 hover:text-red-800"
+												>
+													Supprimer
+												</button>
+											</div>
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
 			)}
 		</div>
 	);

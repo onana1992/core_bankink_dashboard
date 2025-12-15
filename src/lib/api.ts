@@ -48,6 +48,18 @@ import type {
 	TransactionEntry,
 	Hold,
 	CreateTransactionRequest,
+	ChartOfAccount,
+	LedgerAccount,
+	ProductGLMapping,
+	CreateChartOfAccountRequest,
+	UpdateChartOfAccountRequest,
+	CreateLedgerAccountRequest,
+	UpdateLedgerAccountRequest,
+	CreateProductGLMappingRequest,
+	UpdateProductGLMappingRequest,
+	AccountType,
+	LedgerAccountStatus,
+	MappingType,
 	ReverseTransactionRequest,
 	CreateHoldRequest,
 	TransactionType,
@@ -1265,6 +1277,226 @@ export const transfersApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse(res);
+	}
+};
+
+export const chartOfAccountsApi = {
+	async list(params?: {
+		accountType?: AccountType;
+		isActive?: boolean;
+	}): Promise<ChartOfAccount[]> {
+		const usp = new URLSearchParams();
+		if (params?.accountType) usp.set("accountType", params.accountType);
+		if (params?.isActive !== undefined) usp.set("isActive", String(params.isActive));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async getRootAccounts(): Promise<ChartOfAccount[]> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/root`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async get(id: number | string): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async getByCode(code: string): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/by-code/${encodeURIComponent(code)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async getChildren(parentCode: string): Promise<ChartOfAccount[]> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/parent/${encodeURIComponent(parentCode)}/children`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async create(payload: CreateChartOfAccountRequest): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts`, {
+			method: "POST",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async update(id: number | string, payload: UpdateChartOfAccountRequest): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			method: "PUT",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		if (!res.ok) {
+			const error = await handleJsonResponse<{ message?: string }>(res);
+			throw new Error(error?.message || "Erreur lors de la suppression");
+		}
+	}
+};
+
+export const ledgerAccountsApi = {
+	async list(params?: {
+		accountType?: AccountType;
+		currency?: string;
+		status?: LedgerAccountStatus;
+	}): Promise<LedgerAccount[]> {
+		const usp = new URLSearchParams();
+		if (params?.accountType) usp.set("accountType", params.accountType);
+		if (params?.currency) usp.set("currency", params.currency);
+		if (params?.status) usp.set("status", params.status);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/ledger-accounts${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount[]>(res);
+	},
+
+	async get(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async getByCode(code: string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/by-code/${encodeURIComponent(code)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async getByChartOfAccount(chartOfAccountCode: string): Promise<LedgerAccount[]> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/chart-of-account/${encodeURIComponent(chartOfAccountCode)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount[]>(res);
+	},
+
+	async create(payload: CreateLedgerAccountRequest): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts`, {
+			method: "POST",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async update(id: number | string, payload: UpdateLedgerAccountRequest): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+			method: "PUT",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async activate(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/activate`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async deactivate(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/deactivate`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	}
+};
+
+export const productGLMappingsApi = {
+	async list(productId: number | string): Promise<ProductGLMapping[]> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductGLMapping[]>(res);
+	},
+
+	async get(productId: number | string, mappingId: number | string): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async create(productId: number | string, payload: CreateProductGLMappingRequest): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+			method: "POST",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async update(productId: number | string, mappingId: number | string, payload: UpdateProductGLMappingRequest): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			method: "PUT",
+			headers: {
+				...getAuthHeaders(),
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async delete(productId: number | string, mappingId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		if (!res.ok) {
+			const error = await handleJsonResponse<{ message?: string }>(res);
+			throw new Error(error?.message || "Erreur lors de la suppression");
+		}
 	}
 };
 
