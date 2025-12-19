@@ -427,31 +427,41 @@ export default function LedgerAccountsPage() {
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-1">Compte comptable *</label>
-								<select
-									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-									value={form.chartOfAccountCode || ""}
-									onChange={e => {
-										const selected = chartOfAccounts.find(c => c.code === e.target.value);
-										setForm({ 
-											...form, 
-											chartOfAccountCode: e.target.value,
-											accountType: selected?.accountType || form.accountType
-										});
-										if (validationErrors.chartOfAccountCode) {
-											setValidationErrors({ ...validationErrors, chartOfAccountCode: "" });
-										}
-									}}
-									required
-									disabled={!!editingAccount}
-									className={editingAccount ? "bg-gray-100" : ""}
-								>
-									<option value="">Sélectionner un compte comptable</option>
-									{chartOfAccounts.filter(c => c.isActive).map(coa => (
-										<option key={coa.id} value={coa.code}>
-											{coa.code} - {coa.name} ({getAccountTypeLabel(coa.accountType)})
-										</option>
-									))}
-								</select>
+								<div className="relative">
+									<select
+										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
+											editingAccount 
+												? "bg-gray-100 cursor-not-allowed text-gray-500" 
+												: "hover:border-gray-400"
+										} ${validationErrors.chartOfAccountCode ? "border-red-300 focus:ring-red-500 focus:border-red-500" : ""}`}
+										value={form.chartOfAccountCode || ""}
+										onChange={e => {
+											const selected = chartOfAccounts.find(c => c.code === e.target.value);
+											setForm({ 
+												...form, 
+												chartOfAccountCode: e.target.value,
+												accountType: selected?.accountType || form.accountType
+											});
+											if (validationErrors.chartOfAccountCode) {
+												setValidationErrors({ ...validationErrors, chartOfAccountCode: "" });
+											}
+										}}
+										required
+										disabled={!!editingAccount}
+									>
+										<option value="" disabled>Sélectionner un compte comptable</option>
+										{chartOfAccounts.filter(c => c.isActive).map(coa => (
+											<option key={coa.id} value={coa.code}>
+												{coa.code} - {coa.name} ({getAccountTypeLabel(coa.accountType)})
+											</option>
+										))}
+									</select>
+									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+										</svg>
+									</div>
+								</div>
 								{validationErrors.chartOfAccountCode && (
 									<p className="text-xs text-red-600 mt-1">{validationErrors.chartOfAccountCode}</p>
 								)}
@@ -463,26 +473,36 @@ export default function LedgerAccountsPage() {
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-1">Type de compte *</label>
-								<select
-									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-									value={form.accountType}
-									onChange={e => {
-										const newType = e.target.value as AccountType;
-										setForm({ ...form, accountType: newType });
-										if (validationErrors.accountType) {
-											setValidationErrors({ ...validationErrors, accountType: "" });
-										}
-									}}
-									required
-									disabled={!!form.chartOfAccountCode}
-									className={form.chartOfAccountCode ? "bg-gray-100" : ""}
-								>
-									<option value="ASSET">Actif</option>
-									<option value="LIABILITY">Passif</option>
-									<option value="EQUITY">Capitaux propres</option>
-									<option value="REVENUE">Produit</option>
-									<option value="EXPENSE">Charge</option>
-								</select>
+								<div className="relative">
+									<select
+										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
+											form.chartOfAccountCode 
+												? "bg-gray-100 cursor-not-allowed text-gray-500" 
+												: "hover:border-gray-400"
+										} ${validationErrors.accountType ? "border-red-300 focus:ring-red-500 focus:border-red-500" : ""}`}
+										value={form.accountType}
+										onChange={e => {
+											const newType = e.target.value as AccountType;
+											setForm({ ...form, accountType: newType });
+											if (validationErrors.accountType) {
+												setValidationErrors({ ...validationErrors, accountType: "" });
+											}
+										}}
+										required
+										disabled={!!form.chartOfAccountCode}
+									>
+										<option value="ASSET">Actif</option>
+										<option value="LIABILITY">Passif</option>
+										<option value="EQUITY">Capitaux propres</option>
+										<option value="REVENUE">Produit</option>
+										<option value="EXPENSE">Charge</option>
+									</select>
+									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+										</svg>
+									</div>
+								</div>
 								{validationErrors.accountType && (
 									<p className="text-xs text-red-600 mt-1">{validationErrors.accountType}</p>
 								)}

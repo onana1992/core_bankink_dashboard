@@ -112,19 +112,8 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
 							<NavLink href="/accounts" label={t("sidebar.customerAccounts")} icon={Wallet} collapsed={collapsed} />
-							<details className="group rounded-md">
-								<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-									<span className="flex items-center gap-2">
-										<BookOpen className="h-4 w-4 text-gray-700" />
-										<span className={labelClass}>{t("sidebar.grandLivre")}</span>
-									</span>
-									{!collapsed && <Chevron />}
-								</summary>
-								<div className="mt-1 space-y-1 pl-3">
-									<NavLink href="/ledger-accounts" label={t("sidebar.ledgerAccounts")} icon={BookOpen} collapsed={collapsed} />
-									<NavLink href="/chart-of-accounts" label={t("sidebar.chartOfAccounts")} icon={FileText} collapsed={collapsed} />
-								</div>
-							</details>
+							<NavLink href="/gl" label={t("sidebar.glAccounts")} icon={BookOpen} collapsed={collapsed} />
+							<NavLink href="/chart-of-accounts" label={t("sidebar.chartOfAccounts")} icon={FileText} collapsed={collapsed} />
 						</div>
 					</details>
 
@@ -159,7 +148,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/transfers" label="Transferts internes" icon={ArrowLeftRight} collapsed={collapsed} />
 							<NavLink href="/payments/outgoing" label={t("sidebar.outgoingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
 							<NavLink href="/payments/incoming" label={t("sidebar.incomingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
 						</div>

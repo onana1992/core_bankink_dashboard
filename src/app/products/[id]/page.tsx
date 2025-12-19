@@ -289,6 +289,17 @@ export default function ProductDetailPage() {
 		}
 	}
 
+	async function handleDeleteMapping(mappingId: number) {
+		if (!confirm("Êtes-vous sûr de vouloir supprimer ce mapping GL ?")) return;
+		try {
+			const { productGLMappingsApi } = await import("@/lib/api");
+			await productGLMappingsApi.delete(id, mappingId);
+			await loadAllConfigurations();
+		} catch (e: any) {
+			alert(e?.message ?? "Erreur lors de la suppression");
+		}
+	}
+
 	if (loading) {
 		return <div className="p-4">Chargement...</div>;
 	}
@@ -4945,10 +4956,8 @@ function ProductGLMappingsTab({
 	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
 	useEffect(() => {
-		if (showForm) {
-			loadLedgerAccounts();
-		}
-	}, [showForm]);
+		loadLedgerAccounts();
+	}, []);
 
 	useEffect(() => {
 		if (editingMapping) {
@@ -5079,8 +5088,24 @@ function ProductGLMappingsTab({
 		return labels[type] || type;
 	}
 
+	function getAccountTypeLabel(type: import("@/types").AccountType): string {
+		const labels: Record<import("@/types").AccountType, string> = {
+			ASSET: "Actif",
+			LIABILITY: "Passif",
+			EQUITY: "Capitaux propres",
+			REVENUE: "Produit",
+			EXPENSE: "Charge"
+		};
+		return labels[type] || type;
+	}
+
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return (
+			<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
+				<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+				<p className="mt-4 text-gray-600">Chargement des mappings GL...</p>
+			</div>
+		);
 	}
 
 	// Validation des mappings obligatoires
@@ -5090,36 +5115,51 @@ function ProductGLMappingsTab({
 	);
 
 	return (
-		<div className="space-y-4">
+		<div className="space-y-6">
 			<div className="flex justify-between items-center">
 				<div>
-					<h3 className="text-lg font-semibold">Mappings Grand Livre</h3>
+					<h3 className="text-lg font-semibold text-gray-900">Mappings Grand Livre</h3>
+					<p className="text-sm text-gray-600 mt-1">Association des comptes GL aux produits bancaires</p>
 					{missingMappings.length > 0 && (
-						<p className="text-sm text-orange-600 mt-1">
-							⚠️ Mappings manquants: {missingMappings.map(t => getMappingTypeLabel(t)).join(", ")}
-						</p>
+						<div className="mt-3 p-3 bg-orange-50 border-l-4 border-orange-400 rounded-r-md">
+							<p className="text-sm text-orange-800 flex items-center gap-2">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+								</svg>
+								Mappings manquants: {missingMappings.map(t => getMappingTypeLabel(t)).join(", ")}
+							</p>
+						</div>
 					)}
 				</div>
 				{!showForm && (
-					<Button onClick={onAdd}>Ajouter un mapping</Button>
+					<Button onClick={onAdd} className="flex items-center gap-2">
+						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+						</svg>
+						Ajouter un mapping
+					</Button>
 				)}
 			</div>
 
 			{error && (
-				<div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+				<div className="bg-red-50 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded flex items-center gap-2">
+					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+					</svg>
 					{error}
 				</div>
 			)}
 
 			{showForm && (
-				<form onSubmit={handleSubmit} className="border rounded-md p-4 space-y-4 bg-gray-50">
+				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 					<div className="flex justify-between items-center mb-4">
-						<h4 className="font-semibold">
+						<h4 className="text-lg font-semibold text-gray-900">
 							{editingMapping ? "Modifier le mapping GL" : "Nouveau mapping GL"}
 						</h4>
 						<Button
 							type="button"
 							variant="outline"
+							size="sm"
 							onClick={() => {
 								onCloseForm();
 								setEditingMapping(null);
@@ -5130,135 +5170,222 @@ function ProductGLMappingsTab({
 							✕
 						</Button>
 					</div>
-					<div className="grid grid-cols-2 gap-4">
-						<div>
-							<label className="block text-sm mb-1">Type de mapping *</label>
-							<select
-								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-								value={form.mappingType}
-								onChange={e => {
-									const newType = e.target.value as import("@/types").MappingType;
-									setForm({ ...form, mappingType: newType, ledgerAccountId: 0 }); // Réinitialiser le compte GL
-									if (validationErrors.mappingType) {
-										setValidationErrors({ ...validationErrors, mappingType: "" });
-									}
-								}}
-								required
-								disabled={!!editingMapping}
-								className={editingMapping ? "bg-gray-100" : ""}
-							>
-								<option value="ASSET_ACCOUNT">Compte actif</option>
-								<option value="LIABILITY_ACCOUNT">Compte passif</option>
-								<option value="FEE_ACCOUNT">Compte frais</option>
-								<option value="INTEREST_ACCOUNT">Compte intérêts</option>
-								<option value="REVENUE_ACCOUNT">Compte revenus</option>
-								<option value="EXPENSE_ACCOUNT">Compte charges</option>
-							</select>
-							{validationErrors.mappingType && (
-								<p className="text-xs text-red-600 mt-1">{validationErrors.mappingType}</p>
-							)}
-							<p className="text-xs text-gray-500 mt-1">
-								Comptes GL requis: {getRequiredAccountTypes(form.mappingType)}
-							</p>
-						</div>
-						<div>
-							<label className="block text-sm mb-1">Compte GL *</label>
-							<select
-								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-								value={form.ledgerAccountId}
-								onChange={e => {
-									setForm({ ...form, ledgerAccountId: parseInt(e.target.value) });
-									if (validationErrors.ledgerAccountId) {
-										setValidationErrors({ ...validationErrors, ledgerAccountId: "" });
-									}
-								}}
-								required
-							>
-								<option value={0}>Sélectionner un compte GL</option>
-								{filterLedgerAccountsByMappingType(form.mappingType).map(account => (
-									<option key={account.id} value={account.id}>
-										{account.code} - {account.name} ({account.currency}) - {account.accountType}
-									</option>
-								))}
-							</select>
-							{validationErrors.ledgerAccountId && (
-								<p className="text-xs text-red-600 mt-1">{validationErrors.ledgerAccountId}</p>
-							)}
-							{filterLedgerAccountsByMappingType(form.mappingType).length === 0 && (
-								<p className="text-xs text-orange-600 mt-1">
-									Aucun compte GL actif disponible pour ce type de mapping
+					<form onSubmit={handleSubmit} className="space-y-4">
+						<div className="grid grid-cols-2 gap-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Type de mapping *</label>
+								<div className="relative">
+									<select
+										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
+											editingMapping 
+												? "bg-gray-100 cursor-not-allowed text-gray-500" 
+												: "hover:border-gray-400"
+										} ${validationErrors.mappingType ? "border-red-300 focus:ring-red-500 focus:border-red-500" : ""}`}
+										value={form.mappingType}
+										onChange={e => {
+											const newType = e.target.value as import("@/types").MappingType;
+											setForm({ ...form, mappingType: newType, ledgerAccountId: 0 }); // Réinitialiser le compte GL
+											if (validationErrors.mappingType) {
+												setValidationErrors({ ...validationErrors, mappingType: "" });
+											}
+										}}
+										required
+										disabled={!!editingMapping}
+									>
+										<option value="ASSET_ACCOUNT">Compte actif</option>
+										<option value="LIABILITY_ACCOUNT">Compte passif</option>
+										<option value="FEE_ACCOUNT">Compte frais</option>
+										<option value="INTEREST_ACCOUNT">Compte intérêts</option>
+										<option value="REVENUE_ACCOUNT">Compte revenus</option>
+										<option value="EXPENSE_ACCOUNT">Compte charges</option>
+									</select>
+									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+										</svg>
+									</div>
+								</div>
+								{validationErrors.mappingType && (
+									<p className="text-xs text-red-600 mt-1">{validationErrors.mappingType}</p>
+								)}
+								<p className="text-xs text-gray-500 mt-1">
+									Comptes GL requis: <span className="font-medium">{getRequiredAccountTypes(form.mappingType)}</span>
 								</p>
-							)}
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">Compte GL *</label>
+								<div className="relative">
+									<select
+										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
+											validationErrors.ledgerAccountId ? "border-red-300 focus:ring-red-500 focus:border-red-500" : "hover:border-gray-400"
+										}`}
+										value={form.ledgerAccountId}
+										onChange={e => {
+											setForm({ ...form, ledgerAccountId: parseInt(e.target.value) });
+											if (validationErrors.ledgerAccountId) {
+												setValidationErrors({ ...validationErrors, ledgerAccountId: "" });
+											}
+										}}
+										required
+									>
+										<option value={0} disabled>Sélectionner un compte GL</option>
+										{filterLedgerAccountsByMappingType(form.mappingType).map(account => (
+											<option key={account.id} value={account.id}>
+												{account.code} - {account.name} ({account.currency}) - {getAccountTypeLabel(account.accountType)}
+											</option>
+										))}
+									</select>
+									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+										</svg>
+									</div>
+								</div>
+								{validationErrors.ledgerAccountId && (
+									<p className="text-xs text-red-600 mt-1">{validationErrors.ledgerAccountId}</p>
+								)}
+								{filterLedgerAccountsByMappingType(form.mappingType).length === 0 && (
+									<p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+										</svg>
+										Aucun compte GL actif disponible pour ce type de mapping
+									</p>
+								)}
+							</div>
 						</div>
-					</div>
-					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>
-							{submitting ? (editingMapping ? "Modification..." : "Création...") : (editingMapping ? "Modifier" : "Créer")}
-						</Button>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => {
-								onCloseForm();
-								setEditingMapping(null);
-								setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
-								setValidationErrors({});
-							}}
-						>
-							Annuler
-						</Button>
-					</div>
-				</form>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => {
+									onCloseForm();
+									setEditingMapping(null);
+									setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+									setValidationErrors({});
+								}}
+							>
+								Annuler
+							</Button>
+							<Button type="submit" disabled={submitting}>
+								{submitting ? (editingMapping ? "Modification..." : "Création...") : (editingMapping ? "Modifier" : "Créer")}
+							</Button>
+						</div>
+					</form>
+				</div>
 			)}
 
 			{mappings.length === 0 ? (
-				<div className="text-center py-8 text-gray-500">Aucun mapping GL configuré</div>
+				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
+					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+					</svg>
+					<p className="text-gray-500 text-lg font-medium">Aucun mapping GL configuré</p>
+					<p className="text-gray-400 text-sm mt-2">Ajoutez un mapping pour associer ce produit à un compte GL</p>
+				</div>
 			) : (
-				<div className="bg-white rounded-lg shadow overflow-hidden">
-					<table className="min-w-full divide-y divide-gray-200">
-						<thead className="bg-gray-50">
-							<tr>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type de mapping</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compte GL</th>
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-							</tr>
-						</thead>
-						<tbody className="bg-white divide-y divide-gray-200">
-							{mappings.map(mapping => {
-								const account = ledgerAccounts.find(a => a.id === mapping.ledgerAccountId);
-								return (
-									<tr key={mapping.id} className="hover:bg-gray-50">
-										<td className="px-4 py-3 text-sm">
-											<Badge>{getMappingTypeLabel(mapping.mappingType)}</Badge>
-										</td>
-										<td className="px-4 py-3 text-sm text-gray-900">
-											{account ? `${account.code} - ${account.name}` : `ID: ${mapping.ledgerAccountId}`}
-										</td>
-										<td className="px-4 py-3 text-sm">
-											<div className="flex gap-2">
-												<button
-													onClick={() => setEditingMapping(mapping)}
-													className="text-green-600 hover:text-green-800"
-												>
-													Modifier
-												</button>
-												<button
-													onClick={() => {
-														if (confirm("Êtes-vous sûr de vouloir supprimer ce mapping ?")) {
-															onDelete(mapping.id);
-														}
-													}}
-													className="text-red-600 hover:text-red-800"
-												>
-													Supprimer
-												</button>
-											</div>
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					<div className="overflow-x-auto">
+						<table className="min-w-full divide-y divide-gray-200">
+							<thead className="bg-gray-50">
+								<tr>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type de mapping</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte GL</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type de compte</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+								</tr>
+							</thead>
+							<tbody className="bg-white divide-y divide-gray-200">
+								{mappings.map(mapping => {
+									const account = ledgerAccounts.find(a => a.id === mapping.ledgerAccountId);
+									return (
+										<tr key={mapping.id} className="hover:bg-gray-50 transition-colors">
+											<td className="px-6 py-4 whitespace-nowrap">
+												<Badge variant={
+													mapping.mappingType === "ASSET_ACCOUNT" ? "info" :
+													mapping.mappingType === "LIABILITY_ACCOUNT" ? "danger" :
+													mapping.mappingType === "REVENUE_ACCOUNT" ? "success" :
+													mapping.mappingType === "EXPENSE_ACCOUNT" ? "warning" : "neutral"
+												}>
+													{getMappingTypeLabel(mapping.mappingType)}
+												</Badge>
+											</td>
+											<td className="px-6 py-4">
+												{account ? (
+													<Link href={`/ledger-accounts/${account.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+														{account.code} - {account.name}
+													</Link>
+												) : (
+													<span className="text-gray-500">ID: {mapping.ledgerAccountId}</span>
+												)}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												{account ? (
+													<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+														{account.currency}
+													</span>
+												) : (
+													<span className="text-gray-400">-</span>
+												)}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap">
+												{account ? (
+													<Badge variant={
+														account.accountType === "ASSET" ? "info" :
+														account.accountType === "LIABILITY" ? "danger" :
+														account.accountType === "EQUITY" ? "success" :
+														account.accountType === "REVENUE" ? "success" : "warning"
+													}>
+														{getAccountTypeLabel(account.accountType)}
+													</Badge>
+												) : (
+													<span className="text-gray-400">-</span>
+												)}
+											</td>
+											<td className="px-6 py-4 whitespace-nowrap text-right">
+												<div className="flex items-center justify-end gap-2">
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => setEditingMapping(mapping)}
+														className="flex items-center gap-1"
+													>
+														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+														</svg>
+														Modifier
+													</Button>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => {
+															if (confirm("Êtes-vous sûr de vouloir supprimer ce mapping ?")) {
+																onDelete(mapping.id);
+															}
+														}}
+														className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
+													>
+														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+														</svg>
+														Supprimer
+													</Button>
+												</div>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+					{mappings.length > 0 && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+							<p className="text-sm text-gray-600">
+								Affichage de <span className="font-semibold">{mappings.length}</span> mapping{mappings.length > 1 ? "s" : ""}
+							</p>
+						</div>
+					)}
 				</div>
 			)}
 		</div>
