@@ -6,8 +6,8 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
-import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi } from "@/lib/api";
-import type { Account, AccountStatus, Customer, Product, Transaction, Hold } from "@/types";
+import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi, interestsApi, feesApi } from "@/lib/api";
+import type { Account, AccountStatus, Customer, Product, Transaction, Hold, ProductFee } from "@/types";
 
 export default function AccountDetailPage() {
 	const params = useParams();
@@ -38,6 +38,22 @@ export default function AccountDetailPage() {
 	const [holdAmount, setHoldAmount] = useState("");
 	const [holdReason, setHoldReason] = useState("");
 	const [holdExpiresAt, setHoldExpiresAt] = useState("");
+
+	// Intérêts et frais
+	const [interestCalculation, setInterestCalculation] = useState<any>(null);
+	const [interestHistory, setInterestHistory] = useState<Transaction[]>([]);
+	const [applicableFees, setApplicableFees] = useState<ProductFee[]>([]);
+	const [feeHistory, setFeeHistory] = useState<Transaction[]>([]);
+	const [interestLoading, setInterestLoading] = useState(false);
+	const [feeLoading, setFeeLoading] = useState(false);
+	const [showApplyInterestModal, setShowApplyInterestModal] = useState(false);
+	const [showApplyFeeModal, setShowApplyFeeModal] = useState(false);
+	const [interestPeriodDays, setInterestPeriodDays] = useState("30");
+	const [interestDescription, setInterestDescription] = useState("");
+	const [selectedFeeType, setSelectedFeeType] = useState<string>("");
+	const [feeDescription, setFeeDescription] = useState("");
+	const [feeWaive, setFeeWaive] = useState(false);
+	const [feeWaiverReason, setFeeWaiverReason] = useState("");
 
 	async function load() {
 		setLoading(true);
@@ -78,6 +94,11 @@ export default function AccountDetailPage() {
 			// Charger les transactions et réservations
 			loadTransactions();
 			loadHolds();
+			// Charger les intérêts et frais
+			loadInterestCalculation();
+			loadInterestHistory();
+			loadApplicableFees();
+			loadFeeHistory();
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement du compte");
 		} finally {
@@ -108,12 +129,112 @@ export default function AccountDetailPage() {
 		if (!accountId) return;
 		setHoldsLoading(true);
 		try {
-			const data = await holdsApi.list(accountId);
+			const data = await holdsApi.getAccountHolds(accountId);
 			setHolds(data);
 		} catch (e: any) {
 			console.error("Erreur lors du chargement des réservations:", e);
 		} finally {
 			setHoldsLoading(false);
+		}
+	}
+
+	async function loadInterestCalculation() {
+		if (!accountId) return;
+		setInterestLoading(true);
+		try {
+			const data = await interestsApi.calculateInterest(accountId, 30);
+			setInterestCalculation(data);
+		} catch (e: any) {
+			console.error("Erreur lors du calcul des intérêts:", e);
+		} finally {
+			setInterestLoading(false);
+		}
+	}
+
+	async function loadInterestHistory() {
+		if (!accountId) return;
+		try {
+			const fromDate = new Date();
+			fromDate.setMonth(fromDate.getMonth() - 3);
+			const data = await interestsApi.getHistoryList(accountId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+			setInterestHistory(data);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement de l'historique des intérêts:", e);
+		}
+	}
+
+	async function loadApplicableFees() {
+		if (!accountId) return;
+		setFeeLoading(true);
+		try {
+			const data = await feesApi.getApplicableFees(accountId);
+			setApplicableFees(data);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement des frais applicables:", e);
+		} finally {
+			setFeeLoading(false);
+		}
+	}
+
+	async function loadFeeHistory() {
+		if (!accountId) return;
+		try {
+			const fromDate = new Date();
+			fromDate.setMonth(fromDate.getMonth() - 3);
+			const data = await feesApi.getHistoryList(accountId, fromDate.toISOString().split('T')[0], new Date().toISOString().split('T')[0]);
+			setFeeHistory(data);
+		} catch (e: any) {
+			console.error("Erreur lors du chargement de l'historique des frais:", e);
+		}
+	}
+
+	async function handleApplyInterest() {
+		if (!interestPeriodDays || !account) {
+			alert("Veuillez remplir tous les champs requis");
+			return;
+		}
+		setActionLoading(true);
+		try {
+			await interestsApi.applyInterest(accountId, {
+				periodDays: parseInt(interestPeriodDays),
+				description: interestDescription || undefined
+			});
+			setShowApplyInterestModal(false);
+			setInterestPeriodDays("30");
+			setInterestDescription("");
+			await load();
+			await loadInterestHistory();
+		} catch (e: any) {
+			alert(e?.message ?? "Erreur lors de l'application des intérêts");
+		} finally {
+			setActionLoading(false);
+		}
+	}
+
+	async function handleApplyFee() {
+		if (!selectedFeeType || !account) {
+			alert("Veuillez sélectionner un type de frais");
+			return;
+		}
+		setActionLoading(true);
+		try {
+			await feesApi.applyFee(accountId, {
+				feeType: selectedFeeType,
+				description: feeDescription || undefined,
+				waiveFee: feeWaive,
+				waiverReason: feeWaive ? feeWaiverReason : undefined
+			});
+			setShowApplyFeeModal(false);
+			setSelectedFeeType("");
+			setFeeDescription("");
+			setFeeWaive(false);
+			setFeeWaiverReason("");
+			await load();
+			await loadFeeHistory();
+		} catch (e: any) {
+			alert(e?.message ?? "Erreur lors de l'application du frais");
+		} finally {
+			setActionLoading(false);
 		}
 	}
 
@@ -795,6 +916,127 @@ export default function AccountDetailPage() {
 				)}
 			</div>
 
+			{/* Intérêts */}
+			<div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Intérêts</h2>
+					{account?.status === "ACTIVE" && account?.interestRate && parseFloat(account.interestRate.toString()) > 0 && (
+						<Button size="sm" onClick={() => setShowApplyInterestModal(true)}>
+							Appliquer des intérêts
+						</Button>
+					)}
+				</div>
+				{interestLoading ? (
+					<div className="text-center py-4 text-gray-500">Chargement...</div>
+				) : interestCalculation ? (
+					<div className="space-y-4">
+						<div className="grid grid-cols-2 gap-4">
+							<div className="bg-gray-50 p-4 rounded-lg">
+								<dt className="text-sm font-medium text-gray-500 mb-1">Taux d'intérêt</dt>
+								<dd className="text-2xl font-bold text-gray-900">{interestCalculation.interestRate}%</dd>
+							</div>
+							<div className="bg-gray-50 p-4 rounded-lg">
+								<dt className="text-sm font-medium text-gray-500 mb-1">Intérêts estimés (30 jours)</dt>
+								<dd className="text-2xl font-bold text-green-600">{formatCurrency(parseFloat(interestCalculation.calculatedInterest?.toString() || "0"), account.currency)}</dd>
+							</div>
+						</div>
+						{interestHistory.length > 0 && (
+							<div>
+								<h3 className="text-sm font-medium text-gray-700 mb-2">Historique récent</h3>
+								<div className="overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="bg-gray-50">
+											<tr>
+												<th className="px-3 py-2 text-left">Date</th>
+												<th className="px-3 py-2 text-left">Montant</th>
+												<th className="px-3 py-2 text-left">Description</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y">
+											{interestHistory.slice(0, 5).map((tx) => (
+												<tr key={tx.id}>
+													<td className="px-3 py-2">{new Date(tx.transactionDate).toLocaleDateString("fr-FR")}</td>
+													<td className="px-3 py-2 font-medium text-green-600">{formatCurrency(parseFloat(tx.amount.toString()), tx.currency)}</td>
+													<td className="px-3 py-2 text-gray-600">{tx.description || "—"}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						)}
+					</div>
+				) : (
+					<div className="text-center py-4 text-gray-500">Aucun taux d'intérêt configuré</div>
+				)}
+			</div>
+
+			{/* Frais */}
+			<div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Frais</h2>
+					{account?.status === "ACTIVE" && applicableFees.length > 0 && (
+						<Button size="sm" onClick={() => setShowApplyFeeModal(true)}>
+							Appliquer un frais
+						</Button>
+					)}
+				</div>
+				{feeLoading ? (
+					<div className="text-center py-4 text-gray-500">Chargement...</div>
+				) : applicableFees.length > 0 ? (
+					<div className="space-y-4">
+						<div>
+							<h3 className="text-sm font-medium text-gray-700 mb-2">Frais applicables</h3>
+							<div className="space-y-2">
+								{applicableFees.map((fee) => (
+									<div key={fee.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+										<div>
+											<div className="font-medium">{fee.feeName}</div>
+											<div className="text-sm text-gray-600">{fee.feeType}</div>
+										</div>
+										<div className="text-right">
+											{fee.feeAmount && (
+												<div className="font-medium">{formatCurrency(parseFloat(fee.feeAmount.toString()), fee.currency)}</div>
+											)}
+											{fee.feePercentage && (
+												<div className="text-sm text-gray-600">{fee.feePercentage}%</div>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+						{feeHistory.length > 0 && (
+							<div>
+								<h3 className="text-sm font-medium text-gray-700 mb-2">Historique récent</h3>
+								<div className="overflow-x-auto">
+									<table className="w-full text-sm">
+										<thead className="bg-gray-50">
+											<tr>
+												<th className="px-3 py-2 text-left">Date</th>
+												<th className="px-3 py-2 text-left">Montant</th>
+												<th className="px-3 py-2 text-left">Description</th>
+											</tr>
+										</thead>
+										<tbody className="divide-y">
+											{feeHistory.slice(0, 5).map((tx) => (
+												<tr key={tx.id}>
+													<td className="px-3 py-2">{new Date(tx.transactionDate).toLocaleDateString("fr-FR")}</td>
+													<td className="px-3 py-2 font-medium text-red-600">{formatCurrency(parseFloat(tx.amount.toString()), tx.currency)}</td>
+													<td className="px-3 py-2 text-gray-600">{tx.description || "—"}</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						)}
+					</div>
+				) : (
+					<div className="text-center py-4 text-gray-500">Aucun frais configuré</div>
+				)}
+			</div>
+
 			{/* Réservations */}
 			<div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
 				<div className="mb-4 flex items-center justify-between">
@@ -994,6 +1236,115 @@ export default function AccountDetailPage() {
 								</Button>
 								<Button onClick={handleCreateHold} disabled={actionLoading || !holdAmount || !holdReason}>
 									Créer la réservation
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Modal d'application d'intérêts */}
+			{showApplyInterestModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold mb-4">Appliquer des intérêts</h3>
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium mb-1">Nombre de jours *</label>
+								<Input
+									type="number"
+									min="1"
+									value={interestPeriodDays}
+									onChange={(e) => setInterestPeriodDays(e.target.value)}
+									placeholder="30"
+								/>
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1">Description (optionnel)</label>
+								<Input
+									value={interestDescription}
+									onChange={(e) => setInterestDescription(e.target.value)}
+									placeholder="Intérêts mensuels..."
+								/>
+							</div>
+							<div className="flex gap-2 justify-end">
+								<Button variant="outline" onClick={() => {
+									setShowApplyInterestModal(false);
+									setInterestPeriodDays("30");
+									setInterestDescription("");
+								}}>
+									Annuler
+								</Button>
+								<Button onClick={handleApplyInterest} disabled={actionLoading || !interestPeriodDays}>
+									Appliquer
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Modal d'application de frais */}
+			{showApplyFeeModal && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+						<h3 className="text-lg font-semibold mb-4">Appliquer un frais</h3>
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium mb-1">Type de frais *</label>
+								<select
+									value={selectedFeeType}
+									onChange={(e) => setSelectedFeeType(e.target.value)}
+									className="w-full rounded border px-3 py-2"
+								>
+									<option value="">Sélectionner...</option>
+									{applicableFees.map((fee) => (
+										<option key={fee.id} value={fee.feeType}>
+											{fee.feeName} ({fee.feeType})
+										</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1">Description (optionnel)</label>
+								<Input
+									value={feeDescription}
+									onChange={(e) => setFeeDescription(e.target.value)}
+									placeholder="Frais mensuels..."
+								/>
+							</div>
+							<div>
+								<label className="flex items-center gap-2">
+									<input
+										type="checkbox"
+										checked={feeWaive}
+										onChange={(e) => setFeeWaive(e.target.checked)}
+									/>
+									<span className="text-sm">Dispenser le frais</span>
+								</label>
+							</div>
+							{feeWaive && (
+								<div>
+									<label className="block text-sm font-medium mb-1">Raison de l'exemption *</label>
+									<Input
+										value={feeWaiverReason}
+										onChange={(e) => setFeeWaiverReason(e.target.value)}
+										placeholder="Raison..."
+									/>
+								</div>
+							)}
+							<div className="flex gap-2 justify-end">
+								<Button variant="outline" onClick={() => {
+									setShowApplyFeeModal(false);
+									setSelectedFeeType("");
+									setFeeDescription("");
+									setFeeWaive(false);
+									setFeeWaiverReason("");
+								}}>
+									Annuler
+								</Button>
+								<Button onClick={handleApplyFee} disabled={actionLoading || !selectedFeeType || (feeWaive && !feeWaiverReason)}>
+									Appliquer
 								</Button>
 							</div>
 						</div>

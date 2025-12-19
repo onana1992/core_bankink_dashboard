@@ -24,7 +24,13 @@ import type {
 	CreateProductPenaltyRequest,
 	ProductEligibilityRule,
 	CreateProductEligibilityRuleRequest,
+	ProductGLMapping,
+	CreateProductGLMappingRequest,
+	UpdateProductGLMappingRequest,
 	Account,
+	JournalBatch,
+	CreateJournalBatchRequest,
+	LedgerEntry,
 	OpenProductRequest,
 	CloseAccountRequest,
 	FreezeAccountRequest,
@@ -43,7 +49,29 @@ import type {
 	CreatePermissionRequest,
 	AssignRoleRequest,
 	AssignPermissionsRequest,
-	UserStatus
+	UserStatus,
+	ChartOfAccount,
+	CreateChartOfAccountRequest,
+	UpdateChartOfAccountRequest,
+	LedgerAccount,
+	CreateLedgerAccountRequest,
+	UpdateLedgerAccountRequest,
+	AccountType,
+	LedgerAccountStatus,
+	JournalBatchStatus,
+	Transaction,
+	TransactionType,
+	TransactionStatus,
+	CreateTransactionRequest,
+	ReverseTransactionRequest,
+	TransactionEntry,
+	Transfer,
+	TransferStatus,
+	CreateTransferRequest,
+	CancelTransferRequest,
+	Hold,
+	HoldStatus,
+	CreateHoldRequest
 } from "@/types";
 
 // Validate and set API base URL
@@ -70,6 +98,20 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 	}
 
 	if (!res.ok) {
+		// Gérer les erreurs d'authentification (401 Unauthorized)
+		if (res.status === 401) {
+			// Supprimer les tokens invalides
+			if (typeof window !== 'undefined') {
+				localStorage.removeItem('accessToken');
+				localStorage.removeItem('refreshToken');
+				// Rediriger vers la page de login si on n'y est pas déjà
+				if (window.location.pathname !== '/login') {
+					window.location.href = '/login?error=session_expired';
+				}
+			}
+			throw new Error("Authentification requise. Veuillez vous connecter.");
+		}
+
 		let errorMessage = `HTTP ${res.status}`;
 		try {
 			const text = await res.text();
@@ -569,6 +611,50 @@ export const productsApi = {
 	}
 };
 
+export const productGLMappingsApi = {
+	async list(productId: number | string): Promise<ProductGLMapping[]> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductGLMapping[]>(res);
+	},
+
+	async get(productId: number | string, mappingId: number | string): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async create(productId: number | string, payload: CreateProductGLMappingRequest): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async update(productId: number | string, mappingId: number | string, payload: UpdateProductGLMappingRequest): Promise<ProductGLMapping> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductGLMapping>(res);
+	},
+
+	async delete(productId: number | string, mappingId: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	}
+};
+
 export const accountsApi = {
 	async list(params?: { clientId?: number }): Promise<Account[]> {
 		const usp = new URLSearchParams();
@@ -672,6 +758,11 @@ function getAuthHeaders(): HeadersInit {
 	const headers: HeadersInit = { "Content-Type": "application/json" };
 	if (token) {
 		headers["Authorization"] = `Bearer ${token}`;
+	} else if (typeof window !== 'undefined') {
+		// Log uniquement en développement pour déboguer
+		if (process.env.NODE_ENV === 'development') {
+			console.warn("Aucun token d'accès trouvé dans localStorage. L'utilisateur doit se connecter.");
+		}
 	}
 	return headers;
 }
@@ -685,9 +776,11 @@ export const authApi = {
 		});
 		const response = await handleJsonResponse<LoginResponse>(res);
 		// Stocker les tokens
-		if (typeof window !== 'undefined' && response) {
+		if (typeof window !== 'undefined' && response && response.accessToken) {
 			localStorage.setItem('accessToken', response.accessToken);
-			localStorage.setItem('refreshToken', response.refreshToken);
+			if (response.refreshToken) {
+				localStorage.setItem('refreshToken', response.refreshToken);
+			}
 		}
 		return response;
 	},
@@ -894,6 +987,544 @@ export const auditApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<AuditEvent[]>(res);
+	}
+};
+
+export const chartOfAccountsApi = {
+	async list(params?: { accountType?: AccountType; isActive?: boolean }): Promise<ChartOfAccount[]> {
+		const usp = new URLSearchParams();
+		if (params?.accountType) usp.set("accountType", params.accountType);
+		if (params?.isActive !== undefined) usp.set("isActive", String(params.isActive));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async getRootAccounts(): Promise<ChartOfAccount[]> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/root`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async get(id: number | string): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async getByCode(code: string): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/by-code/${encodeURIComponent(code)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async getChildren(parentCode: string): Promise<ChartOfAccount[]> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/parent/${encodeURIComponent(parentCode)}/children`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ChartOfAccount[]>(res);
+	},
+
+	async create(payload: CreateChartOfAccountRequest): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async update(id: number | string, payload: UpdateChartOfAccountRequest): Promise<ChartOfAccount> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ChartOfAccount>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	}
+};
+
+export const ledgerAccountsApi = {
+	async list(params?: { accountType?: AccountType; currency?: string; status?: LedgerAccountStatus }): Promise<LedgerAccount[]> {
+		const usp = new URLSearchParams();
+		if (params?.accountType) usp.set("accountType", params.accountType);
+		if (params?.currency) usp.set("currency", params.currency);
+		if (params?.status) usp.set("status", params.status);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/ledger-accounts${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount[]>(res);
+	},
+
+	async get(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async getByCode(code: string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/by-code/${encodeURIComponent(code)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async create(payload: CreateLedgerAccountRequest): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async update(id: number | string, payload: UpdateLedgerAccountRequest): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async activate(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/activate`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async deactivate(id: number | string): Promise<LedgerAccount> {
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/deactivate`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LedgerAccount>(res);
+	}
+};
+
+export const transactionsApi = {
+	async list(params?: {
+		accountId?: number;
+		type?: TransactionType;
+		status?: TransactionStatus;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.accountId) usp.set("accountId", String(params.accountId));
+		if (params?.type) usp.set("type", params.type);
+		if (params?.status) usp.set("status", params.status);
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transactions${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async get(id: number | string): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getByNumber(transactionNumber: string): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/by-number/${encodeURIComponent(transactionNumber)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getAccountTransactions(accountId: number | string, params?: { page?: number; size?: number }): Promise<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async getEntries(id: number | string): Promise<TransactionEntry[]> {
+		const res = await fetch(`${API_BASE}/api/transactions/${id}/entries`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<TransactionEntry[]>(res);
+	},
+
+	async create(payload: CreateTransactionRequest, idempotencyKey?: string): Promise<Transaction> {
+		const headers = getAuthHeaders();
+		if (idempotencyKey) {
+			(headers as Record<string, string>)["Idempotency-Key"] = idempotencyKey;
+		}
+		const res = await fetch(`${API_BASE}/api/transactions`, {
+			method: "POST",
+			headers: headers,
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async reverse(id: number | string, payload: ReverseTransactionRequest): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/transactions/${id}/reverse`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	}
+};
+
+export const transfersApi = {
+	async list(params?: {
+		fromAccountId?: number;
+		toAccountId?: number;
+		status?: TransferStatus;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Transfer[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.fromAccountId) usp.set("fromAccountId", String(params.fromAccountId));
+		if (params?.toAccountId) usp.set("toAccountId", String(params.toAccountId));
+		if (params?.status) usp.set("status", params.status);
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/transfers${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: Transfer[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async get(id: number | string): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async getByNumber(transferNumber: string): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/by-number/${encodeURIComponent(transferNumber)}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async getAccountTransfers(accountId: number | string): Promise<Transfer[]> {
+		const res = await fetch(`${API_BASE}/api/transfers/accounts/${accountId}/transfers`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transfer[]>(res);
+	},
+
+	async create(payload: CreateTransferRequest, idempotencyKey?: string): Promise<Transfer> {
+		const headers = getAuthHeaders();
+		if (idempotencyKey) {
+			(headers as Record<string, string>)["Idempotency-Key"] = idempotencyKey;
+		}
+		const res = await fetch(`${API_BASE}/api/transfers`, {
+			method: "POST",
+			headers: headers,
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transfer>(res);
+	},
+
+	async cancel(id: number | string, payload: CancelTransferRequest): Promise<Transfer> {
+		const res = await fetch(`${API_BASE}/api/transfers/${id}/cancel`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transfer>(res);
+	}
+};
+
+export const holdsApi = {
+	async get(id: number | string): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Hold>(res);
+	},
+
+	async getAccountHolds(accountId: number | string): Promise<Hold[]> {
+		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/holds`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Hold[]>(res);
+	},
+
+	async create(accountId: number | string, payload: CreateHoldRequest): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/holds`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Hold>(res);
+	},
+
+	async release(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	},
+
+	async apply(holdId: number | string, transactionId: number | string): Promise<Hold> {
+		const res = await fetch(`${API_BASE}/api/transactions/holds/${holdId}/apply?transactionId=${transactionId}`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<Hold>(res);
+	}
+};
+
+export const interestsApi = {
+	async calculateInterest(accountId: number | string, periodDays: number = 30): Promise<any> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/calculation?periodDays=${periodDays}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async applyInterest(accountId: number | string, payload: { periodDays: number; description?: string; valueDate?: string }): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/apply`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getHistory(accountId: number | string, fromDate?: string, toDate?: string, page: number = 0, size: number = 20): Promise<any> {
+		const params = new URLSearchParams();
+		if (fromDate) params.append("fromDate", fromDate);
+		if (toDate) params.append("toDate", toDate);
+		params.append("page", page.toString());
+		params.append("size", size.toString());
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/history?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async getHistoryList(accountId: number | string, fromDate?: string, toDate?: string): Promise<Transaction[]> {
+		const params = new URLSearchParams();
+		if (fromDate) params.append("fromDate", fromDate);
+		if (toDate) params.append("toDate", toDate);
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/history/list?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction[]>(res);
+	}
+};
+
+export const feesApi = {
+	async getApplicableFees(accountId: number | string): Promise<ProductFee[]> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/applicable`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductFee[]>(res);
+	},
+
+	async calculateFee(accountId: number | string, feeType: string): Promise<any> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/calculation?feeType=${feeType}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async applyFee(accountId: number | string, payload: { feeType: string; description?: string; waiveFee?: boolean; waiverReason?: string; valueDate?: string }): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/apply`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async waiveFee(accountId: number | string, payload: { feeType: string; description?: string; waiverReason: string; valueDate?: string }): Promise<Transaction> {
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/waive`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async getHistory(accountId: number | string, fromDate?: string, toDate?: string, page: number = 0, size: number = 20): Promise<any> {
+		const params = new URLSearchParams();
+		if (fromDate) params.append("fromDate", fromDate);
+		if (toDate) params.append("toDate", toDate);
+		params.append("page", page.toString());
+		params.append("size", size.toString());
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/history?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async getHistoryList(accountId: number | string, fromDate?: string, toDate?: string): Promise<Transaction[]> {
+		const params = new URLSearchParams();
+		if (fromDate) params.append("fromDate", fromDate);
+		if (toDate) params.append("toDate", toDate);
+		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/history/list?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction[]>(res);
+	}
+};
+
+export const dashboardApi = {
+	async getStats(): Promise<any> {
+		const res = await fetch(`${API_BASE}/api/dashboard/stats`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async getRecentTransactions(limit: number = 10): Promise<Transaction[]> {
+		const res = await fetch(`${API_BASE}/api/dashboard/recent-transactions?limit=${limit}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Transaction[]>(res);
+	},
+
+	async getRecentAccounts(limit: number = 10): Promise<Account[]> {
+		const res = await fetch(`${API_BASE}/api/dashboard/recent-accounts?limit=${limit}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Account[]>(res);
+	},
+
+	async getTransactionStatsByType(fromDate?: string, toDate?: string): Promise<any> {
+		const params = new URLSearchParams();
+		if (fromDate) params.append("fromDate", fromDate);
+		if (toDate) params.append("toDate", toDate);
+		const res = await fetch(`${API_BASE}/api/dashboard/transaction-stats-by-type?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	}
+};
+
+export const journalBatchesApi = {
+	async list(params?: {
+		status?: JournalBatchStatus;
+		startDate?: string;
+		endDate?: string;
+	}): Promise<JournalBatch[]> {
+		const usp = new URLSearchParams();
+		if (params?.status) usp.set("status", params.status);
+		if (params?.startDate) usp.set("startDate", params.startDate);
+		if (params?.endDate) usp.set("endDate", params.endDate);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/journal-batches${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<JournalBatch[]>(res);
+	},
+
+	async get(id: number | string): Promise<JournalBatch> {
+		const res = await fetch(`${API_BASE}/api/journal-batches/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<JournalBatch>(res);
+	},
+
+	async create(payload: CreateJournalBatchRequest): Promise<JournalBatch> {
+		const res = await fetch(`${API_BASE}/api/journal-batches`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<JournalBatch>(res);
+	},
+
+	async post(id: number | string): Promise<JournalBatch> {
+		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/post`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<JournalBatch>(res);
+	},
+
+	async close(id: number | string): Promise<JournalBatch> {
+		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/close`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<JournalBatch>(res);
+	},
+
+	async getEntries(id: number | string): Promise<LedgerEntry[]> {
+		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/entries`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerEntry[]>(res);
 	}
 };
 

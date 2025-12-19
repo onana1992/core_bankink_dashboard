@@ -18,11 +18,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [user, setUser] = useState<LoginResponse["user"] | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
 	useEffect(() => {
 		// Vérifier si l'utilisateur est déjà authentifié
 		const token = authApi.getAccessToken();
 		if (token) {
+			setIsAuthenticated(true);
 			// Optionnel: charger les infos utilisateur depuis le token ou une API
 			// Pour l'instant, on garde juste le token
 		}
@@ -32,6 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const login = async (username: string, password: string) => {
 		const response = await authApi.login({ username, password });
 		setUser(response.user);
+		// Mettre à jour l'état d'authentification après la connexion
+		setIsAuthenticated(true);
 	};
 
 	const logout = async () => {
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			}
 		}
 		setUser(null);
+		setIsAuthenticated(false);
 	};
 
 	const refreshToken = async () => {
@@ -61,9 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		if (refreshToken) {
 			try {
 				await authApi.refreshToken({ refreshToken });
+				setIsAuthenticated(true);
 			} catch (e) {
 				// Si le refresh échoue, déconnecter l'utilisateur
 				setUser(null);
+				setIsAuthenticated(false);
 			}
 		}
 	};
@@ -72,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		<AuthContext.Provider
 			value={{
 				user,
-				isAuthenticated: !!user || authApi.isAuthenticated(),
+				isAuthenticated,
 				login,
 				logout,
 				refreshToken,

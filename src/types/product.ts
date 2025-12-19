@@ -247,3 +247,26 @@ export interface CreateProductEligibilityRuleRequest {
 	isActive?: boolean;
 }
 
+// GL Mappings
+export type MappingType = "ASSET_ACCOUNT" | "LIABILITY_ACCOUNT" | "FEE_ACCOUNT" | "INTEREST_ACCOUNT" | "REVENUE_ACCOUNT" | "EXPENSE_ACCOUNT";
+
+export interface ProductGLMapping {
+	id: number;
+	productId: number;
+	mappingType: MappingType;
+	ledgerAccountId: number;
+	createdAt?: string;
+	updatedAt?: string;
+	createdBy?: number | null;
+}
+
+export interface CreateProductGLMappingRequest {
+	mappingType: MappingType;
+	ledgerAccountId: number;
+}
+
+export interface UpdateProductGLMappingRequest {
+	mappingType?: MappingType;
+	ledgerAccountId?: number;
+}
+

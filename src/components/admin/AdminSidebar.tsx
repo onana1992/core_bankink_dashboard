@@ -134,7 +134,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							<NavLink href="/transactions/interest" label="Intérêts" icon={Sparkles} collapsed={collapsed} />
 							<NavLink href="/transactions/adjustment" label="Ajustements" icon={Settings2} collapsed={collapsed} />
 							<NavLink href="/transactions/reversal" label="Réversions" icon={RotateCcw} collapsed={collapsed} />
-							<NavLink href="/transactions/journal" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
+							<NavLink href="/journal-batches" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
 							<NavLink href="/holds" label={t("sidebar.holds")} icon={CheckCircle} collapsed={collapsed} />
 						</div>
 					</details>

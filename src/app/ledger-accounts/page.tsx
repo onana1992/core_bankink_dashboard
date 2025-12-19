@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ledgerAccountsApi, chartOfAccountsApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import type { LedgerAccount, AccountType, LedgerAccountStatus, ChartOfAccount, CreateLedgerAccountRequest, UpdateLedgerAccountRequest } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -11,6 +12,7 @@ import Input from "@/components/ui/Input";
 
 export default function LedgerAccountsPage() {
 	const router = useRouter();
+	const { isAuthenticated, loading: authLoading } = useAuth();
 	const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
 	const [chartOfAccounts, setChartOfAccounts] = useState<ChartOfAccount[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -33,9 +35,13 @@ export default function LedgerAccountsPage() {
 	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
 	useEffect(() => {
+		// Ne charger les données que si l'utilisateur est authentifié et que le chargement est terminé
+		if (authLoading) return;
+		if (!isAuthenticated) return;
+		
 		loadAccounts();
 		loadChartOfAccounts();
-	}, [filterAccountType, filterCurrency, filterStatus]);
+	}, [filterAccountType, filterCurrency, filterStatus, authLoading, isAuthenticated]);
 
 	useEffect(() => {
 		if (editingAccount) {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
-import { productsApi } from "@/lib/api";
+import { productsApi, productGLMappingsApi } from "@/lib/api";
 import {
 	Edit2,
 	Package,
@@ -102,7 +102,6 @@ export default function ProductDetailPage() {
 		setLoadingConfigs(true);
 		try {
 			console.log("Chargement des configurations pour le produit:", id);
-			const { productGLMappingsApi } = await import("@/lib/api");
 			const [ratesData, feesData, limitsData, periodsData, penaltiesData, rulesData, mappingsData] = await Promise.all([
 				productsApi.getInterestRates(id).catch(e => {
 					console.error("Erreur lors du chargement des taux d'intérêt:", e);
