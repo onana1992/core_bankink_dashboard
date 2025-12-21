@@ -116,6 +116,29 @@ export interface AssignPermissionsRequest {
 	permissionIds: number[];
 }
 
+export interface AuditStatisticsResponse {
+	totalEvents: number;
+	eventsLast24Hours: number;
+	eventsLast7Days: number;
+	eventsLast30Days: number;
+	eventsByAction: Record<string, number>;
+	eventsByResourceType: Record<string, number>;
+	eventsByUser: Record<string, number>;
+	uniqueUsers: number;
+	uniqueResources: number;
+}
+
+export interface AuditResourceTraceResponse {
+	resourceType: string;
+	resourceId: number;
+	events: AuditEvent[];
+	totalEvents: number;
+	firstEvent: AuditEvent | null;
+	lastEvent: AuditEvent | null;
+}
+
+
+
 
 
 

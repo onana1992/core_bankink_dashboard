@@ -974,7 +974,79 @@ export const auditApi = {
 		resourceType?: string;
 		fromDate?: string;
 		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: AuditEvent[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.userId) usp.set("userId", String(params.userId));
+		if (params?.action) usp.set("action", params.action);
+		if (params?.resourceType) usp.set("resourceType", params.resourceType);
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/audit/events${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: AuditEvent[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async getEvent(id: number): Promise<AuditEvent> {
+		const res = await fetch(`${API_BASE}/api/audit/events/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AuditEvent>(res);
+	},
+
+	async getStatistics(): Promise<import("@/types").AuditStatisticsResponse> {
+		const res = await fetch(`${API_BASE}/api/audit/statistics`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<import("@/types").AuditStatisticsResponse>(res);
+	},
+
+	async getUserActivity(userId: number, params?: {
+		fromDate?: string;
+		toDate?: string;
 	}): Promise<AuditEvent[]> {
+		const usp = new URLSearchParams();
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/audit/users/${userId}/activity${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AuditEvent[]>(res);
+	},
+
+	async getResourceTrace(resourceType: string, resourceId: number): Promise<import("@/types").AuditResourceTraceResponse> {
+		const res = await fetch(`${API_BASE}/api/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<import("@/types").AuditResourceTraceResponse>(res);
+	},
+
+	async getResourceAccesses(resourceType: string, resourceId: number): Promise<AuditEvent[]> {
+		const res = await fetch(`${API_BASE}/api/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}/accesses`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AuditEvent[]>(res);
+	},
+
+	async exportEvents(params?: {
+		userId?: number;
+		action?: string;
+		resourceType?: string;
+		fromDate?: string;
+		toDate?: string;
+	}): Promise<Blob> {
 		const usp = new URLSearchParams();
 		if (params?.userId) usp.set("userId", String(params.userId));
 		if (params?.action) usp.set("action", params.action);
@@ -982,11 +1054,14 @@ export const auditApi = {
 		if (params?.fromDate) usp.set("fromDate", params.fromDate);
 		if (params?.toDate) usp.set("toDate", params.toDate);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/audit/events${query ? `?${query}` : ""}`, {
+		const res = await fetch(`${API_BASE}/api/audit/export${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<AuditEvent[]>(res);
+		if (!res.ok) {
+			throw new Error(`Export failed: ${res.statusText}`);
+		}
+		return res.blob();
 	}
 };
 

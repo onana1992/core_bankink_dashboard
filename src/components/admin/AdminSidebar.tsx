@@ -226,19 +226,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</div>
 					</details>
 
-					<details className="group rounded-md">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-							<span className="flex items-center gap-2">
-								<ScrollText className="h-4 w-4 text-gray-700" />
-								<span className={labelClass}>{t("sidebar.auditCompliance")}</span>
-							</span>
-							{!collapsed && <Chevron />}
-						</summary>
-						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/audit" label="Événements d'audit" icon={ScrollText} collapsed={collapsed} />
-							<NavLink href="/audit/access" label={t("sidebar.accessLogs")} icon={ShieldCheck} collapsed={collapsed} />
-						</div>
-					</details>
+					<NavLink href="/audit" label={t("sidebar.auditCompliance")} icon={ScrollText} collapsed={collapsed} />
 
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
