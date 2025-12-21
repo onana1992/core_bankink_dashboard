@@ -230,7 +230,9 @@ export const customersApi = {
 		const form = new FormData();
 		form.append("file", file);
 		const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-		const headers: HeadersInit = {};
+		const headers: HeadersInit = {
+			...getLanguageHeader()
+		};
 		if (token) {
 			headers["Authorization"] = `Bearer ${token}`;
 		}
@@ -752,10 +754,26 @@ export const accountsApi = {
 	}
 };
 
+// Helper function to get language header
+function getLanguageHeader(): Record<string, string> {
+	if (typeof window === 'undefined') {
+		return {};
+	}
+	// Récupérer la langue depuis localStorage (stockée par i18next)
+	const language = localStorage.getItem('i18nextLng') || 'fr'; // Par défaut 'fr' si non défini
+	// Normaliser le format (enlever les variantes comme 'fr-FR' -> 'fr')
+	const langCode = language.split('-')[0].toLowerCase();
+	return { "X-Language": langCode };
+}
+
 // Helper function to get auth headers
 function getAuthHeaders(): HeadersInit {
 	const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-	const headers: HeadersInit = { "Content-Type": "application/json" };
+	const headers: HeadersInit = { 
+		"Content-Type": "application/json",
+		...getLanguageHeader()
+	};
+	
 	if (token) {
 		headers["Authorization"] = `Bearer ${token}`;
 	} else if (typeof window !== 'undefined') {
@@ -771,7 +789,10 @@ export const authApi = {
 	async login(payload: LoginRequest): Promise<LoginResponse> {
 		const res = await fetch(`${API_BASE}/api/auth/login`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: { 
+				"Content-Type": "application/json",
+				...getLanguageHeader()
+			},
 			body: JSON.stringify(payload)
 		});
 		const response = await handleJsonResponse<LoginResponse>(res);
@@ -788,7 +809,10 @@ export const authApi = {
 	async refreshToken(payload: RefreshTokenRequest): Promise<LoginResponse> {
 		const res = await fetch(`${API_BASE}/api/auth/refresh`, {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: { 
+				"Content-Type": "application/json",
+				...getLanguageHeader()
+			},
 			body: JSON.stringify(payload)
 		});
 		const response = await handleJsonResponse<LoginResponse>(res);
