@@ -158,12 +158,25 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 }
 
 export const customersApi = {
-	async list(): Promise<Customer[]> {
-		const res = await fetch(`${API_BASE}/api/customers`, {
+	async list(params?: {
+		type?: "PERSON" | "BUSINESS";
+		status?: "DRAFT" | "PENDING_REVIEW" | "VERIFIED" | "REJECTED" | "BLOCKED";
+		search?: string;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Customer[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.type) usp.set("type", params.type);
+		if (params?.status) usp.set("status", params.status);
+		if (params?.search) usp.set("search", params.search);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/customers${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<Customer[]>(res);
+		return handleJsonResponse<{ content: Customer[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
 	},
 
 	async create(payload: CreateCustomerRequest): Promise<Customer> {

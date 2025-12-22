@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -21,6 +22,7 @@ import type {
 } from "@/types";
 
 export default function CustomerDetailPage() {
+	const { t } = useTranslation();
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const id = useMemo(() => Number(params?.id), [params]);
@@ -94,12 +96,12 @@ export default function CustomerDetailPage() {
 	const [activeTab, setActiveTab] = useState<string>("overview");
 
 	const tabs = [
-		{ id: "overview", label: "Vue d'ensemble" },
-		{ id: "documents", label: "Documents" },
-		{ id: "addresses", label: "Adresses" },
-		...(customer?.type === "BUSINESS" ? [{ id: "related-persons", label: "Personnes liées" }] : []),
-		{ id: "kyc-actions", label: "Actions KYC" },
-		{ id: "accounts", label: "Comptes" }
+		{ id: "overview", label: t("customer.detail.tabs.overview") },
+		{ id: "documents", label: t("customer.detail.tabs.documents") },
+		{ id: "addresses", label: t("customer.detail.tabs.addresses") },
+		...(customer?.type === "BUSINESS" ? [{ id: "related-persons", label: t("customer.detail.tabs.relatedPersons") }] : []),
+		{ id: "kyc-actions", label: t("customer.detail.tabs.kycActions") },
+		{ id: "accounts", label: t("customer.detail.tabs.accounts") }
 	];
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
@@ -203,7 +205,7 @@ export default function CustomerDetailPage() {
 				phone: customerData.phone ?? ""
 			});
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur inconnue");
+			setError(e?.message ?? t("customer.errors.unknown"));
 		} finally {
 			setLoading(false);
 		}
@@ -224,7 +226,7 @@ export default function CustomerDetailPage() {
 			setCustomer(updated);
 			setIsEditing(false);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la sauvegarde");
+			setError(e?.message ?? t("customer.detail.generalInfo.save") + " - " + t("customer.errors.unknown"));
 		} finally {
 			setSaving(false);
 		}
@@ -263,15 +265,15 @@ export default function CustomerDetailPage() {
 		
 		// Validation côté client
 		if (!addr.line1?.trim()) {
-			setError("La ligne 1 est requise");
+			setError(t("customer.detail.addresses.line1Required"));
 			return;
 		}
 		if (!addr.city?.trim()) {
-			setError("La ville est requise");
+			setError(t("customer.detail.addresses.cityRequired"));
 			return;
 		}
 		if (!addr.country?.trim()) {
-			setError("Le pays est requis");
+			setError(t("customer.detail.addresses.countryRequired"));
 			return;
 		}
 		
@@ -293,7 +295,7 @@ export default function CustomerDetailPage() {
 			setAddresses(updatedAddresses);
 			setAddr(prev => ({ ...prev, line1: "", line2: "", city: "", state: "", postalCode: "", country: "CM" }));
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout de l'adresse");
+			setError(e?.message ?? t("customer.detail.addresses.addError"));
 		} finally {
 			setAddrSubmitting(false);
 		}
@@ -324,15 +326,15 @@ export default function CustomerDetailPage() {
 		
 		// Validation côté client
 		if (!editAddr.line1?.trim()) {
-			setError("La ligne 1 est requise");
+			setError(t("customer.detail.addresses.line1Required"));
 			return;
 		}
 		if (!editAddr.city?.trim()) {
-			setError("La ville est requise");
+			setError(t("customer.detail.addresses.cityRequired"));
 			return;
 		}
 		if (!editAddr.country?.trim()) {
-			setError("Le pays est requis");
+			setError(t("customer.detail.addresses.countryRequired"));
 			return;
 		}
 		
@@ -354,7 +356,7 @@ export default function CustomerDetailPage() {
 			setAddresses(updatedAddresses);
 			cancelEditAddress();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la modification de l'adresse");
+			setError(e?.message ?? t("customer.detail.addresses.updateError"));
 		} finally {
 			setAddrSubmitting(false);
 		}
@@ -366,8 +368,9 @@ export default function CustomerDetailPage() {
 		
 		// Validation: le selfie doit être une image
 		if (docType === "SELFIE" && !docFile.type.startsWith("image/")) {
-			setError("Le selfie doit être une image (JPEG, PNG, etc.)");
-			setToast({ message: "Le selfie doit être une image", type: "error" });
+			const errorMsg = t("customer.detail.documents.selfieError");
+			setError(errorMsg);
+			setToast({ message: errorMsg, type: "error" });
 			return;
 		}
 		
@@ -377,9 +380,9 @@ export default function CustomerDetailPage() {
 			await customersApi.uploadDocument(id, docType, docFile);
 			await load();
 			setDocFile(null);
-			setToast({ message: "Document uploadé avec succès", type: "success" });
+			setToast({ message: t("customer.detail.documents.uploaded"), type: "success" });
 		} catch (e: any) {
-			const errorMessage = e?.message ?? "Erreur lors de l'upload du document";
+			const errorMessage = e?.message ?? t("customer.detail.documents.uploadError");
 			setError(errorMessage);
 			setToast({ message: errorMessage, type: "error" });
 		} finally {
@@ -393,8 +396,9 @@ export default function CustomerDetailPage() {
 		
 		// Validation: le selfie doit être une image
 		if (!selfieFile.type.startsWith("image/")) {
-			setError("Le selfie doit être une image (JPEG, PNG, etc.)");
-			setToast({ message: "Le selfie doit être une image", type: "error" });
+			const errorMsg = t("customer.detail.documents.selfieError");
+			setError(errorMsg);
+			setToast({ message: errorMsg, type: "error" });
 			return;
 		}
 		
@@ -413,9 +417,9 @@ export default function CustomerDetailPage() {
 			if (uploadedDoc) {
 				await loadSelfieImage(uploadedDoc.id);
 			}
-			setToast({ message: "Selfie uploadé avec succès", type: "success" });
+			setToast({ message: t("customer.detail.documents.uploaded"), type: "success" });
 		} catch (e: any) {
-			const errorMessage = e?.message ?? "Erreur lors de l'upload du selfie";
+			const errorMessage = e?.message ?? t("customer.detail.documents.uploadError");
 			setError(errorMessage);
 			setToast({ message: errorMessage, type: "error" });
 		} finally {
@@ -452,9 +456,9 @@ export default function CustomerDetailPage() {
 			setCustomer(c);
 			setShowRejectForm(false);
 			setRejectionReason("");
-			setToast({ message: "KYC rejeté avec succès", type: "success" });
+			setToast({ message: t("customer.detail.kyc.reject.success"), type: "success" });
 		} catch (e: any) {
-			const errorMessage = e?.message ?? "Erreur lors du rejet du KYC";
+			const errorMessage = e?.message ?? t("customer.detail.kyc.reject.error");
 			setError(errorMessage);
 			setToast({ message: errorMessage, type: "error" });
 		} finally {
@@ -469,15 +473,15 @@ export default function CustomerDetailPage() {
 		
 		// Validation
 		if (!rpForm.firstName?.trim()) {
-			setError("Le prénom est requis");
+			setError(t("customer.detail.relatedPersons.firstNameRequired"));
 			return;
 		}
 		if (!rpForm.lastName?.trim()) {
-			setError("Le nom de famille est requis");
+			setError(t("customer.detail.relatedPersons.lastNameRequired"));
 			return;
 		}
 		if (rpForm.role === "UBO" && !rpForm.ownershipPercent) {
-			setError("Le pourcentage de détention est requis pour un UBO");
+			setError(t("customer.detail.relatedPersons.ownershipRequired"));
 			return;
 		}
 		
@@ -501,9 +505,9 @@ export default function CustomerDetailPage() {
 				ownershipPercent: undefined,
 				pepFlag: false
 			});
-			setToast({ message: "Personne liée ajoutée avec succès", type: "success" });
+			setToast({ message: t("customer.detail.relatedPersons.added"), type: "success" });
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout de la personne liée");
+			setError(e?.message ?? t("customer.detail.relatedPersons.addError"));
 		} finally {
 			setRpSubmitting(false);
 		}
@@ -533,15 +537,15 @@ export default function CustomerDetailPage() {
 		
 		// Validation
 		if (!editRpForm.firstName?.trim()) {
-			setError("Le prénom est requis");
+			setError(t("customer.detail.relatedPersons.firstNameRequired"));
 			return;
 		}
 		if (!editRpForm.lastName?.trim()) {
-			setError("Le nom de famille est requis");
+			setError(t("customer.detail.relatedPersons.lastNameRequired"));
 			return;
 		}
 		if (editRpForm.role === "UBO" && !editRpForm.ownershipPercent) {
-			setError("Le pourcentage de détention est requis pour un UBO");
+			setError(t("customer.detail.relatedPersons.ownershipRequired"));
 			return;
 		}
 		
@@ -557,9 +561,9 @@ export default function CustomerDetailPage() {
 			const updated = await customersApi.getRelatedPersons(id);
 			setRelatedPersons(updated);
 			cancelEditRelatedPerson();
-			setToast({ message: "Personne liée mise à jour avec succès", type: "success" });
+			setToast({ message: t("customer.detail.relatedPersons.updated"), type: "success" });
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la modification de la personne liée");
+			setError(e?.message ?? t("customer.detail.relatedPersons.updateError"));
 		} finally {
 			setRpSubmitting(false);
 		}
@@ -567,7 +571,7 @@ export default function CustomerDetailPage() {
 
 	async function deleteRelatedPerson(rpId: number) {
 		if (!id) return;
-		if (!confirm("Êtes-vous sûr de vouloir supprimer cette personne liée ?")) return;
+		if (!confirm(t("customer.detail.relatedPersons.deleteConfirm"))) return;
 		
 		setRpSubmitting(true);
 		setError(null);
@@ -575,9 +579,9 @@ export default function CustomerDetailPage() {
 			await customersApi.deleteRelatedPerson(id, rpId);
 			const updated = await customersApi.getRelatedPersons(id);
 			setRelatedPersons(updated);
-			setToast({ message: "Personne liée supprimée avec succès", type: "success" });
+			setToast({ message: t("customer.detail.relatedPersons.deleted"), type: "success" });
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la suppression de la personne liée");
+			setError(e?.message ?? t("customer.detail.relatedPersons.deleteError"));
 		} finally {
 			setRpSubmitting(false);
 		}
@@ -593,11 +597,11 @@ export default function CustomerDetailPage() {
 			setReviewingDocId(null);
 			setReviewNote("");
 			setToast({ 
-				message: status === "APPROVED" ? "Document approuvé avec succès" : "Document rejeté", 
+				message: status === "APPROVED" ? t("customer.detail.documents.approved") : t("customer.detail.documents.rejected"), 
 				type: "success" 
 			});
 		} catch (e: any) {
-			const errorMessage = e?.message ?? "Erreur lors de la revue du document";
+			const errorMessage = e?.message ?? t("customer.detail.documents.reviewError");
 			setError(errorMessage);
 			setToast({ message: errorMessage, type: "error" });
 		} finally {
@@ -625,8 +629,9 @@ export default function CustomerDetailPage() {
 			setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 		} catch (e) {
 			console.error('Error loading document:', e);
-			setError('Impossible de charger le document');
-			setToast({ message: 'Impossible de charger le document', type: "error" });
+			const errorMsg = t("customer.detail.documents.uploadError");
+			setError(errorMsg);
+			setToast({ message: errorMsg, type: "error" });
 		}
 	}
 
@@ -647,7 +652,7 @@ export default function CustomerDetailPage() {
 			<div className="flex items-center justify-center py-20">
 				<div className="text-center">
 					<div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-					<p className="text-gray-600">Chargement des informations du client...</p>
+					<p className="text-gray-600">{t("customer.detail.loading")}</p>
 				</div>
 			</div>
 		);
@@ -661,8 +666,8 @@ export default function CustomerDetailPage() {
 						<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
 					</svg>
 					<div>
-						<div className="font-medium">Erreur</div>
-						<div className="text-sm mt-1">{error || "Client non trouvé"}</div>
+						<div className="font-medium">{t("customer.detail.error")}</div>
+						<div className="text-sm mt-1">{error || t("customer.detail.notFound")}</div>
 					</div>
 				</div>
 				<Link href="/customers">
@@ -670,7 +675,7 @@ export default function CustomerDetailPage() {
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 						</svg>
-						Retour à la liste
+						{t("customer.detail.backToList")}
 					</Button>
 				</Link>
 			</div>
@@ -693,7 +698,7 @@ export default function CustomerDetailPage() {
 					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 					</svg>
-					Retour à la liste des clients
+					{t("customer.detail.backToList")}
 				</Link>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-4">
@@ -704,9 +709,9 @@ export default function CustomerDetailPage() {
 						</div>
 						<div>
 							<h1 className="text-3xl font-bold text-gray-900">
-								{customer?.displayName || `Client #${id}`}
+								{customer?.displayName || `${t("common.customers")} #${id}`}
 							</h1>
-							<p className="text-gray-600 mt-1">Détails et gestion du client</p>
+							<p className="text-gray-600 mt-1">{t("customer.detail.subtitle")}</p>
 						</div>
 					</div>
 					<div className="flex gap-2">
@@ -714,13 +719,13 @@ export default function CustomerDetailPage() {
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 							</svg>
-							Retour
+							{t("customer.detail.back")}
 						</Button>
 						<Button variant="outline" onClick={load} className="flex items-center gap-2">
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							Rafraîchir
+							{t("common.refresh")}
 						</Button>
 					</div>
 				</div>
@@ -768,8 +773,8 @@ export default function CustomerDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold text-gray-900">Photo du client</h2>
-								<p className="text-xs text-gray-500">Selfie et vérification</p>
+								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.photo.title")}</h2>
+								<p className="text-xs text-gray-500">{t("customer.detail.photo.subtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -780,7 +785,7 @@ export default function CustomerDetailPage() {
 									<div className="relative">
 										<img
 											src={selfieUrl}
-											alt="Selfie du client"
+											alt={t("customer.detail.photo.alt")}
 											className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 shadow-lg"
 											onError={() => setSelfieError(true)}
 											onLoad={() => setSelfieError(false)}
@@ -827,12 +832,12 @@ export default function CustomerDetailPage() {
 												<svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
 												</svg>
-												{selfieFile ? selfieFile.name : "Uploader un selfie"}
+												{selfieFile ? selfieFile.name : t("customer.detail.photo.upload")}
 											</label>
 										</div>
 										{selfieFile && (
 											<Button type="submit" disabled={selfieUploading} size="sm">
-												{selfieUploading ? "Upload..." : "Envoyer"}
+												{selfieUploading ? t("customer.detail.photo.uploading") : t("customer.detail.photo.send")}
 											</Button>
 										)}
 									</form>
@@ -844,7 +849,7 @@ export default function CustomerDetailPage() {
 											rel="noopener noreferrer"
 											className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
 										>
-											Voir le selfie
+											{t("customer.detail.photo.view")}
 										</a>
 										{selfieDocument?.status && (
 											<Badge variant={selfieDocument.status === "APPROVED" ? "success" : selfieDocument.status === "REJECTED" ? "danger" : "warning"}>
@@ -871,19 +876,19 @@ export default function CustomerDetailPage() {
 									</svg>
 								</div>
 								<div>
-									<h2 className="text-lg font-semibold text-gray-900">Informations générales</h2>
-									<p className="text-xs text-gray-500">Détails du client</p>
+									<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.generalInfo.title")}</h2>
+									<p className="text-xs text-gray-500">{t("customer.detail.generalInfo.subtitle")}</p>
 								</div>
 							</div>
 							{!isEditing && customer && (
 								<Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-									Modifier
+									{t("customer.detail.generalInfo.edit")}
 								</Button>
 							)}
 						</div>
 					</div>
 					<div className="p-6">
-						{loading && <div className="text-sm text-gray-500 text-center py-4">Chargement...</div>}
+						{loading && <div className="text-sm text-gray-500 text-center py-4">{t("common.loading")}</div>}
 						{customer && (
 							<>
 								{!isEditing ? (
@@ -892,7 +897,7 @@ export default function CustomerDetailPage() {
 										<div className="space-y-4">
 											{/* Nom affiché - Mise en avant */}
 											<div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-												<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nom affiché</dt>
+												<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.generalInfo.displayName")}</dt>
 												<dd className="font-semibold text-lg text-gray-900 mt-1">{customer.displayName}</dd>
 											</div>
 											
@@ -900,7 +905,7 @@ export default function CustomerDetailPage() {
 											<div className="space-y-3">
 												{customer.type === "PERSON" && (customer.firstName || customer.lastName) && (
 													<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-														<dt className="text-sm font-medium text-gray-700">Nom complet</dt>
+														<dt className="text-sm font-medium text-gray-700">{t("customer.detail.generalInfo.fullName")}</dt>
 														<dd className="text-sm font-semibold text-gray-900">
 															{customer.firstName} {customer.lastName}
 														</dd>
@@ -922,7 +927,7 @@ export default function CustomerDetailPage() {
 															<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
 															</svg>
-															Email
+															{t("common.email")}
 														</dt>
 														<dd>
 															<a
@@ -940,7 +945,7 @@ export default function CustomerDetailPage() {
 															<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
 															</svg>
-															Téléphone
+															{t("customer.detail.generalInfo.phone")}
 														</dt>
 														<dd>
 															<a
@@ -967,17 +972,17 @@ export default function CustomerDetailPage() {
 												</div>
 												{typeof customer.riskScore === "number" && (
 													<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-														<dt className="text-sm font-medium text-gray-700">Score de risque</dt>
+														<dt className="text-sm font-medium text-gray-700">{t("customer.detail.generalInfo.riskScore")}</dt>
 														<dd>
 															<Badge variant={riskBadgeVariant(customer.riskScore)}>{customer.riskScore}/100</Badge>
 														</dd>
 													</div>
 												)}
 												<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-													<dt className="text-sm font-medium text-gray-700">Personne PEP</dt>
+													<dt className="text-sm font-medium text-gray-700">{t("customer.detail.generalInfo.pepPerson")}</dt>
 													<dd>
 														<Badge variant={customer.pepFlag ? "danger" : "success"}>
-															{customer.pepFlag ? "Oui" : "Non"}
+															{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
 														</Badge>
 													</dd>
 												</div>
@@ -992,7 +997,7 @@ export default function CustomerDetailPage() {
 																<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 																</svg>
-																Créé le
+																{t("customer.detail.generalInfo.createdAt")}
 															</dt>
 															<dd className="text-sm text-gray-600">
 																{new Date(customer.createdAt).toLocaleDateString("fr-FR", {
@@ -1011,7 +1016,7 @@ export default function CustomerDetailPage() {
 																<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																	<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 																</svg>
-																Modifié le
+																{t("customer.detail.generalInfo.updatedAt")}
 															</dt>
 															<dd className="text-sm text-gray-600">
 																{new Date(customer.updatedAt).toLocaleDateString("fr-FR", {
@@ -1040,7 +1045,7 @@ export default function CustomerDetailPage() {
 											{/* Colonne gauche */}
 											<div className="space-y-4">
 												<div>
-													<label className="block text-sm font-medium mb-1">Nom affiché *</label>
+													<label className="block text-sm font-medium mb-1">{t("customer.detail.generalInfo.displayName")} *</label>
 													<Input
 														value={formData.displayName}
 														onChange={e => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
@@ -1050,14 +1055,14 @@ export default function CustomerDetailPage() {
 												{customer.type === "PERSON" && (
 													<>
 														<div>
-															<label className="block text-sm font-medium mb-1">Prénom</label>
+															<label className="block text-sm font-medium mb-1">{t("customer.detail.relatedPersons.firstName")}</label>
 															<Input
 																value={formData.firstName}
 																onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
 															/>
 														</div>
 														<div>
-															<label className="block text-sm font-medium mb-1">Nom de famille</label>
+															<label className="block text-sm font-medium mb-1">{t("customer.detail.relatedPersons.lastName")}</label>
 															<Input
 																value={formData.lastName}
 																onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
@@ -1066,7 +1071,7 @@ export default function CustomerDetailPage() {
 													</>
 												)}
 												<div>
-													<label className="block text-sm font-medium mb-1">Email</label>
+													<label className="block text-sm font-medium mb-1">{t("common.email")}</label>
 													<Input
 														type="email"
 														value={formData.email}
@@ -1074,7 +1079,7 @@ export default function CustomerDetailPage() {
 													/>
 												</div>
 												<div>
-													<label className="block text-sm font-medium mb-1">Téléphone</label>
+													<label className="block text-sm font-medium mb-1">{t("customer.detail.generalInfo.phone")}</label>
 													<Input
 														value={formData.phone}
 														onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
@@ -1096,10 +1101,10 @@ export default function CustomerDetailPage() {
 										</div>
 										<div className="flex gap-2 pt-2 border-t border-gray-200">
 											<Button type="submit" disabled={saving}>
-												{saving ? "Sauvegarde..." : "Enregistrer"}
+												{saving ? t("customer.detail.generalInfo.saving") : t("customer.detail.generalInfo.save")}
 											</Button>
 											<Button type="button" variant="outline" onClick={handleCancel} disabled={saving}>
-												Annuler
+												{t("customer.detail.generalInfo.cancel")}
 											</Button>
 										</div>
 									</form>
@@ -1123,19 +1128,19 @@ export default function CustomerDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold text-gray-900">Documents</h2>
-								<p className="text-xs text-gray-500">Gestion des documents KYC</p>
+								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.documents.title")}</h2>
+								<p className="text-xs text-gray-500">{t("customer.detail.documents.subtitle")}</p>
 							</div>
 						</div>
 					</div>
 					<div className="p-6 space-y-6">
 						{/* Formulaire d'upload - Pleine largeur */}
 						<div>
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">Uploader un document</h3>
+							<h3 className="text-sm font-semibold text-gray-700 mb-3">{t("customer.detail.documents.upload")}</h3>
 							<form onSubmit={submitDocument} className="space-y-4">
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 									<div>
-										<label className="block text-sm mb-1">Type</label>
+										<label className="block text-sm mb-1">{t("customer.detail.documents.fileType")}</label>
 										<select
 											className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 											value={docType}
@@ -1149,7 +1154,7 @@ export default function CustomerDetailPage() {
 										</select>
 									</div>
 									<div>
-										<label className="block text-sm mb-1">Fichier</label>
+										<label className="block text-sm mb-1">{t("customer.detail.documents.file")}</label>
 										<div className="relative">
 											<input
 												type="file"
@@ -1176,18 +1181,18 @@ export default function CustomerDetailPage() {
 														d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
 													/>
 												</svg>
-												{docFile ? docFile.name : "Choisir un fichier"}
+												{docFile ? docFile.name : t("customer.detail.documents.chooseFile")}
 											</label>
 										</div>
 										{docFile && (
 											<div className="mt-2 text-xs text-gray-600">
-												Fichier sélectionné: <span className="font-medium">{docFile.name}</span>
+												{t("customer.detail.documents.fileSelected")}: <span className="font-medium">{docFile.name}</span>
 											</div>
 										)}
 									</div>
 									<div className="flex items-end">
 										<Button type="submit" disabled={!docFile || docSubmitting} className="w-full">
-											{docSubmitting ? "Envoi..." : "Uploader"}
+											{docSubmitting ? t("customer.detail.documents.uploading") : t("customer.detail.documents.uploadButton")}
 										</Button>
 									</div>
 								</div>
@@ -1196,9 +1201,9 @@ export default function CustomerDetailPage() {
 
 						{/* Liste des documents - 2 colonnes */}
 						<div>
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">Documents enregistrés</h3>
+							<h3 className="text-sm font-semibold text-gray-700 mb-3">{t("customer.detail.documents.saved")}</h3>
 							{documents.length === 0 ? (
-								<div className="text-sm text-gray-500 py-4">Aucun document enregistré</div>
+								<div className="text-sm text-gray-500 py-4">{t("customer.detail.documents.none")}</div>
 							) : (
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									{documents.map(doc => (
@@ -1220,7 +1225,7 @@ export default function CustomerDetailPage() {
 													}}
 													disabled={reviewSubmitting}
 												>
-													Réviser
+													{t("customer.detail.documents.review")}
 												</Button>
 											)}
 										</div>
@@ -1230,7 +1235,7 @@ export default function CustomerDetailPage() {
 													<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 													</svg>
-													<span className="font-semibold text-gray-900">{doc.fileName || "Sans nom"}</span>
+													<span className="font-semibold text-gray-900">{doc.fileName || t("customer.detail.documents.noName")}</span>
 												</div>
 												<button
 													onClick={() => openDocument(doc.id)}
@@ -1240,7 +1245,7 @@ export default function CustomerDetailPage() {
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 													</svg>
-													Voir le document
+													{t("customer.detail.documents.view")}
 												</button>
 											</div>
 											<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
@@ -1249,7 +1254,7 @@ export default function CustomerDetailPage() {
 														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
 														</svg>
-														<span>Type: {doc.contentType}</span>
+														<span>{t("customer.detail.documents.type")}: {doc.contentType}</span>
 													</div>
 												)}
 												{doc.uploadedAt && (
@@ -1257,7 +1262,7 @@ export default function CustomerDetailPage() {
 														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 														</svg>
-														<span>Uploadé: {new Date(doc.uploadedAt).toLocaleDateString("fr-FR", {
+														<span>{t("customer.detail.documents.uploadedAt")}: {new Date(doc.uploadedAt).toLocaleDateString("fr-FR", {
 															year: "numeric",
 															month: "short",
 															day: "numeric",
@@ -1271,7 +1276,7 @@ export default function CustomerDetailPage() {
 														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 														</svg>
-														<span>Révisé: {new Date(doc.reviewedAt).toLocaleDateString("fr-FR", {
+														<span>{t("customer.detail.documents.reviewedAt")}: {new Date(doc.reviewedAt).toLocaleDateString("fr-FR", {
 															year: "numeric",
 															month: "short",
 															day: "numeric",
@@ -1288,7 +1293,7 @@ export default function CustomerDetailPage() {
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 														</svg>
 														<div className="text-xs">
-															<div className="font-semibold text-blue-900 mb-1">Note du réviseur</div>
+															<div className="font-semibold text-blue-900 mb-1">{t("customer.detail.documents.reviewerNote")}</div>
 															<div className="text-blue-800">{doc.reviewerNote}</div>
 														</div>
 													</div>
@@ -1302,12 +1307,12 @@ export default function CustomerDetailPage() {
 												<div className="space-y-3">
 													<div>
 														<label className="block text-xs font-medium mb-1 text-gray-700">
-															Note du réviseur (optionnelle)
+															{t("customer.detail.documents.reviewerNote")}
 														</label>
 														<textarea
 															value={reviewNote}
 															onChange={e => setReviewNote(e.target.value)}
-															placeholder="Ajouter une note explicative..."
+															placeholder={t("customer.detail.documents.reviewerNotePlaceholder")}
 															className="w-full rounded-md border bg-white px-2 py-1.5 text-xs resize-none"
 															rows={3}
 														/>
@@ -1318,7 +1323,7 @@ export default function CustomerDetailPage() {
 										onClick={() => reviewDocument(doc.id, "APPROVED")}
 										disabled={reviewSubmitting}
 									>
-										{reviewSubmitting ? "..." : "Approuver"}
+										{reviewSubmitting ? "..." : t("customer.detail.documents.approve")}
 									</Button>
 														<Button
 															size="sm"
@@ -1327,7 +1332,7 @@ export default function CustomerDetailPage() {
 															disabled={reviewSubmitting}
 															className="border-red-300 text-red-700 hover:bg-red-50"
 														>
-															{reviewSubmitting ? "..." : "Rejeter"}
+															{reviewSubmitting ? "..." : t("customer.detail.documents.reject")}
 														</Button>
 														<Button
 															size="sm"
@@ -1338,7 +1343,7 @@ export default function CustomerDetailPage() {
 															}}
 															disabled={reviewSubmitting}
 														>
-															Annuler
+															{t("customer.detail.generalInfo.cancel")}
 														</Button>
 													</div>
 												</div>
@@ -1368,14 +1373,14 @@ export default function CustomerDetailPage() {
 											</svg>
 										</div>
 										<div>
-											<h2 className="text-lg font-semibold text-gray-900">Adresses</h2>
-											<p className="text-xs text-gray-500">Adresses enregistrées</p>
+											<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.addresses.title")}</h2>
+											<p className="text-xs text-gray-500">{t("customer.detail.addresses.subtitle")}</p>
 										</div>
 									</div>
 								</div>
 								<div className="p-6">
 									{addresses.length === 0 ? (
-										<div className="text-sm text-gray-500 py-4">Aucune adresse enregistrée</div>
+										<div className="text-sm text-gray-500 py-4">{t("customer.detail.addresses.none")}</div>
 									) : (
 										<div className="space-y-3">
 											{addresses.map(addr => (
@@ -1384,7 +1389,7 @@ export default function CustomerDetailPage() {
 														<form onSubmit={submitEditAddress} className="space-y-3">
 															<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 																<div>
-																	<label className="block text-xs mb-1">Type</label>
+																	<label className="block text-xs mb-1">{t("common.type")}</label>
 																	<select
 																		className="w-full rounded-md border bg-white px-2 py-1.5 text-xs"
 																		value={editAddr.type}
@@ -1396,7 +1401,7 @@ export default function CustomerDetailPage() {
 																	</select>
 																</div>
 																<div className="md:col-span-2">
-																	<label className="block text-xs mb-1">Ligne 1 *</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line1")} *</label>
 																	<Input 
 																		value={editAddr.line1} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line1: e.target.value }) : null)}
@@ -1405,7 +1410,7 @@ export default function CustomerDetailPage() {
 																	/>
 																</div>
 																<div>
-																	<label className="block text-xs mb-1">Ligne 2</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line2")}</label>
 																	<Input 
 																		value={editAddr.line2} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line2: e.target.value }) : null)}
@@ -1413,7 +1418,7 @@ export default function CustomerDetailPage() {
 																	/>
 																</div>
 																<div>
-																	<label className="block text-xs mb-1">Ville *</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.city")} *</label>
 																	<Input 
 																		value={editAddr.city} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, city: e.target.value }) : null)}
@@ -1422,7 +1427,7 @@ export default function CustomerDetailPage() {
 																	/>
 																</div>
 																<div>
-																	<label className="block text-xs mb-1">État/Province</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.state")}</label>
 																	<Input 
 																		value={editAddr.state} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, state: e.target.value }) : null)}
@@ -1430,7 +1435,7 @@ export default function CustomerDetailPage() {
 																	/>
 																</div>
 																<div>
-																	<label className="block text-xs mb-1">Code postal</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.postalCode")}</label>
 																	<Input 
 																		value={editAddr.postalCode} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, postalCode: e.target.value }) : null)}
@@ -1438,7 +1443,7 @@ export default function CustomerDetailPage() {
 																	/>
 																</div>
 																<div>
-																	<label className="block text-xs mb-1">Pays *</label>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.country")} *</label>
 																	<Input 
 																		value={editAddr.country} 
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, country: e.target.value }) : null)}
@@ -1452,15 +1457,15 @@ export default function CustomerDetailPage() {
 																		checked={Boolean(editAddr.primaryAddress)}
 																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, primaryAddress: e.target.checked }) : null)}
 																	/>
-																	<label className="text-xs">Adresse principale</label>
+																	<label className="text-xs">{t("customer.detail.addresses.primaryAddress")}</label>
 																</div>
 															</div>
 															<div className="flex gap-2 pt-2">
 																<Button type="submit" size="sm" disabled={addrSubmitting}>
-																	{addrSubmitting ? "Enregistrement..." : "Enregistrer"}
+																	{addrSubmitting ? t("customer.detail.addresses.saving") : t("customer.detail.addresses.save")}
 																</Button>
 																<Button type="button" variant="outline" size="sm" onClick={cancelEditAddress} disabled={addrSubmitting}>
-																	Annuler
+																	{t("customer.detail.generalInfo.cancel")}
 																</Button>
 															</div>
 														</form>
@@ -1472,11 +1477,11 @@ export default function CustomerDetailPage() {
 																		{addr.type}
 																	</Badge>
 																	{addr.primaryAddress && (
-																		<Badge variant="info">Principale</Badge>
+																		<Badge variant="info">{t("customer.detail.addresses.primary")}</Badge>
 																	)}
 																</div>
 																<Button variant="outline" size="sm" onClick={() => startEditAddress(addr)}>
-																	Modifier
+																	{t("customer.detail.addresses.edit")}
 																</Button>
 															</div>
 															<div className="bg-white rounded-lg p-4 border border-gray-200 space-y-2">
@@ -1521,15 +1526,15 @@ export default function CustomerDetailPage() {
 											</svg>
 										</div>
 										<div>
-											<h2 className="text-lg font-semibold text-gray-900">Ajouter une adresse</h2>
-											<p className="text-xs text-gray-500">Nouvelle adresse du client</p>
+											<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.addresses.add")}</h2>
+											<p className="text-xs text-gray-500">{t("customer.detail.addresses.addSubtitle")}</p>
 										</div>
 									</div>
 								</div>
 								<div className="p-6 space-y-4">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<label className="block text-sm mb-1">Type</label>
+											<label className="block text-sm mb-1">{t("common.type")}</label>
 											<select
 												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 												value={addr.type}
@@ -1541,7 +1546,7 @@ export default function CustomerDetailPage() {
 											</select>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Ligne 1 *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.line1")} *</label>
 											<Input 
 												value={addr.line1} 
 												onChange={e => setAddr(prev => ({ ...prev, line1: e.target.value }))}
@@ -1549,11 +1554,11 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Ligne 2</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.line2")}</label>
 											<Input value={addr.line2} onChange={e => setAddr(prev => ({ ...prev, line2: e.target.value }))} />
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Ville *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.city")} *</label>
 											<Input 
 												value={addr.city} 
 												onChange={e => setAddr(prev => ({ ...prev, city: e.target.value }))}
@@ -1561,21 +1566,21 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">État/Province</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.state")}</label>
 											<Input 
 												value={addr.state} 
 												onChange={e => setAddr(prev => ({ ...prev, state: e.target.value }))}
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Code postal</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.postalCode")}</label>
 											<Input 
 												value={addr.postalCode} 
 												onChange={e => setAddr(prev => ({ ...prev, postalCode: e.target.value }))}
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Pays (ISO-2) *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.country")} *</label>
 											<Input 
 												value={addr.country} 
 												onChange={e => setAddr(prev => ({ ...prev, country: e.target.value }))}
@@ -1590,12 +1595,12 @@ export default function CustomerDetailPage() {
 												checked={Boolean(addr.primaryAddress)}
 												onChange={e => setAddr(prev => ({ ...prev, primaryAddress: e.target.checked }))}
 											/>
-											<label htmlFor="primaryAddress" className="text-sm">Adresse principale</label>
+											<label htmlFor="primaryAddress" className="text-sm">{t("customer.detail.addresses.primaryAddress")}</label>
 										</div>
 									</div>
 									<div className="flex gap-2">
 										<Button type="submit" disabled={addrSubmitting}>
-											{addrSubmitting ? "Ajout..." : "Ajouter l'adresse"}
+											{addrSubmitting ? t("customer.detail.addresses.adding") : t("customer.detail.addresses.addButton")}
 										</Button>
 									</div>
 								</div>
@@ -1616,8 +1621,8 @@ export default function CustomerDetailPage() {
 										</svg>
 									</div>
 									<div>
-										<h2 className="text-lg font-semibold text-gray-900">Personnes liées</h2>
-										<p className="text-xs text-gray-500">UBO, Directeurs, Signataires</p>
+										<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.relatedPersons.title")}</h2>
+										<p className="text-xs text-gray-500">{t("customer.detail.relatedPersons.subtitle")}</p>
 									</div>
 								</div>
 							</div>
@@ -1625,13 +1630,13 @@ export default function CustomerDetailPage() {
 								{/* Formulaire d'ajout */}
 								<div className="border-b border-gray-200 pb-4 mb-4">
 									<h3 className="text-sm font-semibold text-gray-700 mb-3">
-										{editingRpId ? "Modifier une personne liée" : "Ajouter une personne liée"}
+										{editingRpId ? t("customer.detail.relatedPersons.edit") : t("customer.detail.relatedPersons.add")}
 									</h3>
 							{editingRpId && editRpForm ? (
 								<form onSubmit={submitEditRelatedPerson} className="space-y-4">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<label className="block text-sm mb-1">Rôle *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
 											<select
 												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 												value={editRpForm.role}
@@ -1644,7 +1649,7 @@ export default function CustomerDetailPage() {
 											</select>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Prénom *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
 											<Input
 												value={editRpForm.firstName}
 												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, firstName: e.target.value }) : null)}
@@ -1652,7 +1657,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Nom de famille *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
 											<Input
 												value={editRpForm.lastName}
 												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, lastName: e.target.value }) : null)}
@@ -1660,7 +1665,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Date de naissance</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
 											<Input
 												type="date"
 												value={editRpForm.dateOfBirth}
@@ -1668,7 +1673,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Identifiant national</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
 											<Input
 												value={editRpForm.nationalId || ""}
 												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, nationalId: e.target.value }) : null)}
@@ -1676,7 +1681,7 @@ export default function CustomerDetailPage() {
 										</div>
 										{editRpForm.role === "UBO" && (
 											<div>
-												<label className="block text-sm mb-1">Pourcentage de détention *</label>
+												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
 												<Input
 													type="number"
 													min="0"
@@ -1695,16 +1700,16 @@ export default function CustomerDetailPage() {
 													checked={editRpForm.pepFlag || false}
 													onChange={e => setEditRpForm(prev => prev ? ({ ...prev, pepFlag: e.target.checked }) : null)}
 												/>
-												Personne politiquement exposée (PEP)
+												{t("customer.detail.relatedPersons.pepFlag")}
 											</label>
 										</div>
 									</div>
 									<div className="flex gap-2">
 										<Button type="submit" disabled={rpSubmitting}>
-											{rpSubmitting ? "Sauvegarde..." : "Enregistrer"}
+											{rpSubmitting ? t("customer.detail.relatedPersons.saving") : t("customer.detail.relatedPersons.save")}
 										</Button>
 										<Button type="button" variant="outline" onClick={cancelEditRelatedPerson} disabled={rpSubmitting}>
-											Annuler
+											{t("customer.detail.generalInfo.cancel")}
 										</Button>
 									</div>
 								</form>
@@ -1712,7 +1717,7 @@ export default function CustomerDetailPage() {
 								<form onSubmit={submitRelatedPerson} className="space-y-4">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
-											<label className="block text-sm mb-1">Rôle *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
 											<select
 												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 												value={rpForm.role}
@@ -1725,7 +1730,7 @@ export default function CustomerDetailPage() {
 											</select>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Prénom *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
 											<Input
 												value={rpForm.firstName}
 												onChange={e => setRpForm(prev => ({ ...prev, firstName: e.target.value }))}
@@ -1733,7 +1738,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Nom de famille *</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
 											<Input
 												value={rpForm.lastName}
 												onChange={e => setRpForm(prev => ({ ...prev, lastName: e.target.value }))}
@@ -1741,7 +1746,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Date de naissance</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
 											<Input
 												type="date"
 												value={rpForm.dateOfBirth}
@@ -1749,7 +1754,7 @@ export default function CustomerDetailPage() {
 											/>
 										</div>
 										<div>
-											<label className="block text-sm mb-1">Identifiant national</label>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
 											<Input
 												value={rpForm.nationalId}
 												onChange={e => setRpForm(prev => ({ ...prev, nationalId: e.target.value }))}
@@ -1757,7 +1762,7 @@ export default function CustomerDetailPage() {
 										</div>
 										{rpForm.role === "UBO" && (
 											<div>
-												<label className="block text-sm mb-1">Pourcentage de détention *</label>
+												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
 												<Input
 													type="number"
 													min="0"
@@ -1776,13 +1781,13 @@ export default function CustomerDetailPage() {
 													checked={rpForm.pepFlag || false}
 													onChange={e => setRpForm(prev => ({ ...prev, pepFlag: e.target.checked }))}
 												/>
-												Personne politiquement exposée (PEP)
+												{t("customer.detail.relatedPersons.pepFlag")}
 											</label>
 										</div>
 									</div>
 									<div className="flex gap-2">
 										<Button type="submit" disabled={rpSubmitting}>
-											{rpSubmitting ? "Ajout..." : "Ajouter"}
+											{rpSubmitting ? t("customer.detail.relatedPersons.adding") : t("customer.detail.relatedPersons.addButton")}
 										</Button>
 									</div>
 								</form>
@@ -1791,9 +1796,9 @@ export default function CustomerDetailPage() {
 
 							{/* Liste des personnes liées */}
 							<div>
-								<h3 className="text-sm font-semibold text-gray-700 mb-3">Personnes liées enregistrées</h3>
+								<h3 className="text-sm font-semibold text-gray-700 mb-3">{t("customer.detail.relatedPersons.saved")}</h3>
 								{relatedPersons.length === 0 ? (
-									<div className="text-sm text-gray-500 py-4">Aucune personne liée enregistrée</div>
+									<div className="text-sm text-gray-500 py-4">{t("customer.detail.relatedPersons.none")}</div>
 								) : (
 									<div className="space-y-3">
 										{relatedPersons.map(rp => (
@@ -1812,7 +1817,7 @@ export default function CustomerDetailPage() {
 															onClick={() => startEditRelatedPerson(rp)}
 															disabled={rpSubmitting || editingRpId !== null}
 														>
-															Modifier
+															{t("customer.detail.relatedPersons.edit")}
 														</Button>
 														<Button
 															variant="outline"
@@ -1821,7 +1826,7 @@ export default function CustomerDetailPage() {
 															disabled={rpSubmitting}
 															className="border-red-300 text-red-700 hover:bg-red-50"
 														>
-															Supprimer
+															{t("customer.detail.relatedPersons.delete")}
 														</Button>
 													</div>
 												</div>
@@ -1831,7 +1836,7 @@ export default function CustomerDetailPage() {
 															<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 															</svg>
-															<span>Date de naissance: {new Date(rp.dateOfBirth).toLocaleDateString("fr-FR")}</span>
+															<span>{t("customer.detail.relatedPersons.dateOfBirth")}: {new Date(rp.dateOfBirth).toLocaleDateString("fr-FR")}</span>
 														</div>
 													)}
 													{rp.nationalId && (
@@ -1839,7 +1844,7 @@ export default function CustomerDetailPage() {
 															<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
 															</svg>
-															<span>ID National: {rp.nationalId}</span>
+															<span>{t("customer.detail.relatedPersons.nationalId")}: {rp.nationalId}</span>
 														</div>
 													)}
 													{rp.ownershipPercent !== null && rp.ownershipPercent !== undefined && (
@@ -1847,7 +1852,7 @@ export default function CustomerDetailPage() {
 															<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 															</svg>
-															<span>Détention: <span className="font-semibold">{rp.ownershipPercent}%</span></span>
+															<span>{t("customer.detail.relatedPersons.ownershipPercent")}: <span className="font-semibold">{rp.ownershipPercent}%</span></span>
 														</div>
 													)}
 													<div className="flex items-center gap-2 text-xs">
@@ -1856,7 +1861,7 @@ export default function CustomerDetailPage() {
 														</svg>
 														<span className="text-gray-600">PEP: </span>
 														<Badge variant={rp.pepFlag ? "danger" : "success"} className="text-xs">
-															{rp.pepFlag ? "Oui" : "Non"}
+															{rp.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
 														</Badge>
 													</div>
 												</div>
@@ -1882,8 +1887,8 @@ export default function CustomerDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold text-gray-900">Actions KYC</h2>
-								<p className="text-xs text-gray-500">Soumission, vérification et rejet</p>
+								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.kyc.title")}</h2>
+								<p className="text-xs text-gray-500">{t("customer.detail.kyc.subtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -1894,11 +1899,11 @@ export default function CustomerDetailPage() {
 								<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">Soumission</h3>
+								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.submit.title")}</h3>
 							</div>
-							<p className="text-xs text-gray-600 mb-4">Soumettre le dossier pour revue (DRAFT/REJECTED → PENDING_REVIEW)</p>
+							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.submit.description")}</p>
 							<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} className="w-full md:w-auto">
-								{kycSubmitting === "submit" ? "Soumission..." : "Soumettre KYC"}
+								{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
 							</Button>
 						</div>
 
@@ -1908,16 +1913,16 @@ export default function CustomerDetailPage() {
 								<svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">Vérification</h3>
+								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.verify.title")}</h3>
 							</div>
-							<p className="text-xs text-gray-600 mb-4">Approuver le KYC avec score de risque et indicateur PEP</p>
+							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.verify.description")}</p>
 							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 								<div>
 									<label className="block text-xs font-medium mb-2 text-gray-700 flex items-center gap-1">
 										<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 										</svg>
-										Score de risque
+										{t("customer.detail.kyc.verify.riskScore")}
 									</label>
 									<Input
 										type="number"
@@ -1938,7 +1943,7 @@ export default function CustomerDetailPage() {
 											className="w-4 h-4 text-blue-600"
 										/>
 										<label htmlFor="pep-flag" className="text-xs font-medium text-gray-700 cursor-pointer">
-											Personne PEP
+											{t("customer.detail.kyc.verify.pepFlag")}
 										</label>
 									</div>
 								</div>
@@ -1948,7 +1953,7 @@ export default function CustomerDetailPage() {
 										disabled={kycSubmitting !== null}
 										className="w-full"
 									>
-										{kycSubmitting === "verify" ? "Vérification..." : "Vérifier"}
+										{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
 									</Button>
 								</div>
 							</div>
@@ -1960,9 +1965,9 @@ export default function CustomerDetailPage() {
 								<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">Rejet</h3>
+								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.reject.title")}</h3>
 							</div>
-							<p className="text-xs text-gray-600 mb-4">Rejeter le KYC avec motif de refus (pour audit)</p>
+							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.reject.description")}</p>
 							{!showRejectForm ? (
 								<Button 
 									variant="outline" 
@@ -1970,22 +1975,22 @@ export default function CustomerDetailPage() {
 									disabled={kycSubmitting !== null}
 									className="border-red-300 text-red-700 hover:bg-red-50 w-full md:w-auto"
 								>
-									Rejeter KYC
+									{t("customer.detail.kyc.reject.button")}
 								</Button>
 							) : (
 								<div className="space-y-4 p-4 bg-red-50 border border-red-200 rounded-lg">
 									<div>
 										<label className="block text-xs font-medium mb-2 text-gray-700 flex items-center gap-1">
-											Motif de refus <span className="text-red-600">*</span>
+											{t("customer.detail.kyc.reject.reason")} <span className="text-red-600">*</span>
 										</label>
 										<textarea
 											value={rejectionReason}
 											onChange={e => setRejectionReason(e.target.value)}
-											placeholder="Indiquer le motif du rejet du KYC (obligatoire pour l'audit)..."
+											placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
 											className="w-full rounded-md border bg-white px-3 py-2 text-sm resize-none"
 											rows={3}
 										/>
-										<p className="text-xs text-gray-500 mt-1">Ce motif sera enregistré pour traçabilité et audit</p>
+										<p className="text-xs text-gray-500 mt-1">{t("customer.detail.kyc.reject.reasonHint")}</p>
 									</div>
 									<div className="flex gap-2">
 										<Button 
@@ -1994,7 +1999,7 @@ export default function CustomerDetailPage() {
 											variant="outline"
 											className="border-red-300 text-red-700 hover:bg-red-50"
 										>
-											{kycSubmitting === "reject" ? "Rejet..." : "Confirmer le rejet"}
+											{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
 										</Button>
 										<Button 
 											variant="outline" 
@@ -2004,7 +2009,7 @@ export default function CustomerDetailPage() {
 											}} 
 											disabled={kycSubmitting !== null}
 										>
-											Annuler
+											{t("customer.detail.generalInfo.cancel")}
 										</Button>
 									</div>
 								</div>
@@ -2018,7 +2023,7 @@ export default function CustomerDetailPage() {
 									<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 									</svg>
-									<h3 className="text-sm font-semibold text-gray-900">Motif de refus précédent</h3>
+									<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.reject.previousReason")}</h3>
 								</div>
 								<div className="text-sm text-gray-700 p-3 bg-red-50 border border-red-200 rounded-lg">
 									{customer.rejectionReason}
@@ -2043,15 +2048,15 @@ export default function CustomerDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold text-gray-900">Comptes du client</h2>
-								<p className="text-xs text-gray-500">Liste des comptes bancaires</p>
+								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.accounts.title")}</h2>
+								<p className="text-xs text-gray-500">{t("customer.detail.accounts.subtitle")}</p>
 							</div>
 						</div>
 						<Button variant="outline" size="sm" onClick={load}>
 							<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							Rafraîchir
+							{t("common.refresh")}
 						</Button>
 					</div>
 				</div>
@@ -2061,8 +2066,8 @@ export default function CustomerDetailPage() {
 							<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
 							</svg>
-							<p className="text-gray-500 text-lg font-medium">Aucun compte trouvé</p>
-							<p className="text-gray-400 text-sm mt-2">Ce client n'a pas encore de compte ouvert</p>
+							<p className="text-gray-500 text-lg font-medium">{t("customer.detail.accounts.none")}</p>
+							<p className="text-gray-400 text-sm mt-2">{t("customer.detail.accounts.noneHint")}</p>
 						</div>
 					) : (
 						<div className="overflow-x-auto">
@@ -2070,25 +2075,25 @@ export default function CustomerDetailPage() {
 								<thead className="bg-gray-50">
 									<tr>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Numéro de compte
+											{t("customer.detail.accounts.accountNumber")}
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Statut
+											{t("common.status")}
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Devise
+											{t("customer.detail.accounts.currency")}
 										</th>
 										<th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Solde
+											{t("customer.detail.accounts.balance")}
 										</th>
 										<th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Solde disponible
+											{t("customer.detail.accounts.availableBalance")}
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Date d'ouverture
+											{t("customer.detail.accounts.openingDate")}
 										</th>
 										<th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Actions
+											{t("customer.table.actions")}
 										</th>
 									</tr>
 								</thead>
@@ -2101,10 +2106,10 @@ export default function CustomerDetailPage() {
 											SUSPENDED: "bg-yellow-100 text-yellow-800"
 										};
 										const statusLabels: Record<Account["status"], string> = {
-											ACTIVE: "Actif",
-											CLOSED: "Fermé",
-											FROZEN: "Gelé",
-											SUSPENDED: "Suspendu"
+											ACTIVE: t("common.status") + " - ACTIVE",
+											CLOSED: t("common.status") + " - CLOSED",
+											FROZEN: t("common.status") + " - FROZEN",
+											SUSPENDED: t("common.status") + " - SUSPENDED"
 										};
 										return (
 											<tr key={account.id} className="hover:bg-gray-50 transition-colors">
@@ -2154,12 +2159,12 @@ export default function CustomerDetailPage() {
 												<td className="px-6 py-4 whitespace-nowrap text-right">
 													<Link href={`/accounts/${account.id}`}>
 														<Button variant="outline" size="sm" className="flex items-center gap-1">
-															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-															</svg>
-															Voir
-														</Button>
+													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+													</svg>
+													{t("customer.detail.accounts.view")}
+												</Button>
 													</Link>
 												</td>
 											</tr>

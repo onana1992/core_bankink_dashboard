@@ -21,8 +21,8 @@ export default function NewTransferPage() {
 	useEffect(() => {
 		async function loadCustomers() {
 			try {
-				const data = await customersApi.list();
-				setCustomers(data.filter(c => c.status === "VERIFIED"));
+				const response = await customersApi.list({ status: "VERIFIED", size: 1000 }); // Load all verified customers
+				setCustomers(response.content);
 			} catch (e) {
 				console.error("Erreur lors du chargement des clients:", e);
 			}

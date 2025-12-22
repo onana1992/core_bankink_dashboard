@@ -14,6 +14,10 @@ export default function CustomersPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [customers, setCustomers] = useState<Customer[]>([]);
+	const [page, setPage] = useState(0);
+	const [totalPages, setTotalPages] = useState(0);
+	const [totalElements, setTotalElements] = useState(0);
+	const size = 20;
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -26,8 +30,16 @@ export default function CustomersPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await customersApi.list();
-			setCustomers(data);
+			const response = await customersApi.list({
+				type: filterType !== "ALL" ? filterType : undefined,
+				status: filterStatus !== "ALL" ? filterStatus : undefined,
+				search: q.trim() || undefined,
+				page,
+				size
+			});
+			setCustomers(response.content);
+			setTotalPages(response.totalPages);
+			setTotalElements(response.totalElements);
 		} catch (e: any) {
 			setError(e?.message ?? t("customer.errors.unknown"));
 		} finally {
@@ -37,7 +49,7 @@ export default function CustomersPage() {
 
 	useEffect(() => {
 		load();
-	}, []);
+	}, [page, filterStatus, filterType, q]);
 
 	const stats = useMemo(() => {
 		const total = customers.length;
@@ -77,18 +89,8 @@ export default function CustomersPage() {
 		return "success";
 	}
 
-	const filteredCustomers = useMemo(() => {
-		const query = q.trim().toLowerCase();
-		return customers.filter(c => {
-			if (filterStatus !== "ALL" && c.status !== filterStatus) return false;
-			if (filterType !== "ALL" && c.type !== filterType) return false;
-			if (query) {
-				const hay = `${c.displayName ?? ""} ${c.email ?? ""}`.toLowerCase();
-				if (!hay.includes(query)) return false;
-			}
-			return true;
-		});
-	}, [customers, q, filterStatus, filterType]);
+	// Les filtres sont maintenant gérés côté serveur, donc on utilise directement customers
+	const filteredCustomers = customers;
 
 	return (
 		<div className="space-y-6">
@@ -96,7 +98,7 @@ export default function CustomersPage() {
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">{t("common.customers")}</h1>
-					<p className="text-gray-600 mt-1">Gestion et suivi des clients bancaires</p>
+					<p className="text-gray-600 mt-1">{t("customer.description")}</p>
 				</div>
 				<div className="flex gap-3">
 					<Button onClick={load} variant="outline" className="flex items-center gap-2">
@@ -204,7 +206,7 @@ export default function CustomersPage() {
 					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">Filtres</h2>
+					<h2 className="text-lg font-semibold text-gray-900">{t("customer.filters.title")}</h2>
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div>
@@ -213,7 +215,10 @@ export default function CustomersPage() {
 							<Input
 								placeholder={t("customer.filters.searchPlaceholder")}
 								value={q}
-								onChange={(e) => setQ(e.target.value)}
+								onChange={(e) => {
+									setQ(e.target.value);
+									setPage(0); // Reset to first page when search changes
+								}}
 								className="pl-10"
 							/>
 							<svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +231,10 @@ export default function CustomersPage() {
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterStatus}
-							onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+							onChange={(e) => {
+								setFilterStatus(e.target.value as typeof filterStatus);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
 							<option value="ALL">{t("common.all")}</option>
 							<option value="DRAFT">{t("customer.statuses.DRAFT")}</option>
@@ -241,7 +249,10 @@ export default function CustomersPage() {
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterType}
-							onChange={(e) => setFilterType(e.target.value as typeof filterType)}
+							onChange={(e) => {
+								setFilterType(e.target.value as typeof filterType);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
 							<option value="ALL">{t("common.all")}</option>
 							<option value="PERSON">{t("customer.types.PERSON")}</option>
@@ -273,7 +284,7 @@ export default function CustomersPage() {
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
 					</svg>
 					<p className="text-gray-500 text-lg font-medium">{t("customer.table.noCustomers")}</p>
-					<p className="text-gray-400 text-sm mt-2">Essayez de modifier vos filtres de recherche</p>
+					<p className="text-gray-400 text-sm mt-2">{t("customer.table.noCustomersHint")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -287,7 +298,7 @@ export default function CustomersPage() {
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.status")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.email")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.risk")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("customer.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -333,11 +344,38 @@ export default function CustomersPage() {
 							</tbody>
 						</table>
 					</div>
-					{filteredCustomers.length > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+					{(filteredCustomers.length > 0 || totalElements > 0) && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
 							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{filteredCustomers.length}</span> client{filteredCustomers.length > 1 ? "s" : ""}
+								{t("customer.table.pagination.showing")} <span className="font-semibold">{filteredCustomers.length}</span> {t("customer.table.pagination.of")} <span className="font-semibold">{totalElements}</span> {totalElements > 1 ? t("customer.table.pagination.customersPlural") : t("customer.table.pagination.customers")}
 							</p>
+							{totalPages > 1 && (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.max(0, p - 1))}
+										disabled={page === 0}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+										</svg>
+									</Button>
+									<span className="text-sm text-gray-600">
+										{t("customer.table.pagination.page")} {page + 1} {t("customer.table.pagination.on")} {totalPages}
+									</span>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+										disabled={page >= totalPages - 1}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+										</svg>
+									</Button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>

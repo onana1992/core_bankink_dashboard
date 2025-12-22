@@ -26,11 +26,12 @@ export default function AccountsPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [accountsData, customersData, productsData] = await Promise.all([
+			const [accountsData, customersResponse, productsData] = await Promise.all([
 				accountsApi.list(filterClientId ? { clientId: filterClientId } : undefined),
-				customersApi.list(),
+				customersApi.list({ size: 1000 }), // Load all customers
 				productsApi.list()
 			]);
+			const customersData = customersResponse.content;
 			
 			// Enrichir les comptes avec les informations des produits
 			const enrichedAccounts = accountsData.map(account => {

@@ -30,11 +30,11 @@ export default function NewAccountPage() {
 	useEffect(() => {
 		async function load() {
 			try {
-				const [customersData, productsData] = await Promise.all([
-					customersApi.list(),
+				const [customersResponse, productsData] = await Promise.all([
+					customersApi.list({ status: "VERIFIED", size: 1000 }), // Load all verified customers
 					productsApi.list({ status: "ACTIVE" })
 				]);
-				setCustomers(customersData.filter(c => c.status === "VERIFIED"));
+				setCustomers(customersResponse.content);
 				setProducts(productsData);
 			} catch (e: any) {
 				setError(e?.message ?? "Erreur lors du chargement des données");
