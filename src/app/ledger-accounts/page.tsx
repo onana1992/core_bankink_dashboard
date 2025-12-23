@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import { ledgerAccountsApi, chartOfAccountsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { LedgerAccount, AccountType, LedgerAccountStatus, ChartOfAccount, CreateLedgerAccountRequest, UpdateLedgerAccountRequest } from "@/types";
@@ -11,6 +13,7 @@ import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 
 export default function LedgerAccountsPage() {
+	const { t, i18n } = useTranslation();
 	const router = useRouter();
 	const { isAuthenticated, loading: authLoading } = useAuth();
 	const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
@@ -33,6 +36,11 @@ export default function LedgerAccountsPage() {
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+	// Force re-render when language changes
+	useEffect(() => {
+		// This effect ensures the component re-renders when language changes
+	}, [i18n.language]);
 
 	useEffect(() => {
 		// Ne charger les données que si l'utilisateur est authentifié et que le chargement est terminé
@@ -68,7 +76,7 @@ export default function LedgerAccountsPage() {
 			});
 			setAccounts(data);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement des comptes GL");
+			setError(e?.message ?? t("ledgerAccount.loadError"));
 		} finally {
 			setLoading(false);
 		}
@@ -87,30 +95,30 @@ export default function LedgerAccountsPage() {
 		const errors: Record<string, string> = {};
 
 		if (!form.code?.trim()) {
-			errors.code = "Le code est requis";
+			errors.code = t("ledgerAccount.validation.codeRequired");
 		} else if (form.code.length > 50) {
-			errors.code = "Le code ne peut pas dépasser 50 caractères";
+			errors.code = t("ledgerAccount.validation.codeMaxLength");
 		}
 
 		if (!form.name?.trim()) {
-			errors.name = "Le nom est requis";
+			errors.name = t("ledgerAccount.validation.nameRequired");
 		}
 
 		if (!form.chartOfAccountCode) {
-			errors.chartOfAccountCode = "Le compte comptable est requis";
+			errors.chartOfAccountCode = t("ledgerAccount.validation.chartOfAccountRequired");
 		} else {
 			const chartAccount = chartOfAccounts.find(c => c.code === form.chartOfAccountCode);
 			if (!chartAccount) {
-				errors.chartOfAccountCode = "Le compte comptable n'existe pas";
+				errors.chartOfAccountCode = t("ledgerAccount.validation.chartOfAccountNotFound");
 			} else if (!chartAccount.isActive) {
-				errors.chartOfAccountCode = "Le compte comptable doit être actif";
+				errors.chartOfAccountCode = t("ledgerAccount.validation.chartOfAccountInactive");
 			} else if (chartAccount.accountType !== form.accountType) {
-				errors.accountType = "Le type doit correspondre au type du compte comptable";
+				errors.accountType = t("ledgerAccount.validation.accountTypeMismatch");
 			}
 		}
 
 		if (!form.currency || form.currency.length !== 3) {
-			errors.currency = "La devise doit être un code ISO à 3 caractères";
+			errors.currency = t("ledgerAccount.validation.currencyInvalid");
 		}
 
 		setValidationErrors(errors);
@@ -149,7 +157,22 @@ export default function LedgerAccountsPage() {
 			});
 			loadAccounts();
 		} catch (e: any) {
-			setError(e?.message ?? `Erreur lors de la ${editingAccount ? "modification" : "création"}`);
+			const errorMessage = e?.message ?? (editingAccount ? t("ledgerAccount.updateError") : t("ledgerAccount.createError"));
+			setError(errorMessage);
+			
+			// Vérifier spécifiquement si c'est une erreur de code existant pour un compte GL
+			// Le message du backend est : "Un compte GL avec le code '...' existe déjà"
+			const lowerMessage = errorMessage.toLowerCase();
+			const isCodeExistsError = 
+				e?.status === 409 || 
+				(lowerMessage.includes("compte gl") && lowerMessage.includes("code") && (lowerMessage.includes("existe déjà") || lowerMessage.includes("déjà"))) ||
+				(lowerMessage.includes("ledger account") && lowerMessage.includes("code") && (lowerMessage.includes("already exists") || lowerMessage.includes("duplicate")));
+			
+			if (isCodeExistsError) {
+				setValidationErrors({
+					code: t("ledgerAccount.validation.codeExists")
+				});
+			}
 		} finally {
 			setSubmitting(false);
 		}
@@ -187,14 +210,7 @@ export default function LedgerAccountsPage() {
 	}, [accounts]);
 
 	function getAccountTypeLabel(type: AccountType): string {
-		const labels: Record<AccountType, string> = {
-			ASSET: "Actif",
-			LIABILITY: "Passif",
-			EQUITY: "Capitaux propres",
-			REVENUE: "Produit",
-			EXPENSE: "Charge"
-		};
-		return labels[type] || type;
+		return t(`ledgerAccount.accountTypes.${type}`) || type;
 	}
 
 	function getAccountTypeBadgeVariant(type: AccountType): "neutral" | "success" | "warning" | "danger" | "info" {
@@ -219,21 +235,21 @@ export default function LedgerAccountsPage() {
 			{/* En-tête */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Comptes du Grand Livre</h1>
-					<p className="text-gray-600 mt-1">Gestion et configuration des comptes GL</p>
+					<h1 className="text-3xl font-bold text-gray-900">{t("ledgerAccount.title")}</h1>
+					<p className="text-gray-600 mt-1">{t("ledgerAccount.subtitle")}</p>
 				</div>
 				<div className="flex gap-3">
 					<Button onClick={loadAccounts} variant="outline" className="flex items-center gap-2">
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 						</svg>
-						Actualiser
+						{t("ledgerAccount.refresh")}
 					</Button>
 					<Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2">
 						<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 						</svg>
-						{showForm ? "Annuler" : "Nouveau compte GL"}
+						{showForm ? t("ledgerAccount.cancel") : t("ledgerAccount.newAccount")}
 					</Button>
 				</div>
 			</div>
@@ -243,7 +259,7 @@ export default function LedgerAccountsPage() {
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">Total</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("ledgerAccount.stats.total")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.total}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -256,7 +272,7 @@ export default function LedgerAccountsPage() {
 				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-green-700 mb-1">Actifs</div>
+							<div className="text-sm font-medium text-green-700 mb-1">{t("ledgerAccount.stats.active")}</div>
 							<div className="text-3xl font-bold text-green-900">{stats.active}</div>
 						</div>
 						<div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
@@ -269,7 +285,7 @@ export default function LedgerAccountsPage() {
 				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-red-700 mb-1">Inactifs</div>
+							<div className="text-sm font-medium text-red-700 mb-1">{t("ledgerAccount.stats.inactive")}</div>
 							<div className="text-3xl font-bold text-red-900">{stats.inactive}</div>
 						</div>
 						<div className="w-12 h-12 bg-red-200 rounded-lg flex items-center justify-center">
@@ -282,7 +298,7 @@ export default function LedgerAccountsPage() {
 				<div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl shadow-sm border border-purple-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-purple-700 mb-1">Devises</div>
+							<div className="text-sm font-medium text-purple-700 mb-1">{t("ledgerAccount.stats.currencies")}</div>
 							<div className="text-3xl font-bold text-purple-900">{stats.currencies}</div>
 						</div>
 						<div className="w-12 h-12 bg-purple-200 rounded-lg flex items-center justify-center">
@@ -300,14 +316,14 @@ export default function LedgerAccountsPage() {
 					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">Filtres</h2>
+					<h2 className="text-lg font-semibold text-gray-900">{t("ledgerAccount.filters.title")}</h2>
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Recherche</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("ledgerAccount.filters.search")}</label>
 						<div className="relative">
 							<Input
-								placeholder="Code, nom ou compte comptable..."
+								placeholder={t("ledgerAccount.filters.searchPlaceholder")}
 								value={searchQuery}
 								onChange={(e) => setSearchQuery(e.target.value)}
 								className="pl-10"
@@ -318,39 +334,39 @@ export default function LedgerAccountsPage() {
 						</div>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Type de compte</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("ledgerAccount.filters.accountType")}</label>
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterAccountType}
 							onChange={(e) => setFilterAccountType(e.target.value as AccountType || "")}
 						>
-							<option value="">Tous les types</option>
-							<option value="ASSET">Actif</option>
-							<option value="LIABILITY">Passif</option>
-							<option value="EQUITY">Capitaux propres</option>
-							<option value="REVENUE">Produit</option>
-							<option value="EXPENSE">Charge</option>
+							<option value="">{t("ledgerAccount.filters.allTypes")}</option>
+							<option value="ASSET">{t("ledgerAccount.accountTypes.ASSET")}</option>
+							<option value="LIABILITY">{t("ledgerAccount.accountTypes.LIABILITY")}</option>
+							<option value="EQUITY">{t("ledgerAccount.accountTypes.EQUITY")}</option>
+							<option value="REVENUE">{t("ledgerAccount.accountTypes.REVENUE")}</option>
+							<option value="EXPENSE">{t("ledgerAccount.accountTypes.EXPENSE")}</option>
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Devise</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("ledgerAccount.filters.currency")}</label>
 						<Input
 							value={filterCurrency}
 							onChange={(e) => setFilterCurrency(e.target.value.toUpperCase())}
-							placeholder="USD, EUR, XAF..."
+							placeholder={t("ledgerAccount.filters.currencyPlaceholder")}
 							maxLength={3}
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("ledgerAccount.filters.status")}</label>
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterStatus}
 							onChange={(e) => setFilterStatus(e.target.value as LedgerAccountStatus || "")}
 						>
-							<option value="">Tous les statuts</option>
-							<option value="ACTIVE">Actifs</option>
-							<option value="INACTIVE">Inactifs</option>
+							<option value="">{t("ledgerAccount.filters.allStatuses")}</option>
+							<option value="ACTIVE">{t("ledgerAccount.statuses.ACTIVE")}</option>
+							<option value="INACTIVE">{t("ledgerAccount.statuses.INACTIVE")}</option>
 						</select>
 					</div>
 				</div>
@@ -371,7 +387,7 @@ export default function LedgerAccountsPage() {
 				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 					<div className="flex justify-between items-center mb-4">
 						<h3 className="text-lg font-semibold text-gray-900">
-							{editingAccount ? "Modifier le compte GL" : "Nouveau compte GL"}
+							{editingAccount ? t("ledgerAccount.form.editTitle") : t("ledgerAccount.form.newTitle")}
 						</h3>
 						<Button
 							type="button"
@@ -397,7 +413,7 @@ export default function LedgerAccountsPage() {
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.code")}</label>
 								<Input
 									value={form.code || ""}
 									onChange={e => {
@@ -416,7 +432,7 @@ export default function LedgerAccountsPage() {
 								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.name")}</label>
 								<Input
 									value={form.name || ""}
 									onChange={e => {
@@ -432,7 +448,7 @@ export default function LedgerAccountsPage() {
 								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Compte comptable *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.chartOfAccount")}</label>
 								<div className="relative">
 									<select
 										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
@@ -455,7 +471,7 @@ export default function LedgerAccountsPage() {
 										required
 										disabled={!!editingAccount}
 									>
-										<option value="" disabled>Sélectionner un compte comptable</option>
+										<option value="" disabled>{t("ledgerAccount.form.selectChartOfAccount")}</option>
 										{chartOfAccounts.filter(c => c.isActive).map(coa => (
 											<option key={coa.id} value={coa.code}>
 												{coa.code} - {coa.name} ({getAccountTypeLabel(coa.accountType)})
@@ -473,12 +489,12 @@ export default function LedgerAccountsPage() {
 								)}
 								{form.chartOfAccountCode && (
 									<p className="text-xs text-gray-500 mt-1">
-										Type automatique: {getAccountTypeLabel(form.accountType)}
+										{t("ledgerAccount.form.autoType", { type: getAccountTypeLabel(form.accountType) })}
 									</p>
 								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Type de compte *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.accountType")}</label>
 								<div className="relative">
 									<select
 										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
@@ -497,11 +513,11 @@ export default function LedgerAccountsPage() {
 										required
 										disabled={!!form.chartOfAccountCode}
 									>
-										<option value="ASSET">Actif</option>
-										<option value="LIABILITY">Passif</option>
-										<option value="EQUITY">Capitaux propres</option>
-										<option value="REVENUE">Produit</option>
-										<option value="EXPENSE">Charge</option>
+										<option value="ASSET">{t("ledgerAccount.accountTypes.ASSET")}</option>
+										<option value="LIABILITY">{t("ledgerAccount.accountTypes.LIABILITY")}</option>
+										<option value="EQUITY">{t("ledgerAccount.accountTypes.EQUITY")}</option>
+										<option value="REVENUE">{t("ledgerAccount.accountTypes.REVENUE")}</option>
+										<option value="EXPENSE">{t("ledgerAccount.accountTypes.EXPENSE")}</option>
 									</select>
 									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
 										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,11 +529,11 @@ export default function LedgerAccountsPage() {
 									<p className="text-xs text-red-600 mt-1">{validationErrors.accountType}</p>
 								)}
 								{form.chartOfAccountCode && (
-									<p className="text-xs text-gray-500 mt-1">Défini par le compte comptable</p>
+									<p className="text-xs text-gray-500 mt-1">{t("ledgerAccount.form.definedByChart")}</p>
 								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Devise *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.currency")}</label>
 								<Input
 									value={form.currency || ""}
 									onChange={e => {
@@ -535,23 +551,23 @@ export default function LedgerAccountsPage() {
 								)}
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("ledgerAccount.form.status")}</label>
 								<select
 									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 									value={form.status || "ACTIVE"}
 									onChange={e => setForm({ ...form, status: e.target.value as LedgerAccountStatus })}
 								>
-									<option value="ACTIVE">Actif</option>
-									<option value="INACTIVE">Inactif</option>
+									<option value="ACTIVE">{t("ledgerAccount.statuses.ACTIVE")}</option>
+									<option value="INACTIVE">{t("ledgerAccount.statuses.INACTIVE")}</option>
 								</select>
 							</div>
 						</div>
 						<div className="flex justify-end gap-2 mt-4">
 							<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-								Annuler
+								{t("ledgerAccount.form.cancel")}
 							</Button>
 							<Button type="submit" disabled={submitting}>
-								{submitting ? (editingAccount ? "Modification..." : "Création...") : (editingAccount ? "Modifier" : "Créer")}
+								{submitting ? (editingAccount ? t("ledgerAccount.form.editing") : t("ledgerAccount.form.creating")) : (editingAccount ? t("ledgerAccount.form.edit") : t("ledgerAccount.form.create"))}
 							</Button>
 						</div>
 					</form>
@@ -562,15 +578,15 @@ export default function LedgerAccountsPage() {
 			{loading ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement des comptes GL...</p>
+					<p className="mt-4 text-gray-600">{t("ledgerAccount.loading")}</p>
 				</div>
 			) : filteredAccounts.length === 0 ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 					</svg>
-					<p className="text-gray-500 text-lg font-medium">Aucun compte GL trouvé</p>
-					<p className="text-gray-400 text-sm mt-2">Essayez de modifier vos filtres de recherche</p>
+					<p className="text-gray-500 text-lg font-medium">{t("ledgerAccount.table.noAccounts")}</p>
+					<p className="text-gray-400 text-sm mt-2">{t("ledgerAccount.table.noAccountsHint")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -578,14 +594,14 @@ export default function LedgerAccountsPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48 max-w-xs">Nom</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte comptable</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Solde</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.code")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-48 max-w-xs">{t("ledgerAccount.table.name")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.chartOfAccount")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.type")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.currency")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.balance")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.status")}</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -619,7 +635,7 @@ export default function LedgerAccountsPage() {
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge variant={account.status === "ACTIVE" ? "success" : "neutral"}>
-												{account.status === "ACTIVE" ? "Actif" : "Inactif"}
+												{account.status === "ACTIVE" ? t("ledgerAccount.table.active") : t("ledgerAccount.table.inactive")}
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
@@ -630,7 +646,7 @@ export default function LedgerAccountsPage() {
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 														</svg>
-														Voir
+														{t("ledgerAccount.table.view")}
 													</Button>
 												</Link>
 												<Button
@@ -642,7 +658,7 @@ export default function LedgerAccountsPage() {
 													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 													</svg>
-													Modifier
+													{t("ledgerAccount.table.edit")}
 												</Button>
 											</div>
 										</td>
@@ -654,7 +670,9 @@ export default function LedgerAccountsPage() {
 					{filteredAccounts.length > 0 && (
 						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
 							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{filteredAccounts.length}</span> compte{filteredAccounts.length > 1 ? "s" : ""}
+								{t(`ledgerAccount.table.displaying_${filteredAccounts.length === 1 ? 'one' : 'other'}`, { 
+									count: filteredAccounts.length
+								})}
 							</p>
 						</div>
 					)}

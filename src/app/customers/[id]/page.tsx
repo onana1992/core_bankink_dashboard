@@ -430,9 +430,13 @@ export default function CustomerDetailPage() {
 	async function doSubmitKyc() {
 		if (!id) return;
 		setKycSubmitting("submit");
+		setError(null);
 		try {
 			const c = await customersApi.submitKyc(id);
 			setCustomer(c);
+		} catch (e: any) {
+			const errorMessage = e?.message ?? t("customer.detail.kyc.submit.error");
+			setError(errorMessage);
 		} finally {
 			setKycSubmitting(null);
 		}
@@ -440,9 +444,13 @@ export default function CustomerDetailPage() {
 	async function doVerifyKyc() {
 		if (!id) return;
 		setKycSubmitting("verify");
+		setError(null);
 		try {
 			const c = await customersApi.verifyKyc(id, { riskScore: verifyRisk, pep: verifyPep });
 			setCustomer(c);
+		} catch (e: any) {
+			const errorMessage = e?.message ?? t("customer.detail.kyc.verify.error");
+			setError(errorMessage);
 		} finally {
 			setKycSubmitting(null);
 		}

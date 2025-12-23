@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -56,6 +57,7 @@ import type {
 } from "@/types";
 
 export default function ProductDetailPage() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const params = useParams();
 	const id = params.id as string;
@@ -92,7 +94,7 @@ export default function ProductDetailPage() {
 			setProduct(data);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement");
+			setError(e?.message ?? t("product.detail.error"));
 		} finally {
 			setLoading(false);
 		}
@@ -300,7 +302,7 @@ export default function ProductDetailPage() {
 	}
 
 	if (loading) {
-		return <div className="p-4">Chargement...</div>;
+		return <div className="p-4">{t("product.detail.loading")}</div>;
 	}
 
 	if (error || !product) {
@@ -311,8 +313,8 @@ export default function ProductDetailPage() {
 						<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
 					</svg>
 					<div>
-						<div className="font-medium">Erreur</div>
-						<div className="text-sm mt-1">{error ?? "Produit non trouvé"}</div>
+						<div className="font-medium">{t("product.detail.error")}</div>
+						<div className="text-sm mt-1">{error ?? t("product.detail.notFound")}</div>
 					</div>
 				</div>
 				<Link href="/products">
@@ -320,7 +322,7 @@ export default function ProductDetailPage() {
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 						</svg>
-						Retour à la liste
+						{t("product.detail.backToList")}
 					</Button>
 				</Link>
 			</div>
@@ -348,14 +350,14 @@ export default function ProductDetailPage() {
 	}
 
 	const tabs = [
-		{ id: "overview" as const, label: "Vue d'ensemble" },
-		{ id: "rates" as const, label: `Taux d'intérêt (${interestRates.length})` },
-		{ id: "fees" as const, label: `Frais (${fees.length})` },
-		{ id: "limits" as const, label: `Limites (${limits.length})` },
-		{ id: "periods" as const, label: `Périodes (${periods.length})` },
-		{ id: "penalties" as const, label: `Pénalités (${penalties.length})` },
-		{ id: "eligibility" as const, label: `Règles d'éligibilité (${eligibilityRules.length})` },
-		{ id: "gl-mappings" as const, label: `Mappings GL (${glMappings.length})` }
+		{ id: "overview" as const, label: t("product.detail.tabs.overview") },
+		{ id: "rates" as const, label: `${t("product.detail.tabs.rates")} (${interestRates.length})` },
+		{ id: "fees" as const, label: `${t("product.detail.tabs.fees")} (${fees.length})` },
+		{ id: "limits" as const, label: `${t("product.detail.tabs.limits")} (${limits.length})` },
+		{ id: "periods" as const, label: `${t("product.detail.tabs.periods")} (${periods.length})` },
+		{ id: "penalties" as const, label: `${t("product.detail.tabs.penalties")} (${penalties.length})` },
+		{ id: "eligibility" as const, label: `${t("product.detail.tabs.eligibility")} (${eligibilityRules.length})` },
+		{ id: "gl-mappings" as const, label: `${t("product.detail.tabs.glMappings")} (${glMappings.length})` }
 	];
 
 	return (
@@ -366,7 +368,7 @@ export default function ProductDetailPage() {
 					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 					</svg>
-					Retour à la liste des produits
+					{t("product.detail.backToList")}
 				</Link>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-4">
@@ -375,7 +377,7 @@ export default function ProductDetailPage() {
 						</div>
 						<div>
 							<h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-							<p className="text-gray-600 mt-1">Détails et configuration du produit bancaire</p>
+							<p className="text-gray-600 mt-1">{t("product.detail.subtitle")}</p>
 							<div className="flex gap-2 mt-2">
 								<Badge variant={statusBadgeVariant(product.status)}>{product.status}</Badge>
 								<span className="text-sm text-gray-500">{categoryLabel(product.category)}</span>
@@ -388,30 +390,30 @@ export default function ProductDetailPage() {
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
 								</svg>
-								Désactiver
+								{t("product.detail.deactivate")}
 							</Button>
 						) : (
 							<Button onClick={handleActivate} className="flex items-center gap-2">
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Activer
+								{t("product.detail.activate")}
 							</Button>
 						)}
 						<Button variant="outline" onClick={load} className="flex items-center gap-2">
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							Actualiser
+							{t("product.detail.refresh")}
 						</Button>
 						<Button 
 							variant="outline" 
 							onClick={handleDelete}
 							className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-							title="Supprimer le produit et toutes ses configurations associées"
+							title={t("product.detail.deleteTitle")}
 						>
 							<Trash2 className="h-4 w-4" />
-							Supprimer
+							{t("product.detail.delete")}
 						</Button>
 					</div>
 				</div>
@@ -565,6 +567,7 @@ function ProductOverviewTab({
 		eligibilityRules: number;
 	};
 }) {
+	const { t } = useTranslation();
 	const [editing, setEditing] = useState(false);
 	const [form, setForm] = useState<{
 		name: string;
@@ -595,7 +598,7 @@ function ProductOverviewTab({
 			setEditing(false);
 			onUpdate();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la mise à jour");
+			setError(e?.message ?? t("product.detail.overview.updateError"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -611,17 +614,17 @@ function ProductOverviewTab({
 				)}
 				<div className="grid grid-cols-2 gap-4">
 					<div>
-						<label className="block text-sm mb-1">Code</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.code")}</label>
 						<div className="font-mono text-sm text-gray-500">{product.code}</div>
-						<p className="text-xs text-gray-400 mt-1">Le code ne peut pas être modifié</p>
+						<p className="text-xs text-gray-400 mt-1">{t("product.detail.overview.codeHint")}</p>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Catégorie</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.category")}</label>
 						<div className="text-sm text-gray-500">{product.category}</div>
-						<p className="text-xs text-gray-400 mt-1">La catégorie ne peut pas être modifiée</p>
+						<p className="text-xs text-gray-400 mt-1">{t("product.detail.overview.categoryHint")}</p>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Nom *</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.name")} *</label>
 						<Input
 							value={form.name}
 							onChange={e => setForm({ ...form, name: e.target.value })}
@@ -629,7 +632,7 @@ function ProductOverviewTab({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Statut</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.status")}</label>
 						<select
 							className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 							value={form.status}
@@ -641,7 +644,7 @@ function ProductOverviewTab({
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Devise</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.currency")}</label>
 						<Input
 							value={form.currency}
 							onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
@@ -649,7 +652,7 @@ function ProductOverviewTab({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Taux d'intérêt par défaut (%)</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.defaultInterestRate")}</label>
 						<Input
 							type="number"
 							step="0.0001"
@@ -658,7 +661,7 @@ function ProductOverviewTab({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Solde minimum</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.minBalance")}</label>
 						<Input
 							type="number"
 							step="0.01"
@@ -667,7 +670,7 @@ function ProductOverviewTab({
 						/>
 					</div>
 					<div>
-						<label className="block text-sm mb-1">Solde maximum</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.maxBalance")}</label>
 						<Input
 							type="number"
 							step="0.01"
@@ -676,7 +679,7 @@ function ProductOverviewTab({
 						/>
 					</div>
 					<div className="col-span-2">
-						<label className="block text-sm mb-1">Description</label>
+						<label className="block text-sm mb-1">{t("product.detail.overview.description")}</label>
 						<textarea
 							className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 							value={form.description}
@@ -686,7 +689,7 @@ function ProductOverviewTab({
 					</div>
 				</div>
 				<div className="flex gap-2">
-					<Button type="submit" disabled={submitting}>{submitting ? "Enregistrement..." : "Enregistrer"}</Button>
+					<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.overview.saving") : t("product.detail.overview.save")}</Button>
 					<Button type="button" variant="outline" onClick={() => {
 						setEditing(false);
 						setForm({
@@ -699,7 +702,7 @@ function ProductOverviewTab({
 							defaultInterestRate: product.defaultInterestRate ?? undefined
 						});
 						setError(null);
-					}}>Annuler</Button>
+					}}>{t("product.detail.overview.cancel")}</Button>
 				</div>
 			</form>
 		);
@@ -721,12 +724,12 @@ function ProductOverviewTab({
 			{/* Header avec bouton modifier */}
 			<div className="flex justify-between items-start">
 				<div>
-					<h2 className="text-2xl font-bold text-gray-900">Informations générales</h2>
-					<p className="text-gray-600 mt-1">Détails et configuration du produit</p>
+					<h2 className="text-2xl font-bold text-gray-900">{t("product.detail.overview.edit")}</h2>
+					<p className="text-gray-600 mt-1">{t("product.detail.subtitle")}</p>
 				</div>
 				<Button variant="outline" onClick={() => setEditing(true)} className="flex items-center gap-2">
 					<Edit2 className="h-4 w-4" />
-					Modifier
+					{t("product.detail.overview.edit")}
 				</Button>
 			</div>
 
@@ -4263,6 +4266,7 @@ function EligibilityRulesTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductEligibilityRuleRequest>({
 		ruleType: "MIN_AGE",
 		ruleName: "",
@@ -4335,14 +4339,14 @@ function EligibilityRulesTab({
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.eligibility.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Règles d'éligibilité ({rules.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter une règle</Button>}
+				<h3 className="text-lg font-semibold">{t("product.detail.eligibility.rulesCount", { count: rules.length })}</h3>
+				{!showForm && <Button onClick={onAdd}>{t("product.detail.eligibility.addButton")}</Button>}
 			</div>
 
 			{showForm && (
@@ -4350,28 +4354,28 @@ function EligibilityRulesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de règle *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.ruleType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.ruleType}
 								onChange={e => setForm({ ...form, ruleType: e.target.value as EligibilityRuleType })}
 								required
 							>
-								<option value="MIN_AGE">Âge minimum</option>
-								<option value="MAX_AGE">Âge maximum</option>
-								<option value="MIN_INCOME">Revenu minimum</option>
-								<option value="MIN_BALANCE">Solde minimum</option>
-								<option value="CLIENT_TYPE">Type de client</option>
-								<option value="CLIENT_STATUS">Statut client</option>
-								<option value="RESIDENCY">Résidence</option>
-								<option value="KYC_LEVEL">Niveau KYC</option>
-								<option value="RISK_SCORE">Score de risque</option>
-								<option value="PEP_FLAG">Flag PEP</option>
-								<option value="OTHER">Autre</option>
+								<option value="MIN_AGE">{t("product.detail.eligibility.ruleTypes.MIN_AGE")}</option>
+								<option value="MAX_AGE">{t("product.detail.eligibility.ruleTypes.MAX_AGE")}</option>
+								<option value="MIN_INCOME">{t("product.detail.eligibility.ruleTypes.MIN_INCOME")}</option>
+								<option value="MIN_BALANCE">{t("product.detail.eligibility.ruleTypes.MIN_BALANCE")}</option>
+								<option value="CLIENT_TYPE">{t("product.detail.eligibility.ruleTypes.CLIENT_TYPE")}</option>
+								<option value="CLIENT_STATUS">{t("product.detail.eligibility.ruleTypes.CLIENT_STATUS")}</option>
+								<option value="RESIDENCY">{t("product.detail.eligibility.ruleTypes.RESIDENCY")}</option>
+								<option value="KYC_LEVEL">{t("product.detail.eligibility.ruleTypes.KYC_LEVEL")}</option>
+								<option value="RISK_SCORE">{t("product.detail.eligibility.ruleTypes.RISK_SCORE")}</option>
+								<option value="PEP_FLAG">{t("product.detail.eligibility.ruleTypes.PEP_FLAG")}</option>
+								<option value="OTHER">{t("product.detail.eligibility.ruleTypes.OTHER")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Nom de la règle *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.ruleName")}</label>
 							<Input
 								value={form.ruleName}
 								onChange={e => setForm({ ...form, ruleName: e.target.value })}
@@ -4379,63 +4383,63 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Opérateur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.operator")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.operator}
 								onChange={e => setForm({ ...form, operator: e.target.value as EligibilityOperator })}
 								required
 							>
-								<option value="EQUALS">Égal à</option>
-								<option value="NOT_EQUALS">Différent de</option>
-								<option value="GREATER_THAN">Supérieur à</option>
-								<option value="GREATER_THAN_OR_EQUAL">Supérieur ou égal à</option>
-								<option value="LESS_THAN">Inférieur à</option>
-								<option value="LESS_THAN_OR_EQUAL">Inférieur ou égal à</option>
-								<option value="IN">Dans la liste</option>
-								<option value="NOT_IN">Pas dans la liste</option>
-								<option value="CONTAINS">Contient</option>
+								<option value="EQUALS">{t("product.detail.eligibility.operators.EQUALS")}</option>
+								<option value="NOT_EQUALS">{t("product.detail.eligibility.operators.NOT_EQUALS")}</option>
+								<option value="GREATER_THAN">{t("product.detail.eligibility.operators.GREATER_THAN")}</option>
+								<option value="GREATER_THAN_OR_EQUAL">{t("product.detail.eligibility.operators.GREATER_THAN_OR_EQUAL")}</option>
+								<option value="LESS_THAN">{t("product.detail.eligibility.operators.LESS_THAN")}</option>
+								<option value="LESS_THAN_OR_EQUAL">{t("product.detail.eligibility.operators.LESS_THAN_OR_EQUAL")}</option>
+								<option value="IN">{t("product.detail.eligibility.operators.IN")}</option>
+								<option value="NOT_IN">{t("product.detail.eligibility.operators.NOT_IN")}</option>
+								<option value="CONTAINS">{t("product.detail.eligibility.operators.CONTAINS")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Type de données *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.dataType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.dataType}
 								onChange={e => setForm({ ...form, dataType: e.target.value as EligibilityDataType })}
 								required
 							>
-								<option value="STRING">Chaîne</option>
-								<option value="NUMBER">Nombre</option>
-								<option value="BOOLEAN">Booléen</option>
-								<option value="DATE">Date</option>
-								<option value="ENUM">Énumération</option>
+								<option value="STRING">{t("product.detail.eligibility.dataTypes.STRING")}</option>
+								<option value="NUMBER">{t("product.detail.eligibility.dataTypes.NUMBER")}</option>
+								<option value="BOOLEAN">{t("product.detail.eligibility.dataTypes.BOOLEAN")}</option>
+								<option value="DATE">{t("product.detail.eligibility.dataTypes.DATE")}</option>
+								<option value="ENUM">{t("product.detail.eligibility.dataTypes.ENUM")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.value")}</label>
 							<Input
 								value={form.ruleValue}
 								onChange={e => setForm({ ...form, ruleValue: e.target.value })}
-								placeholder={form.operator === "IN" || form.operator === "NOT_IN" ? '["valeur1", "valeur2"]' : "Valeur"}
+								placeholder={form.operator === "IN" || form.operator === "NOT_IN" ? '["valeur1", "valeur2"]' : t("product.detail.eligibility.form.valuePlaceholder")}
 								required
 							/>
 							{form.operator === "IN" || form.operator === "NOT_IN" ? (
-								<p className="text-xs text-gray-500 mt-1">Format JSON: ["valeur1", "valeur2"]</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.eligibility.form.valueJsonHint")}</p>
 							) : null}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Obligatoire</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.isMandatory")}</label>
 							<input
 								type="checkbox"
 								checked={form.isMandatory ?? true}
 								onChange={e => setForm({ ...form, isMandatory: e.target.checked })}
 								className="rounded"
 							/>
-							<p className="text-xs text-gray-500 mt-1">Si coché, la règle doit être satisfaite</p>
+							<p className="text-xs text-gray-500 mt-1">{t("product.detail.eligibility.form.isMandatoryHint")}</p>
 						</div>
 						<div className="col-span-2">
-							<label className="block text-sm mb-1">Message d'erreur</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.errorMessage")}</label>
 							<textarea
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.errorMessage ?? ""}
@@ -4444,7 +4448,7 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -4453,7 +4457,7 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -4462,43 +4466,43 @@ function EligibilityRulesTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.eligibility.form.adding") : t("product.detail.eligibility.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.eligibility.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
 
 			{rules.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucune règle d'éligibilité configurée</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.eligibility.noRules")}</div>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Type</th>
-								<th className="px-4 py-2 text-left">Nom</th>
-								<th className="px-4 py-2 text-left">Opérateur</th>
-								<th className="px-4 py-2 text-left">Valeur</th>
-								<th className="px-4 py-2 text-left">Obligatoire</th>
-								<th className="px-4 py-2 text-left">Actif</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.type")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.name")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.operator")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.value")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.mandatory")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.eligibility.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
 						<tbody>
 							{rules.map(rule => (
 								<tr key={rule.id} className="border-t">
-									<td className="px-4 py-2">{rule.ruleType}</td>
+									<td className="px-4 py-2">{t(`product.detail.eligibility.ruleTypes.${rule.ruleType}`) || rule.ruleType}</td>
 									<td className="px-4 py-2">{rule.ruleName}</td>
-									<td className="px-4 py-2">{rule.operator}</td>
+									<td className="px-4 py-2">{t(`product.detail.eligibility.operators.${rule.operator}`) || rule.operator}</td>
 									<td className="px-4 py-2 font-mono text-xs">{rule.ruleValue}</td>
 									<td className="px-4 py-2">
 										<Badge variant={rule.isMandatory ? "warning" : "neutral"}>
-											{rule.isMandatory ? "Oui" : "Non"}
+											{rule.isMandatory ? t("product.detail.eligibility.table.yes") : t("product.detail.eligibility.table.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2">
 										<Badge variant={rule.isActive ? "success" : "neutral"}>
-											{rule.isActive ? "Oui" : "Non"}
+											{rule.isActive ? t("product.detail.eligibility.table.yes") : t("product.detail.eligibility.table.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -4547,7 +4551,7 @@ function EligibilityRulesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.eligibility.menu.view")}
 														</button>
 														<button
 															type="button"
@@ -4561,7 +4565,7 @@ function EligibilityRulesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.eligibility.menu.edit")}
 														</button>
 														<button
 															type="button"
@@ -4573,7 +4577,7 @@ function EligibilityRulesTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.eligibility.menu.delete")}
 														</button>
 													</div>
 												</>
@@ -4599,7 +4603,7 @@ function EligibilityRulesTab({
 										<FileText className="h-6 w-6 text-white" />
 									</div>
 									<div>
-										<h3 className="text-xl font-bold text-white">Détails de la règle d'éligibilité</h3>
+										<h3 className="text-xl font-bold text-white">{t("product.detail.eligibility.modal.title")}</h3>
 										<p className="text-sm text-indigo-100 mt-0.5">{selectedRule.ruleName}</p>
 									</div>
 								</div>
@@ -4624,16 +4628,16 @@ function EligibilityRulesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Type de règle
+										{t("product.detail.eligibility.modal.ruleType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedRule.ruleType}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.eligibility.ruleTypes.${selectedRule.ruleType}`) || selectedRule.ruleType}</div>
 								</div>
 								<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
 									<label className="text-xs font-medium text-purple-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Nom
+										{t("product.detail.eligibility.modal.name")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">{selectedRule.ruleName}</div>
 								</div>
@@ -4642,16 +4646,16 @@ function EligibilityRulesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
 										</svg>
-										Opérateur
+										{t("product.detail.eligibility.modal.operator")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedRule.operator}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.eligibility.operators.${selectedRule.operator}`) || selectedRule.operator}</div>
 								</div>
 								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
 									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
 										</svg>
-										Valeur
+										{t("product.detail.eligibility.modal.value")}
 									</label>
 									<div className="mt-1 font-mono font-semibold text-gray-900 break-all">{selectedRule.ruleValue}</div>
 								</div>
@@ -4660,20 +4664,20 @@ function EligibilityRulesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 										</svg>
-										Type de données
+										{t("product.detail.eligibility.modal.dataType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedRule.dataType}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.eligibility.dataTypes.${selectedRule.dataType}`) || selectedRule.dataType}</div>
 								</div>
 								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
 									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
 										</svg>
-										Obligatoire
+										{t("product.detail.eligibility.modal.mandatory")}
 									</label>
 									<div className="mt-1">
 										<Badge variant={selectedRule.isMandatory ? "warning" : "neutral"}>
-											{selectedRule.isMandatory ? "Oui" : "Non"}
+											{selectedRule.isMandatory ? t("product.detail.eligibility.table.yes") : t("product.detail.eligibility.table.no")}
 										</Badge>
 									</div>
 								</div>
@@ -4687,7 +4691,7 @@ function EligibilityRulesTab({
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
 										<div className="flex-1">
-											<label className="text-xs font-medium text-red-700 uppercase tracking-wide mb-1 block">Message d'erreur</label>
+											<label className="text-xs font-medium text-red-700 uppercase tracking-wide mb-1 block">{t("product.detail.eligibility.modal.errorMessage")}</label>
 											<div className="text-sm text-red-800 mt-1">{selectedRule.errorMessage}</div>
 										</div>
 									</div>
@@ -4701,7 +4705,7 @@ function EligibilityRulesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date d'effet
+										{t("product.detail.eligibility.modal.effectiveFrom")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedRule.effectiveFrom}</dd>
 								</div>
@@ -4710,7 +4714,7 @@ function EligibilityRulesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date de fin
+										{t("product.detail.eligibility.modal.effectiveTo")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedRule.effectiveTo ?? "-"}</dd>
 								</div>
@@ -4719,11 +4723,11 @@ function EligibilityRulesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Statut
+										{t("product.detail.eligibility.modal.status")}
 									</dt>
 									<dd>
 										<Badge variant={selectedRule.isActive ? "success" : "neutral"}>
-											{selectedRule.isActive ? "Actif" : "Inactif"}
+											{selectedRule.isActive ? t("product.detail.eligibility.modal.active") : t("product.detail.eligibility.modal.inactive")}
 										</Badge>
 									</dd>
 								</div>
@@ -4736,7 +4740,7 @@ function EligibilityRulesTab({
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								Fermer
+								{t("product.detail.eligibility.modal.close")}
 							</Button>
 						</div>
 					</div>
@@ -4766,13 +4770,13 @@ function EligibilityRulesTab({
 						setSelectedRule(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.eligibility.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier la règle d'éligibilité</h4>
+						<h4 className="font-semibold">{t("product.detail.eligibility.form.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
@@ -4788,28 +4792,28 @@ function EligibilityRulesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de règle *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.ruleType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.ruleType}
 								onChange={e => setEditForm({ ...editForm, ruleType: e.target.value as EligibilityRuleType })}
 								required
 							>
-								<option value="MIN_AGE">Âge minimum</option>
-								<option value="MAX_AGE">Âge maximum</option>
-								<option value="MIN_INCOME">Revenu minimum</option>
-								<option value="MIN_BALANCE">Solde minimum</option>
-								<option value="CLIENT_TYPE">Type de client</option>
-								<option value="CLIENT_STATUS">Statut client</option>
-								<option value="RESIDENCY">Résidence</option>
-								<option value="KYC_LEVEL">Niveau KYC</option>
-								<option value="RISK_SCORE">Score de risque</option>
-								<option value="PEP_FLAG">Flag PEP</option>
-								<option value="OTHER">Autre</option>
+								<option value="MIN_AGE">{t("product.detail.eligibility.ruleTypes.MIN_AGE")}</option>
+								<option value="MAX_AGE">{t("product.detail.eligibility.ruleTypes.MAX_AGE")}</option>
+								<option value="MIN_INCOME">{t("product.detail.eligibility.ruleTypes.MIN_INCOME")}</option>
+								<option value="MIN_BALANCE">{t("product.detail.eligibility.ruleTypes.MIN_BALANCE")}</option>
+								<option value="CLIENT_TYPE">{t("product.detail.eligibility.ruleTypes.CLIENT_TYPE")}</option>
+								<option value="CLIENT_STATUS">{t("product.detail.eligibility.ruleTypes.CLIENT_STATUS")}</option>
+								<option value="RESIDENCY">{t("product.detail.eligibility.ruleTypes.RESIDENCY")}</option>
+								<option value="KYC_LEVEL">{t("product.detail.eligibility.ruleTypes.KYC_LEVEL")}</option>
+								<option value="RISK_SCORE">{t("product.detail.eligibility.ruleTypes.RISK_SCORE")}</option>
+								<option value="PEP_FLAG">{t("product.detail.eligibility.ruleTypes.PEP_FLAG")}</option>
+								<option value="OTHER">{t("product.detail.eligibility.ruleTypes.OTHER")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Nom de la règle *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.ruleName")}</label>
 							<Input
 								value={editForm.ruleName}
 								onChange={e => setEditForm({ ...editForm, ruleName: e.target.value })}
@@ -4817,63 +4821,63 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Opérateur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.operator")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.operator}
 								onChange={e => setEditForm({ ...editForm, operator: e.target.value as EligibilityOperator })}
 								required
 							>
-								<option value="EQUALS">Égal à</option>
-								<option value="NOT_EQUALS">Différent de</option>
-								<option value="GREATER_THAN">Supérieur à</option>
-								<option value="GREATER_THAN_OR_EQUAL">Supérieur ou égal à</option>
-								<option value="LESS_THAN">Inférieur à</option>
-								<option value="LESS_THAN_OR_EQUAL">Inférieur ou égal à</option>
-								<option value="IN">Dans la liste</option>
-								<option value="NOT_IN">Pas dans la liste</option>
-								<option value="CONTAINS">Contient</option>
+								<option value="EQUALS">{t("product.detail.eligibility.operators.EQUALS")}</option>
+								<option value="NOT_EQUALS">{t("product.detail.eligibility.operators.NOT_EQUALS")}</option>
+								<option value="GREATER_THAN">{t("product.detail.eligibility.operators.GREATER_THAN")}</option>
+								<option value="GREATER_THAN_OR_EQUAL">{t("product.detail.eligibility.operators.GREATER_THAN_OR_EQUAL")}</option>
+								<option value="LESS_THAN">{t("product.detail.eligibility.operators.LESS_THAN")}</option>
+								<option value="LESS_THAN_OR_EQUAL">{t("product.detail.eligibility.operators.LESS_THAN_OR_EQUAL")}</option>
+								<option value="IN">{t("product.detail.eligibility.operators.IN")}</option>
+								<option value="NOT_IN">{t("product.detail.eligibility.operators.NOT_IN")}</option>
+								<option value="CONTAINS">{t("product.detail.eligibility.operators.CONTAINS")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Type de données *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.dataType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.dataType}
 								onChange={e => setEditForm({ ...editForm, dataType: e.target.value as EligibilityDataType })}
 								required
 							>
-								<option value="STRING">Chaîne</option>
-								<option value="NUMBER">Nombre</option>
-								<option value="BOOLEAN">Booléen</option>
-								<option value="DATE">Date</option>
-								<option value="ENUM">Énumération</option>
+								<option value="STRING">{t("product.detail.eligibility.dataTypes.STRING")}</option>
+								<option value="NUMBER">{t("product.detail.eligibility.dataTypes.NUMBER")}</option>
+								<option value="BOOLEAN">{t("product.detail.eligibility.dataTypes.BOOLEAN")}</option>
+								<option value="DATE">{t("product.detail.eligibility.dataTypes.DATE")}</option>
+								<option value="ENUM">{t("product.detail.eligibility.dataTypes.ENUM")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.value")}</label>
 							<Input
 								value={editForm.ruleValue}
 								onChange={e => setEditForm({ ...editForm, ruleValue: e.target.value })}
-								placeholder={editForm.operator === "IN" || editForm.operator === "NOT_IN" ? '["valeur1", "valeur2"]' : "Valeur"}
+								placeholder={editForm.operator === "IN" || editForm.operator === "NOT_IN" ? '["valeur1", "valeur2"]' : t("product.detail.eligibility.form.valuePlaceholder")}
 								required
 							/>
 							{editForm.operator === "IN" || editForm.operator === "NOT_IN" ? (
-								<p className="text-xs text-gray-500 mt-1">Format JSON: ["valeur1", "valeur2"]</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.eligibility.form.valueJsonHint")}</p>
 							) : null}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Obligatoire</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.isMandatory")}</label>
 							<input
 								type="checkbox"
 								checked={editForm.isMandatory ?? true}
 								onChange={e => setEditForm({ ...editForm, isMandatory: e.target.checked })}
 								className="rounded"
 							/>
-							<p className="text-xs text-gray-500 mt-1">Si coché, la règle doit être satisfaite</p>
+							<p className="text-xs text-gray-500 mt-1">{t("product.detail.eligibility.form.isMandatoryHint")}</p>
 						</div>
 						<div className="col-span-2">
-							<label className="block text-sm mb-1">Message d'erreur</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.errorMessage")}</label>
 							<textarea
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.errorMessage ?? ""}
@@ -4882,7 +4886,7 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveFrom}
@@ -4891,7 +4895,7 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveTo ?? ""}
@@ -4899,24 +4903,24 @@ function EligibilityRulesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.eligibility.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
 								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("product.detail.eligibility.table.yes")}</option>
+								<option value="false">{t("product.detail.eligibility.table.no")}</option>
 							</select>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.eligibility.form.editing") : t("product.detail.eligibility.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedRule(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.eligibility.form.cancel")}</Button>
 					</div>
 				</form>
 			)}

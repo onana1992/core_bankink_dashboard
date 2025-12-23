@@ -68,7 +68,13 @@
 		"email": "Email",
 		"risk": "Risk",
 		"loading": "Loading...",
-		"reset": "Reset"
+		"reset": "Reset",
+		"back": "Back",
+		"cancel": "Cancel",
+		"error": "Error",
+		"dates": "Dates",
+		"createdAt": "Created on",
+		"updatedAt": "Updated on"
 	},
 	"customer": {
 		"new": "New Customer",
@@ -249,7 +255,9 @@
 					"title": "Submission",
 					"description": "Submit the file for review (DRAFT/REJECTED → PENDING_REVIEW)",
 					"button": "Submit KYC",
-					"submitting": "Submitting..."
+					"submitting": "Submitting...",
+					"success": "KYC submitted successfully",
+					"error": "Error submitting KYC"
 				},
 				"verify": {
 					"title": "Verification",
@@ -257,7 +265,9 @@
 					"riskScore": "Risk Score",
 					"pepFlag": "PEP Person",
 					"button": "Verify",
-					"verifying": "Verifying..."
+					"verifying": "Verifying...",
+					"success": "KYC verified successfully",
+					"error": "Error verifying KYC"
 				},
 				"reject": {
 					"title": "Rejection",
@@ -285,6 +295,340 @@
 				"openingDate": "Opening Date",
 				"view": "View"
 			}
+		}
+	},
+	"product": {
+		"detail": {
+			"title": "Product Details",
+			"subtitle": "Banking product details and configuration",
+			"backToList": "Back to product list",
+			"loading": "Loading...",
+			"error": "Error",
+			"notFound": "Product not found",
+			"refresh": "Refresh",
+			"activate": "Activate",
+			"deactivate": "Deactivate",
+			"delete": "Delete",
+			"deleteTitle": "Delete the product and all its associated configurations",
+			"tabs": {
+				"overview": "Overview",
+				"rates": "Interest Rates",
+				"fees": "Fees",
+				"limits": "Limits",
+				"periods": "Periods",
+				"penalties": "Penalties",
+				"eligibility": "Eligibility Rules",
+				"glMappings": "GL Mappings"
+			},
+			"categories": {
+				"CURRENT_ACCOUNT": "Current Account",
+				"SAVINGS_ACCOUNT": "Savings Account",
+				"TERM_DEPOSIT": "Term Deposit",
+				"LOAN": "Loan",
+				"CARD": "Card"
+			},
+			"overview": {
+				"edit": "Edit",
+				"code": "Code",
+				"codeHint": "Code cannot be modified",
+				"category": "Category",
+				"categoryHint": "Category cannot be modified",
+				"name": "Name",
+				"status": "Status",
+				"currency": "Currency",
+				"defaultInterestRate": "Default Interest Rate (%)",
+				"minBalance": "Minimum Balance",
+				"maxBalance": "Maximum Balance",
+				"description": "Description",
+				"save": "Save",
+				"saving": "Saving...",
+				"cancel": "Cancel",
+				"updateError": "Error updating",
+				"stats": {
+					"interestRates": "Interest Rates",
+					"fees": "Fees",
+					"limits": "Limits",
+					"periods": "Periods",
+					"penalties": "Penalties",
+					"eligibilityRules": "Eligibility Rules"
+				}
+			},
+			"rates": {
+				"title": "Interest Rates",
+				"add": "Add Rate",
+				"addButton": "+ Add Rate",
+				"loading": "Loading...",
+				"rate": "Rate",
+				"view": "View",
+				"edit": "Edit",
+				"delete": "Delete",
+				"editTitle": "Edit Interest Rate",
+				"addTitle": "Add Interest Rate",
+				"adding": "Adding...",
+				"editing": "Editing...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			},
+			"fees": {
+				"title": "Fees",
+				"add": "Add Fee",
+				"addButton": "+ Add Fee",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			},
+			"limits": {
+				"title": "Limits",
+				"add": "Add Limit",
+				"addButton": "+ Add Limit",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			},
+			"periods": {
+				"title": "Periods",
+				"add": "Add Period",
+				"addButton": "+ Add Period",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			},
+			"penalties": {
+				"title": "Penalties",
+				"add": "Add Penalty",
+				"addButton": "+ Add Penalty",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			},
+			"eligibility": {
+				"title": "Eligibility Rules",
+				"add": "Add Rule",
+				"addButton": "+ Add Rule",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating",
+				"noRules": "No eligibility rules configured",
+				"rulesCount": "Eligibility Rules ({{count}})",
+				"form": {
+					"ruleType": "Rule Type *",
+					"ruleName": "Rule Name *",
+					"operator": "Operator *",
+					"dataType": "Data Type *",
+					"value": "Value *",
+					"valuePlaceholder": "Value",
+					"valueJsonHint": "JSON format: [\"value1\", \"value2\"]",
+					"isMandatory": "Mandatory",
+					"isMandatoryHint": "If checked, the rule must be satisfied",
+					"errorMessage": "Error Message",
+					"effectiveFrom": "Effective From *",
+					"effectiveTo": "Effective To",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"editTitle": "Edit Eligibility Rule"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Name",
+					"operator": "Operator",
+					"value": "Value",
+					"mandatory": "Mandatory",
+					"active": "Active",
+					"actions": "Actions",
+					"yes": "Yes",
+					"no": "No"
+				},
+				"menu": {
+					"view": "View",
+					"edit": "Edit",
+					"delete": "Delete"
+				},
+				"modal": {
+					"title": "Eligibility Rule Details",
+					"ruleType": "Rule Type",
+					"name": "Name",
+					"operator": "Operator",
+					"value": "Value",
+					"dataType": "Data Type",
+					"mandatory": "Mandatory",
+					"errorMessage": "Error Message",
+					"effectiveFrom": "Effective From",
+					"effectiveTo": "Effective To",
+					"status": "Status",
+					"active": "Active",
+					"inactive": "Inactive",
+					"close": "Close"
+				},
+				"ruleTypes": {
+					"MIN_AGE": "Minimum Age",
+					"MAX_AGE": "Maximum Age",
+					"MIN_INCOME": "Minimum Income",
+					"MIN_BALANCE": "Minimum Balance",
+					"CLIENT_TYPE": "Client Type",
+					"CLIENT_STATUS": "Client Status",
+					"RESIDENCY": "Residency",
+					"KYC_LEVEL": "KYC Level",
+					"RISK_SCORE": "Risk Score",
+					"PEP_FLAG": "PEP Flag",
+					"OTHER": "Other"
+				},
+				"operators": {
+					"EQUALS": "Equals",
+					"NOT_EQUALS": "Not Equals",
+					"GREATER_THAN": "Greater Than",
+					"GREATER_THAN_OR_EQUAL": "Greater Than Or Equal",
+					"LESS_THAN": "Less Than",
+					"LESS_THAN_OR_EQUAL": "Less Than Or Equal",
+					"IN": "In List",
+					"NOT_IN": "Not In List",
+					"CONTAINS": "Contains"
+				},
+				"dataTypes": {
+					"STRING": "String",
+					"NUMBER": "Number",
+					"BOOLEAN": "Boolean",
+					"DATE": "Date",
+					"ENUM": "Enumeration"
+				}
+			},
+			"glMappings": {
+				"title": "GL Mappings",
+				"add": "Add Mapping",
+				"addButton": "+ Add Mapping",
+				"loading": "Loading...",
+				"deleteError": "Error deleting",
+				"addError": "Error adding",
+				"updateError": "Error updating"
+			}
+		}
+	},
+	"ledgerAccount": {
+		"title": "Ledger Accounts",
+		"subtitle": "Management and configuration of GL accounts",
+		"refresh": "Refresh",
+		"newAccount": "New GL Account",
+		"cancel": "Cancel",
+		"loading": "Loading GL accounts...",
+		"loadError": "Error loading GL accounts",
+		"createError": "Error creating",
+		"updateError": "Error updating",
+		"stats": {
+			"total": "Total",
+			"active": "Active",
+			"inactive": "Inactive",
+			"currencies": "Currencies"
+		},
+		"filters": {
+			"title": "Filters",
+			"search": "Search",
+			"searchPlaceholder": "Code, name or chart of account...",
+			"accountType": "Account Type",
+			"allTypes": "All Types",
+			"currency": "Currency",
+			"currencyPlaceholder": "USD, EUR, XAF...",
+			"status": "Status",
+			"allStatuses": "All Statuses"
+		},
+		"form": {
+			"newTitle": "New GL Account",
+			"editTitle": "Edit GL Account",
+			"code": "Code *",
+			"name": "Name *",
+			"chartOfAccount": "Chart of Account *",
+			"selectChartOfAccount": "Select a chart of account",
+			"accountType": "Account Type *",
+			"currency": "Currency *",
+			"status": "Status",
+			"autoType": "Auto type: {type}",
+			"definedByChart": "Defined by chart of account",
+			"create": "Create",
+			"creating": "Creating...",
+			"edit": "Edit",
+			"editing": "Editing...",
+			"cancel": "Cancel"
+		},
+		"validation": {
+			"codeRequired": "Code is required",
+			"codeMaxLength": "Code cannot exceed 50 characters",
+			"codeExists": "A GL account with this code already exists",
+			"nameRequired": "Name is required",
+			"chartOfAccountRequired": "Chart of account is required",
+			"chartOfAccountNotFound": "Chart of account does not exist",
+			"chartOfAccountInactive": "Chart of account must be active",
+			"accountTypeMismatch": "Type must match the chart of account type",
+			"currencyInvalid": "Currency must be a 3-character ISO code"
+		},
+		"table": {
+			"code": "Code",
+			"name": "Name",
+			"chartOfAccount": "Chart of Account",
+			"type": "Type",
+			"currency": "Currency",
+			"balance": "Balance",
+			"status": "Status",
+			"actions": "Actions",
+			"view": "View",
+			"edit": "Edit",
+			"active": "Active",
+			"inactive": "Inactive",
+			"displaying_one": "Displaying {{count}} account",
+			"displaying_other": "Displaying {{count}} accounts",
+			"noAccounts": "No GL accounts found",
+			"noAccountsHint": "Try adjusting your search filters"
+		},
+		"accountTypes": {
+			"ASSET": "Asset",
+			"LIABILITY": "Liability",
+			"EQUITY": "Equity",
+			"REVENUE": "Revenue",
+			"EXPENSE": "Expense"
+		},
+		"statuses": {
+			"ACTIVE": "Active",
+			"INACTIVE": "Inactive"
+		},
+		"detail": {
+			"title": "GL Account Details",
+			"subtitle": "Grand Ledger account information and entries",
+			"availableBalance": "Available Balance",
+			"notFound": "GL Account not found",
+			"loading": "Loading GL account...",
+			"error": "Error loading GL account",
+			"activate": "Activate",
+			"deactivate": "Deactivate",
+			"edit": "Edit",
+			"refresh": "Refresh",
+			"back": "Back to list"
+		},
+		"entries": {
+			"title": "Ledger Entries",
+			"loading": "Loading entries...",
+			"noEntries": "No entries found",
+			"total": "Total entries",
+			"totalDebit": "Total debit",
+			"totalCredit": "Total credit",
+			"balance": "Balance",
+			"startDate": "Start date",
+			"endDate": "End date",
+			"date": "Date",
+			"valueDate": "Value date",
+			"type": "Type",
+			"debit": "Debit",
+			"credit": "Credit",
+			"description": "Description",
+			"reference": "Reference",
+			"displaying_one": "Displaying {{count}} entry",
+			"displaying_other": "Displaying {{count}} entries"
 		}
 	}
 }

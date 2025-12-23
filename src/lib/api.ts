@@ -112,6 +112,33 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 			throw new Error("Authentification requise. Veuillez vous connecter.");
 		}
 
+		// Gérer les erreurs de conflit (409 Conflict)
+		if (res.status === 409) {
+			let errorMessage = "Un conflit s'est produit. Cette ressource existe déjà.";
+			try {
+				const text = await res.text();
+				if (text) {
+					try {
+						const json = JSON.parse(text);
+						if (json.message) {
+							errorMessage = json.message;
+						} else if (json.error) {
+							errorMessage = json.error;
+						} else {
+							errorMessage = text;
+						}
+					} catch {
+						errorMessage = text || errorMessage;
+					}
+				}
+			} catch {
+				// Utiliser le message par défaut
+			}
+			const error = new Error(errorMessage);
+			(error as any).status = 409;
+			throw error;
+		}
+
 		let errorMessage = `HTTP ${res.status}`;
 		try {
 			const text = await res.text();
@@ -1236,6 +1263,18 @@ export const ledgerAccountsApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<LedgerAccount>(res);
+	},
+
+	async getEntries(id: number | string, params?: { startDate?: string; endDate?: string }): Promise<LedgerEntry[]> {
+		const usp = new URLSearchParams();
+		if (params?.startDate) usp.set("startDate", params.startDate);
+		if (params?.endDate) usp.set("endDate", params.endDate);
+		const query = usp.toString();
+		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/entries${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LedgerEntry[]>(res);
 	}
 };
 

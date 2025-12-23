@@ -68,7 +68,13 @@
 		"email": "Email",
 		"risk": "Risque",
 		"loading": "Chargement...",
-		"reset": "Réinitialiser"
+		"reset": "Réinitialiser",
+		"back": "Retour",
+		"cancel": "Annuler",
+		"error": "Erreur",
+		"dates": "Dates",
+		"createdAt": "Créé le",
+		"updatedAt": "Modifié le"
 	},
 	"customer": {
 		"new": "Nouveau client",
@@ -249,7 +255,9 @@
 					"title": "Soumission",
 					"description": "Soumettre le dossier pour revue (DRAFT/REJECTED → PENDING_REVIEW)",
 					"button": "Soumettre KYC",
-					"submitting": "Soumission..."
+					"submitting": "Soumission...",
+					"success": "KYC soumis avec succès",
+					"error": "Erreur lors de la soumission du KYC"
 				},
 				"verify": {
 					"title": "Vérification",
@@ -257,7 +265,9 @@
 					"riskScore": "Score de risque",
 					"pepFlag": "Personne PEP",
 					"button": "Vérifier",
-					"verifying": "Vérification..."
+					"verifying": "Vérification...",
+					"success": "KYC vérifié avec succès",
+					"error": "Erreur lors de la vérification du KYC"
 				},
 				"reject": {
 					"title": "Rejet",
@@ -286,6 +296,359 @@
 				"view": "Voir"
 			}
 		}
+	},
+	"product": {
+		"detail": {
+			"title": "Détails du produit",
+			"subtitle": "Détails et configuration du produit bancaire",
+			"backToList": "Retour à la liste des produits",
+			"loading": "Chargement...",
+			"error": "Erreur",
+			"notFound": "Produit non trouvé",
+			"refresh": "Actualiser",
+			"activate": "Activer",
+			"deactivate": "Désactiver",
+			"delete": "Supprimer",
+			"deleteTitle": "Supprimer le produit et toutes ses configurations associées",
+			"tabs": {
+				"overview": "Vue d'ensemble",
+				"rates": "Taux d'intérêt",
+				"fees": "Frais",
+				"limits": "Limites",
+				"periods": "Périodes",
+				"penalties": "Pénalités",
+				"eligibility": "Règles d'éligibilité",
+				"glMappings": "Mappings GL"
+			},
+			"categories": {
+				"CURRENT_ACCOUNT": "Compte courant",
+				"SAVINGS_ACCOUNT": "Compte épargne",
+				"TERM_DEPOSIT": "Dépôt à terme",
+				"LOAN": "Prêt",
+				"CARD": "Carte"
+			},
+			"overview": {
+				"edit": "Modifier",
+				"code": "Code",
+				"codeHint": "Le code ne peut pas être modifié",
+				"category": "Catégorie",
+				"categoryHint": "La catégorie ne peut pas être modifiée",
+				"name": "Nom",
+				"status": "Statut",
+				"currency": "Devise",
+				"defaultInterestRate": "Taux d'intérêt par défaut (%)",
+				"minBalance": "Solde minimum",
+				"maxBalance": "Solde maximum",
+				"description": "Description",
+				"save": "Enregistrer",
+				"saving": "Enregistrement...",
+				"cancel": "Annuler",
+				"updateError": "Erreur lors de la mise à jour",
+				"stats": {
+					"interestRates": "Taux d'intérêt",
+					"fees": "Frais",
+					"limits": "Limites",
+					"periods": "Périodes",
+					"penalties": "Pénalités",
+					"eligibilityRules": "Règles d'éligibilité"
+				}
+			},
+			"rates": {
+				"title": "Taux d'intérêt",
+				"add": "Ajouter un taux",
+				"addButton": "+ Ajouter un taux",
+				"loading": "Chargement...",
+				"rate": "Taux",
+				"view": "Voir",
+				"edit": "Modifier",
+				"delete": "Supprimer",
+				"editTitle": "Modifier le taux d'intérêt",
+				"addTitle": "Ajouter un taux d'intérêt",
+				"adding": "Ajout...",
+				"editing": "Modification...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			},
+			"fees": {
+				"title": "Frais",
+				"add": "Ajouter un frais",
+				"addButton": "+ Ajouter un frais",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			},
+			"limits": {
+				"title": "Limites",
+				"add": "Ajouter une limite",
+				"addButton": "+ Ajouter une limite",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			},
+			"periods": {
+				"title": "Périodes",
+				"add": "Ajouter une période",
+				"addButton": "+ Ajouter une période",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			},
+			"penalties": {
+				"title": "Pénalités",
+				"add": "Ajouter une pénalité",
+				"addButton": "+ Ajouter une pénalité",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			},
+			"eligibility": {
+				"title": "Règles d'éligibilité",
+				"add": "Ajouter une règle",
+				"addButton": "+ Ajouter une règle",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification",
+				"noRules": "Aucune règle d'éligibilité configurée",
+				"rulesCount": "Règles d'éligibilité ({{count}})",
+				"form": {
+					"ruleType": "Type de règle *",
+					"ruleName": "Nom de la règle *",
+					"operator": "Opérateur *",
+					"dataType": "Type de données *",
+					"value": "Valeur *",
+					"valuePlaceholder": "Valeur",
+					"valueJsonHint": "Format JSON: [\"valeur1\", \"valeur2\"]",
+					"isMandatory": "Obligatoire",
+					"isMandatoryHint": "Si coché, la règle doit être satisfaite",
+					"errorMessage": "Message d'erreur",
+					"effectiveFrom": "Date d'effet *",
+					"effectiveTo": "Date de fin",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"editTitle": "Modifier la règle d'éligibilité"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Nom",
+					"operator": "Opérateur",
+					"value": "Valeur",
+					"mandatory": "Obligatoire",
+					"active": "Actif",
+					"actions": "Actions",
+					"yes": "Oui",
+					"no": "Non"
+				},
+				"menu": {
+					"view": "Voir",
+					"edit": "Modifier",
+					"delete": "Supprimer"
+				},
+				"modal": {
+					"title": "Détails de la règle d'éligibilité",
+					"ruleType": "Type de règle",
+					"name": "Nom",
+					"operator": "Opérateur",
+					"value": "Valeur",
+					"dataType": "Type de données",
+					"mandatory": "Obligatoire",
+					"errorMessage": "Message d'erreur",
+					"effectiveFrom": "Date d'effet",
+					"effectiveTo": "Date de fin",
+					"status": "Statut",
+					"active": "Actif",
+					"inactive": "Inactif",
+					"close": "Fermer"
+				},
+				"ruleTypes": {
+					"MIN_AGE": "Âge minimum",
+					"MAX_AGE": "Âge maximum",
+					"MIN_INCOME": "Revenu minimum",
+					"MIN_BALANCE": "Solde minimum",
+					"CLIENT_TYPE": "Type de client",
+					"CLIENT_STATUS": "Statut client",
+					"RESIDENCY": "Résidence",
+					"KYC_LEVEL": "Niveau KYC",
+					"RISK_SCORE": "Score de risque",
+					"PEP_FLAG": "Flag PEP",
+					"OTHER": "Autre"
+				},
+				"operators": {
+					"EQUALS": "Égal à",
+					"NOT_EQUALS": "Différent de",
+					"GREATER_THAN": "Supérieur à",
+					"GREATER_THAN_OR_EQUAL": "Supérieur ou égal à",
+					"LESS_THAN": "Inférieur à",
+					"LESS_THAN_OR_EQUAL": "Inférieur ou égal à",
+					"IN": "Dans la liste",
+					"NOT_IN": "Pas dans la liste",
+					"CONTAINS": "Contient"
+				},
+				"dataTypes": {
+					"STRING": "Chaîne",
+					"NUMBER": "Nombre",
+					"BOOLEAN": "Booléen",
+					"DATE": "Date",
+					"ENUM": "Énumération"
+				}
+			},
+			"glMappings": {
+				"title": "Mappings GL",
+				"add": "Ajouter un mapping",
+				"addButton": "+ Ajouter un mapping",
+				"loading": "Chargement...",
+				"deleteError": "Erreur lors de la suppression",
+				"addError": "Erreur lors de l'ajout",
+				"updateError": "Erreur lors de la modification"
+			}
+		}
+	},
+	"ledgerAccount": {
+		"title": "Comptes du Grand Livre",
+		"subtitle": "Gestion et configuration des comptes GL",
+		"refresh": "Actualiser",
+		"newAccount": "Nouveau compte GL",
+		"cancel": "Annuler",
+		"loading": "Chargement des comptes GL...",
+		"loadError": "Erreur lors du chargement des comptes GL",
+		"createError": "Erreur lors de la création",
+		"updateError": "Erreur lors de la modification",
+		"stats": {
+			"total": "Total",
+			"active": "Actifs",
+			"inactive": "Inactifs",
+			"currencies": "Devises"
+		},
+		"filters": {
+			"title": "Filtres",
+			"search": "Recherche",
+			"searchPlaceholder": "Code, nom ou compte comptable...",
+			"accountType": "Type de compte",
+			"allTypes": "Tous les types",
+			"currency": "Devise",
+			"currencyPlaceholder": "USD, EUR, XAF...",
+			"status": "Statut",
+			"allStatuses": "Tous les statuts"
+		},
+		"form": {
+			"newTitle": "Nouveau compte GL",
+			"editTitle": "Modifier le compte GL",
+			"code": "Code *",
+			"name": "Nom *",
+			"chartOfAccount": "Compte comptable *",
+			"selectChartOfAccount": "Sélectionner un compte comptable",
+			"accountType": "Type de compte *",
+			"currency": "Devise *",
+			"status": "Statut",
+			"autoType": "Type automatique: {type}",
+			"definedByChart": "Défini par le compte comptable",
+			"create": "Créer",
+			"creating": "Création...",
+			"edit": "Modifier",
+			"editing": "Modification...",
+			"cancel": "Annuler"
+		},
+		"validation": {
+			"codeRequired": "Le code est requis",
+			"codeMaxLength": "Le code ne peut pas dépasser 50 caractères",
+			"codeExists": "Un compte GL avec ce code existe déjà",
+			"nameRequired": "Le nom est requis",
+			"chartOfAccountRequired": "Le compte comptable est requis",
+			"chartOfAccountNotFound": "Le compte comptable n'existe pas",
+			"chartOfAccountInactive": "Le compte comptable doit être actif",
+			"accountTypeMismatch": "Le type doit correspondre au type du compte comptable",
+			"currencyInvalid": "La devise doit être un code ISO à 3 caractères"
+		},
+		"table": {
+			"code": "Code",
+			"name": "Nom",
+			"chartOfAccount": "Compte comptable",
+			"type": "Type",
+			"currency": "Devise",
+			"balance": "Solde",
+			"status": "Statut",
+			"actions": "Actions",
+			"view": "Voir",
+			"edit": "Modifier",
+			"active": "Actif",
+			"inactive": "Inactif",
+			"displaying_one": "Affichage de {{count}} compte",
+			"displaying_other": "Affichage de {{count}} comptes",
+			"noAccounts": "Aucun compte GL trouvé",
+			"noAccountsHint": "Essayez de modifier vos filtres de recherche"
+		},
+		"accountTypes": {
+			"ASSET": "Actif",
+			"LIABILITY": "Passif",
+			"EQUITY": "Capitaux propres",
+			"REVENUE": "Produit",
+			"EXPENSE": "Charge"
+		},
+		"statuses": {
+			"ACTIVE": "Actif",
+			"INACTIVE": "Inactif"
+		},
+		"detail": {
+			"title": "Détails du compte GL",
+			"subtitle": "Informations et écritures du compte du Grand Livre",
+			"availableBalance": "Solde disponible",
+			"notFound": "Compte GL non trouvé",
+			"loading": "Chargement du compte GL...",
+			"error": "Erreur lors du chargement du compte GL",
+			"activate": "Activer",
+			"deactivate": "Désactiver",
+			"edit": "Modifier",
+			"refresh": "Actualiser",
+			"back": "Retour à la liste"
+		},
+		"entries": {
+			"title": "Écritures comptables",
+			"loading": "Chargement des écritures...",
+			"noEntries": "Aucune écriture trouvée",
+			"total": "Total écritures",
+			"totalDebit": "Total débit",
+			"totalCredit": "Total crédit",
+			"balance": "Solde",
+			"startDate": "Date de début",
+			"endDate": "Date de fin",
+			"date": "Date",
+			"valueDate": "Date de valeur",
+			"type": "Type",
+			"debit": "Débit",
+			"credit": "Crédit",
+			"description": "Description",
+			"reference": "Référence",
+			"displaying_one": "Affichage de {{count}} écriture",
+			"displaying_other": "Affichage de {{count}} écritures"
+		}
+	},
+	"common": {
+		"users": "Utilisateurs",
+		"customers": "Clients",
+		"refresh": "Actualiser",
+		"all": "Tous",
+		"id": "ID",
+		"name": "Nom",
+		"type": "Type",
+		"status": "Statut",
+		"email": "Email",
+		"risk": "Risque",
+		"loading": "Chargement...",
+		"reset": "Réinitialiser",
+		"back": "Retour",
+		"cancel": "Annuler",
+		"error": "Erreur",
+		"dates": "Dates",
+		"createdAt": "Créé le",
+		"updatedAt": "Modifié le"
 	}
 }
-

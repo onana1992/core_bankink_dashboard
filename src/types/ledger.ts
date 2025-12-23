@@ -98,14 +98,14 @@ export interface LedgerEntry {
 	ledgerAccountCode?: string;
 	entryDate: string;
 	valueDate: string;
-	entryType: "DEBIT" | "CREDIT";
-	amount: number;
+	debitAmount: number;
+	creditAmount: number;
 	currency: string;
 	description?: string | null;
 	referenceType?: string | null;
 	referenceId?: number | null;
 	journalBatchId?: number | null;
 	createdAt: string;
-	updatedAt: string;
+	updatedAt?: string | null;
 	createdBy?: number | null;
 }
