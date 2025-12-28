@@ -126,14 +126,14 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/transactions" label="Toutes les transactions" icon={Repeat} collapsed={collapsed} />
-							<NavLink href="/transactions/deposit" label="Dépôts" icon={TrendingUp} collapsed={collapsed} />
-							<NavLink href="/transactions/withdrawal" label="Retraits" icon={TrendingDown} collapsed={collapsed} />
-							<NavLink href="/transactions/transfer" label="Virements" icon={Move} collapsed={collapsed} />
-							<NavLink href="/transactions/fee" label="Frais" icon={DollarSign} collapsed={collapsed} />
-							<NavLink href="/transactions/interest" label="Intérêts" icon={Sparkles} collapsed={collapsed} />
-							<NavLink href="/transactions/adjustment" label="Ajustements" icon={Settings2} collapsed={collapsed} />
-							<NavLink href="/transactions/reversal" label="Réversions" icon={RotateCcw} collapsed={collapsed} />
+							<NavLink href="/transactions" label={t("sidebar.allTransactions")} icon={Repeat} collapsed={collapsed} />
+							<NavLink href="/transactions/deposit" label={t("transaction.list.types.deposits")} icon={TrendingUp} collapsed={collapsed} />
+							<NavLink href="/transactions/withdrawal" label={t("transaction.list.types.withdrawals")} icon={TrendingDown} collapsed={collapsed} />
+							<NavLink href="/transactions/transfer" label={t("transaction.list.types.transfers")} icon={Move} collapsed={collapsed} />
+							<NavLink href="/transactions/fee" label={t("transaction.list.types.fees")} icon={DollarSign} collapsed={collapsed} />
+							<NavLink href="/transactions/interest" label={t("transaction.list.types.interests")} icon={Sparkles} collapsed={collapsed} />
+							<NavLink href="/transactions/adjustment" label={t("transaction.list.types.adjustments")} icon={Settings2} collapsed={collapsed} />
+							<NavLink href="/transactions/reversal" label={t("transaction.list.types.reversals")} icon={RotateCcw} collapsed={collapsed} />
 							<NavLink href="/journal-batches" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
 							<NavLink href="/holds" label={t("sidebar.holds")} icon={CheckCircle} collapsed={collapsed} />
 						</div>
@@ -219,9 +219,9 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							{!collapsed && <Chevron />}
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/users" label="Utilisateurs" icon={Users} collapsed={collapsed} />
-							<NavLink href="/roles" label="Rôles" icon={KeyRound} collapsed={collapsed} />
-							<NavLink href="/permissions" label="Permissions" icon={ShieldCheck} collapsed={collapsed} />
+							<NavLink href="/users" label={t("sidebar.users")} icon={Users} collapsed={collapsed} />
+							<NavLink href="/roles" label={t("sidebar.roles")} icon={KeyRound} collapsed={collapsed} />
+							<NavLink href="/permissions" label={t("sidebar.permissions")} icon={ShieldCheck} collapsed={collapsed} />
 							<NavLink href="/approvals" label={t("sidebar.approvals")} icon={CheckCircle} collapsed={collapsed} />
 						</div>
 					</details>

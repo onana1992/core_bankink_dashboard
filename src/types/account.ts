@@ -38,6 +38,7 @@ export interface OpenProductRequest {
 	openingAmount?: number;
 	periodId?: number;
 	currency?: string;
+	sourceAccountId?: number; // Compte source pour les frais d'ouverture (optionnel)
 }
 
 export interface CloseAccountRequest {

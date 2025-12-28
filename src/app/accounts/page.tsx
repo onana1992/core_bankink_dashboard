@@ -16,6 +16,10 @@ export default function AccountsPage() {
 	const [accounts, setAccounts] = useState<Account[]>([]);
 	const [customers, setCustomers] = useState<Customer[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
+	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(20);
+	const [totalPages, setTotalPages] = useState(0);
+	const [totalElements, setTotalElements] = useState(0);
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -26,12 +30,18 @@ export default function AccountsPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [accountsData, customersResponse, productsData] = await Promise.all([
-				accountsApi.list(filterClientId ? { clientId: filterClientId } : undefined),
+			const [accountsResponse, customersResponse, productsResponse] = await Promise.all([
+				accountsApi.list({
+					clientId: filterClientId || undefined,
+					page,
+					size
+				}),
 				customersApi.list({ size: 1000 }), // Load all customers
-				productsApi.list()
+				productsApi.list({ size: 1000 }) // Load all products
 			]);
 			const customersData = customersResponse.content;
+			const productsData = productsResponse.content;
+			const accountsData = accountsResponse.content;
 			
 			// Enrichir les comptes avec les informations des produits
 			const enrichedAccounts = accountsData.map(account => {
@@ -53,6 +63,8 @@ export default function AccountsPage() {
 			});
 			
 			setAccounts(enrichedAccounts);
+			setTotalPages(accountsResponse.totalPages);
+			setTotalElements(accountsResponse.totalElements);
 			setCustomers(customersData);
 			setProducts(productsData);
 		} catch (e: any) {
@@ -64,22 +76,21 @@ export default function AccountsPage() {
 
 	useEffect(() => {
 		load();
-	}, [filterClientId]);
+	}, [filterClientId, page, size]);
 
 	const stats = useMemo(() => {
-		const total = accounts.length;
 		const by: Record<string, number> = {};
 		for (const a of accounts) {
 			by[a.status] = (by[a.status] ?? 0) + 1;
 		}
 		return {
-			total,
+			total: totalElements,
 			active: by["ACTIVE"] ?? 0,
 			closed: by["CLOSED"] ?? 0,
 			frozen: by["FROZEN"] ?? 0,
 			suspended: by["SUSPENDED"] ?? 0
 		};
-	}, [accounts]);
+	}, [accounts, totalElements]);
 
 	const filtered = useMemo(() => {
 		let result = accounts;
@@ -250,7 +261,10 @@ export default function AccountsPage() {
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterStatus}
-							onChange={(e) => setFilterStatus(e.target.value as "ALL" | AccountStatus)}
+							onChange={(e) => {
+								setFilterStatus(e.target.value as "ALL" | AccountStatus);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
 							<option value="ALL">Tous les statuts</option>
 							<option value="ACTIVE">Actif</option>
@@ -264,7 +278,10 @@ export default function AccountsPage() {
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterClientId ?? ""}
-							onChange={(e) => setFilterClientId(e.target.value ? Number(e.target.value) : null)}
+							onChange={(e) => {
+								setFilterClientId(e.target.value ? Number(e.target.value) : null);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
 							<option value="">Tous les clients</option>
 							{customers.map(c => (
@@ -376,11 +393,56 @@ export default function AccountsPage() {
 							</tbody>
 						</table>
 					</div>
-					{filtered.length > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{filtered.length}</span> compte{filtered.length > 1 ? "s" : ""}
-							</p>
+					{(filtered.length > 0 || totalElements > 0) && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
+							<div className="flex items-center gap-4">
+								<p className="text-sm text-gray-600">
+									Affichage de <span className="font-semibold">{filtered.length}</span> sur <span className="font-semibold">{totalElements}</span> compte{totalElements > 1 ? "s" : ""}
+								</p>
+								<div className="flex items-center gap-2">
+									<label className="text-sm text-gray-600">Éléments par page:</label>
+									<select
+										className="px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+										value={size}
+										onChange={(e) => {
+											setSize(Number(e.target.value));
+											setPage(0); // Reset to first page when size changes
+										}}
+									>
+										<option value="10">10</option>
+										<option value="20">20</option>
+										<option value="50">50</option>
+										<option value="100">100</option>
+									</select>
+								</div>
+							</div>
+							{totalPages > 1 && (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.max(0, p - 1))}
+										disabled={page === 0}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+										</svg>
+									</Button>
+									<span className="text-sm text-gray-600">
+										Page {page + 1} sur {totalPages}
+									</span>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+										disabled={page >= totalPages - 1}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+										</svg>
+									</Button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>

@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import Toast from "@/components/ui/Toast";
 import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi, interestsApi, feesApi } from "@/lib/api";
 import type { Account, AccountStatus, Customer, Product, Transaction, Hold, ProductFee } from "@/types";
 
 export default function AccountDetailPage() {
+	const { t } = useTranslation();
 	const params = useParams();
 	const router = useRouter();
 	const accountId = params.id as string;
@@ -19,6 +22,7 @@ export default function AccountDetailPage() {
 	const [account, setAccount] = useState<Account | null>(null);
 	const [client, setClient] = useState<Customer | null>(null);
 	const [product, setProduct] = useState<Product | null>(null);
+	const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" | "warning" } | null>(null);
 
 	// Actions
 	const [actionLoading, setActionLoading] = useState(false);
@@ -94,11 +98,13 @@ export default function AccountDetailPage() {
 			// Charger les transactions et réservations
 			loadTransactions();
 			loadHolds();
-			// Charger les intérêts et frais
-			loadInterestCalculation();
-			loadInterestHistory();
-			loadApplicableFees();
-			loadFeeHistory();
+			// Charger les intérêts et frais seulement si le compte est ACTIVE
+			if (accountData.status === "ACTIVE") {
+				loadInterestCalculation();
+				loadInterestHistory();
+				loadApplicableFees();
+				loadFeeHistory();
+			}
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement du compte");
 		} finally {
@@ -139,12 +145,19 @@ export default function AccountDetailPage() {
 	}
 
 	async function loadInterestCalculation() {
-		if (!accountId) return;
+		if (!accountId || !account) return;
+		// Ne JAMAIS calculer les intérêts si le compte n'est pas ACTIVE
+		// (logique bancaire : les intérêts ne s'appliquent qu'aux comptes actifs)
+		if (account.status !== "ACTIVE") {
+			return;
+		}
 		setInterestLoading(true);
 		try {
 			const data = await interestsApi.calculateInterest(accountId, 30);
 			setInterestCalculation(data);
 		} catch (e: any) {
+			// Ignorer silencieusement les erreurs (compte peut ne pas être ACTIVE)
+			// Ne pas afficher de toast car ces erreurs sont attendues pour les comptes non-ACTIVE
 			console.error("Erreur lors du calcul des intérêts:", e);
 		} finally {
 			setInterestLoading(false);
@@ -164,12 +177,19 @@ export default function AccountDetailPage() {
 	}
 
 	async function loadApplicableFees() {
-		if (!accountId) return;
+		if (!accountId || !account) return;
+		// Ne JAMAIS charger les frais applicables si le compte n'est pas ACTIVE
+		// (logique bancaire : les frais ne s'appliquent qu'aux comptes actifs)
+		if (account.status !== "ACTIVE") {
+			return;
+		}
 		setFeeLoading(true);
 		try {
 			const data = await feesApi.getApplicableFees(accountId);
 			setApplicableFees(data);
 		} catch (e: any) {
+			// Ignorer silencieusement les erreurs (compte peut ne pas être ACTIVE)
+			// Ne pas afficher de toast car ces erreurs sont attendues pour les comptes non-ACTIVE
 			console.error("Erreur lors du chargement des frais applicables:", e);
 		} finally {
 			setFeeLoading(false);
@@ -280,18 +300,24 @@ export default function AccountDetailPage() {
 
 	async function handleClose() {
 		if (!closeReason.trim()) {
-			alert("Le motif de fermeture est requis");
+			alert(t("account.detail.close.reasonRequired"));
 			return;
 		}
 		setActionLoading(true);
 		try {
-			await accountsApi.close(accountId, { reason: closeReason });
+			const updatedAccount = await accountsApi.close(accountId, { reason: closeReason });
 			setShowCloseModal(false);
 			setCloseReason("");
-			await load();
+			// Mettre à jour immédiatement le statut avec les données retournées
+			setAccount(updatedAccount);
+			// Afficher un toast de succès
+			setToast({ message: t("account.detail.close.success"), type: "success" });
+			// Recharger complètement la page après un court délai pour s'assurer que tout est à jour
+			setTimeout(() => {
+				window.location.reload();
+			}, 1500);
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la fermeture du compte");
-		} finally {
+			setToast({ message: e?.message ?? t("account.detail.close.error"), type: "error" });
 			setActionLoading(false);
 		}
 	}
@@ -326,13 +352,19 @@ export default function AccountDetailPage() {
 	async function handleSuspend() {
 		setActionLoading(true);
 		try {
-			await accountsApi.suspend(accountId, suspendReason ? { reason: suspendReason } : undefined);
+			const updatedAccount = await accountsApi.suspend(accountId, suspendReason ? { reason: suspendReason } : undefined);
 			setShowSuspendModal(false);
 			setSuspendReason("");
-			await load();
+			// Mettre à jour immédiatement le statut avec les données retournées
+			setAccount(updatedAccount);
+			// Afficher un toast de succès
+			setToast({ message: t("account.detail.suspend.success"), type: "success" });
+			// Recharger complètement la page après un court délai pour s'assurer que tout est à jour
+			setTimeout(() => {
+				window.location.reload();
+			}, 1500);
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suspension du compte");
-		} finally {
+			setToast({ message: e?.message ?? t("account.detail.suspend.error"), type: "error" });
 			setActionLoading(false);
 		}
 	}
@@ -341,11 +373,17 @@ export default function AccountDetailPage() {
 		if (!confirm("Êtes-vous sûr de vouloir réactiver ce compte ?")) return;
 		setActionLoading(true);
 		try {
-			await accountsApi.unsuspend(accountId);
-			await load();
+			const updatedAccount = await accountsApi.unsuspend(accountId);
+			// Mettre à jour immédiatement le statut avec les données retournées
+			setAccount(updatedAccount);
+			// Afficher un toast de succès
+			setToast({ message: t("account.detail.unsuspend.success"), type: "success" });
+			// Recharger complètement la page après un court délai pour s'assurer que tout est à jour
+			setTimeout(() => {
+				window.location.reload();
+			}, 1500);
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la réactivation du compte");
-		} finally {
+			setToast({ message: e?.message ?? t("account.detail.unsuspend.error"), type: "error" });
 			setActionLoading(false);
 		}
 	}
@@ -410,6 +448,13 @@ export default function AccountDetailPage() {
 
 	return (
 		<div className="space-y-6">
+			{toast && (
+				<Toast
+					message={toast.message}
+					type={toast.type}
+					onClose={() => setToast(null)}
+				/>
+			)}
 			{/* En-tête amélioré */}
 			<div>
 				<Link href="/accounts" className="text-blue-600 hover:text-blue-800 hover:underline text-sm mb-3 inline-flex items-center gap-1">

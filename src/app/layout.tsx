@@ -3,6 +3,7 @@ import "./globals.css";
 import AdminShell from "@/components/admin/AdminShell";
 import I18nProvider from "@/components/I18nProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ToastProvider } from "@/contexts/ToastContext";
 
 export const metadata: Metadata = {
 	title: "Core Admin",
@@ -19,7 +20,9 @@ export default function RootLayout({
 			<body>
 				<I18nProvider>
 					<AuthProvider>
-						<AdminShell>{children}</AdminShell>
+						<ToastProvider>
+							<AdminShell>{children}</AdminShell>
+						</ToastProvider>
 					</AuthProvider>
 				</I18nProvider>
 			</body>

@@ -91,10 +91,18 @@ const getApiBase = (): string => {
 
 const API_BASE = getApiBase();
 
-async function handleJsonResponse<T>(res: Response): Promise<T> {
+async function handleJsonResponse<T>(res: Response, silent: boolean = false): Promise<T> {
 	// Gérer les réponses vides (204 No Content, etc.) avant de vérifier res.ok
 	if (res.status === 204 || (res.status >= 200 && res.status < 300 && !res.headers.get('content-type')?.includes('application/json'))) {
 		return undefined as T;
+	}
+
+	// Lire le texte une seule fois au début
+	let text: string = "";
+	try {
+		text = await res.text();
+	} catch {
+		// Si on ne peut pas lire le texte, continuer avec une chaîne vide
 	}
 
 	if (!res.ok) {
@@ -104,6 +112,11 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 			if (typeof window !== 'undefined') {
 				localStorage.removeItem('accessToken');
 				localStorage.removeItem('refreshToken');
+				// Afficher un toast avant la redirection
+				const event = new CustomEvent("show-toast", {
+					detail: { message: "Authentification requise. Veuillez vous connecter.", type: "error" }
+				});
+				window.dispatchEvent(event);
 				// Rediriger vers la page de login si on n'y est pas déjà
 				if (window.location.pathname !== '/login') {
 					window.location.href = '/login?error=session_expired';
@@ -115,63 +128,69 @@ async function handleJsonResponse<T>(res: Response): Promise<T> {
 		// Gérer les erreurs de conflit (409 Conflict)
 		if (res.status === 409) {
 			let errorMessage = "Un conflit s'est produit. Cette ressource existe déjà.";
-			try {
-				const text = await res.text();
-				if (text) {
-					try {
-						const json = JSON.parse(text);
-						if (json.message) {
-							errorMessage = json.message;
-						} else if (json.error) {
-							errorMessage = json.error;
-						} else {
-							errorMessage = text;
-						}
-					} catch {
-						errorMessage = text || errorMessage;
+			if (text) {
+				try {
+					const json = JSON.parse(text);
+					if (json.message) {
+						errorMessage = json.message;
+					} else if (json.error) {
+						errorMessage = json.error;
+					} else {
+						errorMessage = text;
 					}
+				} catch {
+					errorMessage = text || errorMessage;
 				}
-			} catch {
-				// Utiliser le message par défaut
+			}
+			// Afficher un toast
+			if (typeof window !== "undefined") {
+				const event = new CustomEvent("show-toast", {
+					detail: { message: errorMessage, type: "error" }
+				});
+				window.dispatchEvent(event);
 			}
 			const error = new Error(errorMessage);
 			(error as any).status = 409;
 			throw error;
 		}
 
+		// Gérer les autres erreurs
 		let errorMessage = `HTTP ${res.status}`;
-		try {
-			const text = await res.text();
-			if (text) {
-				// Essayer de parser comme JSON pour les erreurs de validation
-				try {
-					const json = JSON.parse(text);
-					// Extraire le message d'erreur principal
-					if (json.message) {
-						errorMessage = json.message;
-					} else if (json.error) {
-						errorMessage = json.error;
-					} else if (json.errors) {
-						// Si c'est un objet d'erreurs de validation
-						const errors = typeof json.errors === 'string' 
-							? json.errors 
-							: Object.values(json.errors).join(', ');
-						errorMessage = errors || text;
-					} else {
-						errorMessage = text;
-					}
-				} catch {
+		if (text) {
+			// Essayer de parser comme JSON pour les erreurs de validation
+			try {
+				const json = JSON.parse(text);
+				// Extraire le message d'erreur principal
+				if (json.message) {
+					errorMessage = json.message;
+				} else if (json.error) {
+					errorMessage = json.error;
+				} else if (json.errors) {
+					// Si c'est un objet d'erreurs de validation
+					const errors = typeof json.errors === 'string' 
+						? json.errors 
+						: Object.values(json.errors).join(', ');
+					errorMessage = errors || text;
+				} else {
 					errorMessage = text;
 				}
+			} catch {
+				errorMessage = text;
 			}
-		} catch {
-			// Ignorer les erreurs de lecture
 		}
+		
+		// Afficher un toast au lieu d'une erreur console (sauf si silent = true)
+		if (!silent && typeof window !== "undefined") {
+			const event = new CustomEvent("show-toast", {
+				detail: { message: errorMessage, type: "error" }
+			});
+			window.dispatchEvent(event);
+		}
+		
 		throw new Error(errorMessage);
 	}
 
-	// Lire le texte une seule fois
-	const text = await res.text();
+	// Si la réponse est OK, parser le JSON
 	if (!text || text.trim() === '') {
 		return undefined as T;
 	}
@@ -380,16 +399,23 @@ export const customersApi = {
 };
 
 export const productsApi = {
-	async list(params?: { category?: ProductCategory; status?: ProductStatus }): Promise<Product[]> {
+	async list(params?: {
+		category?: ProductCategory;
+		status?: ProductStatus;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Product[]; totalElements: number; totalPages: number; number: number; size: number }> {
 		const usp = new URLSearchParams();
 		if (params?.category) usp.set("category", params.category);
 		if (params?.status) usp.set("status", params.status);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
 		const res = await fetch(`${API_BASE}/api/products${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<Product[]>(res);
+		return handleJsonResponse<{ content: Product[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
 	},
 
 	async create(payload: CreateProductRequest): Promise<Product> {
@@ -698,15 +724,22 @@ export const productGLMappingsApi = {
 };
 
 export const accountsApi = {
-	async list(params?: { clientId?: number }): Promise<Account[]> {
+	async list(params?: {
+		clientId?: number;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }> {
 		const usp = new URLSearchParams();
 		if (params?.clientId) usp.set("clientId", String(params.clientId));
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/accounts${query ? `?${query}` : ""}`, {
+		const url = `${API_BASE}/api/accounts${query ? `?${query}` : ""}`;
+		const res = await fetch(url, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<Account[]>(res);
+		return handleJsonResponse<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
 	},
 
 	async get(id: number | string): Promise<Account> {
@@ -1485,7 +1518,8 @@ export const interestsApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<any>(res);
+		// Ne pas afficher de toast pour cette erreur car elle est attendue pour les comptes non-ACTIVE
+		return handleJsonResponse<any>(res, true);
 	},
 
 	async applyInterest(accountId: number | string, payload: { periodDays: number; description?: string; valueDate?: string }): Promise<Transaction> {
@@ -1528,7 +1562,8 @@ export const feesApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<ProductFee[]>(res);
+		// Ne pas afficher de toast pour cette erreur car elle est attendue pour les comptes non-ACTIVE
+		return handleJsonResponse<ProductFee[]>(res, true);
 	},
 
 	async calculateFee(accountId: number | string, feeType: string): Promise<any> {
@@ -1676,6 +1711,14 @@ export const journalBatchesApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<LedgerEntry[]>(res);
+	},
+
+	async recalculateTotals(id: number | string): Promise<void> {
+		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/recalculate-totals`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<void>(res);
 	}
 };
 

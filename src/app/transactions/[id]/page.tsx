@@ -2,22 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { transactionsApi, accountsApi, transfersApi, customersApi } from "@/lib/api";
 import type { Transaction, TransactionEntry, TransactionStatus, Account, Transfer, Customer } from "@/types";
-
-const TRANSACTION_TYPE_LABELS: Record<string, string> = {
-	DEPOSIT: "Dépôt",
-	WITHDRAWAL: "Retrait",
-	TRANSFER: "Virement",
-	FEE: "Frais",
-	INTEREST: "Intérêts",
-	ADJUSTMENT: "Ajustement",
-	REVERSAL: "Réversal"
-};
 
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 	PENDING: "bg-yellow-100 text-yellow-800",
@@ -27,20 +19,8 @@ const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 	REVERSED: "bg-gray-100 text-gray-800"
 };
 
-const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
-	PENDING: "En attente",
-	PROCESSING: "En traitement",
-	COMPLETED: "Terminée",
-	FAILED: "Échouée",
-	REVERSED: "Annulée"
-};
-
-const ENTRY_TYPE_LABELS: Record<string, string> = {
-	DEBIT: "Débit",
-	CREDIT: "Crédit"
-};
-
 export default function TransactionDetailPage() {
+	const { t } = useTranslation();
 	const params = useParams();
 	const transactionId = params.id as string;
 
@@ -78,7 +58,7 @@ export default function TransactionDetailPage() {
 					const accountData = await accountsApi.get(txnData.accountId);
 					setAccount(accountData);
 				} catch (e) {
-					console.error("Erreur lors du chargement du compte:", e);
+					console.error(t("transaction.detail.errors.loadAccount"), e);
 				}
 			}
 
@@ -101,7 +81,7 @@ export default function TransactionDetailPage() {
 							const clientData = await customersApi.get(fromAccData.clientId);
 							setFromClient(clientData);
 						} catch (e) {
-							console.error("Erreur lors du chargement du client source:", e);
+							console.error(t("transaction.detail.errors.loadSenderClient"), e);
 						}
 					}
 					
@@ -112,24 +92,24 @@ export default function TransactionDetailPage() {
 							const clientData = await customersApi.get(toAccData.clientId);
 							setToClient(clientData);
 						} catch (e) {
-							console.error("Erreur lors du chargement du client destination:", e);
+							console.error(t("transaction.detail.errors.loadRecipientClient"), e);
 						}
 					}
 				} catch (e: any) {
 					// Si le transfert n'est pas trouvé (404), c'est acceptable - la transaction peut exister sans le transfert
 					// (par exemple si le transfert a été supprimé ou s'il y a une incohérence dans les données)
-					if (e?.message?.includes("non trouvé") || e?.message?.includes("non trouvée")) {
-						console.warn(`Transfert ${txnData.referenceId} non trouvé pour la transaction ${transactionId}. La transaction peut exister indépendamment du transfert.`);
+					if (e?.message?.includes("non trouvé") || e?.message?.includes("non trouvée") || e?.message?.includes("not found") || e?.status === 404) {
+						console.warn(t("transaction.detail.sections.transfer.notFound.message", { id: txnData.referenceId }));
 						setTransferNotFound(true);
 					} else {
-						console.error("Erreur lors du chargement du transfert:", e);
+						console.error(t("transaction.detail.errors.loadTransfer"), e);
 					}
 					// Ne pas définir le transfert si une erreur survient
 					setTransfer(null);
 				}
 			}
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement de la transaction");
+			setError(e?.message ?? t("transaction.detail.errors.loadError"));
 		} finally {
 			setLoading(false);
 		}
@@ -143,7 +123,7 @@ export default function TransactionDetailPage() {
 
 	async function handleReverse() {
 		if (!reverseReason.trim()) {
-			alert("La raison de l'annulation est requise");
+			alert(t("transaction.detail.reverse.reasonRequired"));
 			return;
 		}
 		setReverseLoading(true);
@@ -153,21 +133,27 @@ export default function TransactionDetailPage() {
 			setReverseReason("");
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de l'annulation de la transaction");
+			alert(e?.message ?? t("transaction.detail.reverse.error"));
 		} finally {
 			setReverseLoading(false);
 		}
 	}
 
 	function formatAmount(amount: number, currency: string): string {
-		return new Intl.NumberFormat("fr-FR", {
+		// Utiliser la locale basée sur la langue i18n
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Intl.NumberFormat(locale, {
 			style: "currency",
 			currency: currency || "XAF"
 		}).format(amount);
 	}
 
 	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleString("fr-FR", {
+		// Utiliser la locale basée sur la langue i18n
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Date(dateString).toLocaleString(locale, {
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric",
@@ -181,7 +167,7 @@ export default function TransactionDetailPage() {
 			<div className="flex items-center justify-center py-20">
 				<div className="text-center">
 					<div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-					<p className="text-gray-600">Chargement des informations de la transaction...</p>
+					<p className="text-gray-600">{t("transaction.detail.loading")}</p>
 				</div>
 			</div>
 		);
@@ -195,8 +181,8 @@ export default function TransactionDetailPage() {
 						<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
 					</svg>
 					<div>
-						<div className="font-medium">Erreur</div>
-						<div className="text-sm mt-1">{error || "Transaction non trouvée"}</div>
+						<div className="font-medium">{t("transaction.detail.error")}</div>
+						<div className="text-sm mt-1">{error || t("transaction.detail.notFound")}</div>
 					</div>
 				</div>
 				<Link href="/transactions">
@@ -204,7 +190,7 @@ export default function TransactionDetailPage() {
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 						</svg>
-						Retour à la liste
+						{t("transaction.detail.back")}
 					</Button>
 				</Link>
 			</div>
@@ -221,7 +207,7 @@ export default function TransactionDetailPage() {
 					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 					</svg>
-					Retour à la liste des transactions
+					{t("transaction.detail.backToList")}
 				</Link>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-4">
@@ -231,8 +217,8 @@ export default function TransactionDetailPage() {
 							</svg>
 						</div>
 						<div>
-							<h1 className="text-3xl font-bold text-gray-900">Transaction {transaction.transactionNumber}</h1>
-							<p className="text-gray-600 mt-1">Détails et écritures comptables</p>
+							<h1 className="text-3xl font-bold text-gray-900">{t("transaction.detail.title", { number: transaction.transactionNumber })}</h1>
+							<p className="text-gray-600 mt-1">{t("transaction.detail.subtitle")}</p>
 						</div>
 					</div>
 					{canReverse && (
@@ -244,7 +230,7 @@ export default function TransactionDetailPage() {
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 							</svg>
-							Annuler la transaction
+							{t("transaction.detail.reverse.button")}
 						</Button>
 					)}
 				</div>
@@ -262,36 +248,36 @@ export default function TransactionDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-bold text-white">Informations générales</h2>
-								<p className="text-xs text-indigo-100">Détails de la transaction</p>
+								<h2 className="text-lg font-bold text-white">{t("transaction.detail.sections.general.title")}</h2>
+								<p className="text-xs text-indigo-100">{t("transaction.detail.sections.general.subtitle")}</p>
 							</div>
 						</div>
 					</div>
 					<div className="p-6 space-y-4">
 						<div className="bg-white rounded-lg p-4 border border-indigo-100">
-							<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Numéro</dt>
+							<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("transaction.detail.sections.general.number")}</dt>
 							<dd className="font-mono font-bold text-lg text-gray-900 mt-1">{transaction.transactionNumber}</dd>
 						</div>
 						<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-							<dt className="text-sm font-medium text-gray-700">Type</dt>
-							<dd className="text-sm font-semibold text-gray-900">{TRANSACTION_TYPE_LABELS[transaction.type]}</dd>
+							<dt className="text-sm font-medium text-gray-700">{t("transaction.detail.sections.general.type")}</dt>
+							<dd className="text-sm font-semibold text-gray-900">{t(`transaction.detail.types.${transaction.type}`)}</dd>
 						</div>
 						<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-							<dt className="text-sm font-medium text-gray-700">Statut</dt>
+							<dt className="text-sm font-medium text-gray-700">{t("transaction.detail.sections.general.status")}</dt>
 							<dd>
 								<Badge className={TRANSACTION_STATUS_COLORS[transaction.status]}>
-									{TRANSACTION_STATUS_LABELS[transaction.status]}
+									{t(`transaction.detail.statuses.${transaction.status}`)}
 								</Badge>
 							</dd>
 						</div>
 						<div className="bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg p-4 border border-indigo-200">
-							<dt className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2">Montant</dt>
+							<dt className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-2">{t("transaction.detail.sections.general.amount")}</dt>
 							<dd className="text-2xl font-bold text-indigo-900">
 								{formatAmount(transaction.amount, transaction.currency)}
 							</dd>
 						</div>
 						<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-							<dt className="text-sm font-medium text-gray-700">Compte</dt>
+							<dt className="text-sm font-medium text-gray-700">{t("transaction.detail.sections.general.account")}</dt>
 							<dd className="text-sm">
 								{account ? (
 									<Link
@@ -307,13 +293,13 @@ export default function TransactionDetailPage() {
 						</div>
 						{transaction.description && (
 							<div className="bg-white rounded-lg p-4 border border-gray-200">
-								<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Description</dt>
+								<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{t("transaction.detail.sections.general.description")}</dt>
 								<dd className="text-sm text-gray-700">{transaction.description}</dd>
 							</div>
 						)}
 						{transfer && (
 							<div className="bg-white rounded-lg p-4 border border-blue-200">
-								<dt className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">Transfert interne</dt>
+								<dt className="text-xs font-medium text-blue-700 uppercase tracking-wide mb-2">{t("transaction.detail.sections.general.internalTransfer")}</dt>
 								<dd className="text-sm">
 									<Link
 										href={`/transfers/${transfer.id}`}
@@ -337,8 +323,8 @@ export default function TransactionDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-bold text-white">Dates</h2>
-								<p className="text-xs text-blue-100">Horodatage de la transaction</p>
+								<h2 className="text-lg font-bold text-white">{t("transaction.detail.sections.dates.title")}</h2>
+								<p className="text-xs text-blue-100">{t("transaction.detail.sections.dates.subtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -348,7 +334,7 @@ export default function TransactionDetailPage() {
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Date de transaction
+								{t("transaction.detail.sections.dates.transactionDate")}
 							</dt>
 							<dd className="font-medium text-gray-900">{formatDate(transaction.transactionDate)}</dd>
 						</div>
@@ -357,7 +343,7 @@ export default function TransactionDetailPage() {
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 								</svg>
-								Date de valeur
+								{t("transaction.detail.sections.dates.valueDate")}
 							</dt>
 							<dd className="font-medium text-gray-900">{transaction.valueDate}</dd>
 						</div>
@@ -366,7 +352,7 @@ export default function TransactionDetailPage() {
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Créée le
+								{t("transaction.detail.sections.dates.createdAt")}
 							</dt>
 							<dd className="font-medium text-gray-900">{formatDate(transaction.createdAt)}</dd>
 						</div>
@@ -375,7 +361,7 @@ export default function TransactionDetailPage() {
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 								</svg>
-								Modifiée le
+								{t("transaction.detail.sections.dates.updatedAt")}
 							</dt>
 							<dd className="font-medium text-gray-900">{formatDate(transaction.updatedAt)}</dd>
 						</div>
@@ -392,10 +378,9 @@ export default function TransactionDetailPage() {
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 							</svg>
 							<div className="flex-1">
-								<h3 className="text-sm font-semibold text-yellow-900 mb-1">Transfert non trouvé</h3>
+								<h3 className="text-sm font-semibold text-yellow-900 mb-1">{t("transaction.detail.sections.transfer.notFound.title")}</h3>
 								<p className="text-sm text-yellow-700">
-									Cette transaction référence un transfert (ID: {transaction.referenceId}) qui n'a pas pu être chargé. 
-									La transaction peut exister indépendamment du transfert.
+									{t("transaction.detail.sections.transfer.notFound.message", { id: transaction.referenceId })}
 								</p>
 							</div>
 						</div>
@@ -414,8 +399,8 @@ export default function TransactionDetailPage() {
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-bold text-gray-900">Informations du transfert</h2>
-								<p className="text-xs text-gray-600">Émetteur et destinataire</p>
+								<h2 className="text-lg font-bold text-gray-900">{t("transaction.detail.sections.transfer.title")}</h2>
+								<p className="text-xs text-gray-600">{t("transaction.detail.sections.transfer.subtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -427,11 +412,11 @@ export default function TransactionDetailPage() {
 									<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 									</svg>
-									<h3 className="font-semibold text-red-900">Émetteur</h3>
+									<h3 className="font-semibold text-red-900">{t("transaction.detail.sections.transfer.sender")}</h3>
 								</div>
 								{fromClient && (
 									<div className="mb-3">
-										<div className="text-xs text-gray-600 mb-1">Client</div>
+										<div className="text-xs text-gray-600 mb-1">{t("transaction.detail.sections.transfer.client")}</div>
 										<div className="font-semibold text-gray-900">
 											<Link
 												href={`/customers/${fromClient.id}`}
@@ -447,7 +432,7 @@ export default function TransactionDetailPage() {
 								)}
 								{fromAccount && (
 									<div>
-										<div className="text-xs text-gray-600 mb-1">Compte</div>
+										<div className="text-xs text-gray-600 mb-1">{t("transaction.detail.sections.transfer.account")}</div>
 										<div className="font-mono font-semibold text-gray-900">
 											<Link
 												href={`/accounts/${fromAccount.id}`}
@@ -457,7 +442,7 @@ export default function TransactionDetailPage() {
 											</Link>
 										</div>
 										<div className="text-sm text-gray-600 mt-1">
-											Solde: {formatAmount(fromAccount.balance, fromAccount.currency)}
+											{t("transaction.detail.sections.transfer.balance")} {formatAmount(fromAccount.balance, fromAccount.currency)}
 										</div>
 									</div>
 								)}
@@ -469,11 +454,11 @@ export default function TransactionDetailPage() {
 									<svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 									</svg>
-									<h3 className="font-semibold text-green-900">Destinataire</h3>
+									<h3 className="font-semibold text-green-900">{t("transaction.detail.sections.transfer.recipient")}</h3>
 								</div>
 								{toClient && (
 									<div className="mb-3">
-										<div className="text-xs text-gray-600 mb-1">Client</div>
+										<div className="text-xs text-gray-600 mb-1">{t("transaction.detail.sections.transfer.client")}</div>
 										<div className="font-semibold text-gray-900">
 											<Link
 												href={`/customers/${toClient.id}`}
@@ -489,7 +474,7 @@ export default function TransactionDetailPage() {
 								)}
 								{toAccount && (
 									<div>
-										<div className="text-xs text-gray-600 mb-1">Compte</div>
+										<div className="text-xs text-gray-600 mb-1">{t("transaction.detail.sections.transfer.account")}</div>
 										<div className="font-mono font-semibold text-gray-900">
 											<Link
 												href={`/accounts/${toAccount.id}`}
@@ -499,7 +484,7 @@ export default function TransactionDetailPage() {
 											</Link>
 										</div>
 										<div className="text-sm text-gray-600 mt-1">
-											Solde: {formatAmount(toAccount.balance, toAccount.currency)}
+											{t("transaction.detail.sections.transfer.balance")} {formatAmount(toAccount.balance, toAccount.currency)}
 										</div>
 									</div>
 								)}
@@ -508,7 +493,7 @@ export default function TransactionDetailPage() {
 						{transfer.feeAmount > 0 && (
 							<div className="mt-4 pt-4 border-t border-gray-200">
 								<div className="flex items-center justify-between">
-									<span className="text-sm text-gray-600">Frais de transfert:</span>
+									<span className="text-sm text-gray-600">{t("transaction.detail.sections.transfer.fee")}</span>
 									<span className="font-semibold text-orange-600">
 										{formatAmount(transfer.feeAmount, transfer.currency)}
 									</span>
@@ -529,8 +514,8 @@ export default function TransactionDetailPage() {
 							</svg>
 						</div>
 						<div>
-							<h2 className="text-lg font-bold text-gray-900">Écritures comptables</h2>
-							<p className="text-xs text-gray-600">Double écriture (débit/crédit)</p>
+							<h2 className="text-lg font-bold text-gray-900">{t("transaction.detail.sections.entries.title")}</h2>
+							<p className="text-xs text-gray-600">{t("transaction.detail.sections.entries.subtitle")}</p>
 						</div>
 					</div>
 				</div>
@@ -539,18 +524,18 @@ export default function TransactionDetailPage() {
 						<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 						</svg>
-						<p className="text-gray-500 text-lg font-medium">Aucune écriture trouvée</p>
+						<p className="text-gray-500 text-lg font-medium">{t("transaction.detail.sections.entries.noEntries")}</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Montant</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte GL</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.detail.sections.entries.table.type")}</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.detail.sections.entries.table.amount")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.detail.sections.entries.table.currency")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.detail.sections.entries.table.glAccount")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.detail.sections.entries.table.date")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -564,7 +549,7 @@ export default function TransactionDetailPage() {
 														: "bg-green-100 text-green-800"
 												}
 											>
-												{ENTRY_TYPE_LABELS[entry.entryType]}
+												{t(`transaction.detail.entryTypes.${entry.entryType}`)}
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
@@ -599,17 +584,17 @@ export default function TransactionDetailPage() {
 			{showReverseModal && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 					<div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-						<h2 className="text-xl font-bold text-gray-900 mb-4">Annuler la transaction</h2>
+						<h2 className="text-xl font-bold text-gray-900 mb-4">{t("transaction.detail.reverse.title")}</h2>
 						<div className="mb-4">
 							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Raison de l'annulation *
+								{t("transaction.detail.reverse.reason")}
 							</label>
 							<textarea
 								value={reverseReason}
 								onChange={(e) => setReverseReason(e.target.value)}
 								className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 								rows={4}
-								placeholder="Expliquez la raison de l'annulation..."
+								placeholder={t("transaction.detail.reverse.reasonPlaceholder")}
 							/>
 						</div>
 						<div className="flex justify-end gap-2">
@@ -621,10 +606,10 @@ export default function TransactionDetailPage() {
 								}}
 								disabled={reverseLoading}
 							>
-								Annuler
+								{t("transaction.detail.reverse.cancel")}
 							</Button>
 							<Button onClick={handleReverse} disabled={reverseLoading}>
-								{reverseLoading ? "Traitement..." : "Confirmer l'annulation"}
+								{reverseLoading ? t("transaction.detail.reverse.processing") : t("transaction.detail.reverse.confirm")}
 							</Button>
 						</div>
 					</div>

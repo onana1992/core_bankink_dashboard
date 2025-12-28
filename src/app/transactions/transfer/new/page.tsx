@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import TransactionForm from "@/components/transactions/TransactionForm";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { accountsApi, customersApi } from "@/lib/api";
+import { generateIdempotencyKey } from "@/lib/idempotency";
 import type { Account, CreateTransactionRequest, CreateTransferRequest, Customer } from "@/types";
 
 export default function NewTransferPage() {
+	const { t } = useTranslation();
 	const [destinationAccountId, setDestinationAccountId] = useState<number>(0);
 	const [destinationAccounts, setDestinationAccounts] = useState<Account[]>([]);
 	const [destinationAccount, setDestinationAccount] = useState<Account | null>(null);
@@ -24,7 +27,7 @@ export default function NewTransferPage() {
 				const response = await customersApi.list({ status: "VERIFIED", size: 1000 }); // Load all verified customers
 				setCustomers(response.content);
 			} catch (e) {
-				console.error("Erreur lors du chargement des clients:", e);
+				console.error(t("transfer.new.errors.loadCustomers"), e);
 			}
 		}
 		loadCustomers();
@@ -33,10 +36,10 @@ export default function NewTransferPage() {
 	useEffect(() => {
 		async function loadAccounts() {
 			try {
-				const data = await accountsApi.list();
-				setDestinationAccounts(data.filter((acc) => acc.status === "ACTIVE"));
+				const response = await accountsApi.list({ size: 1000 });
+				setDestinationAccounts(response.content.filter((acc) => acc.status === "ACTIVE"));
 			} catch (e) {
-				console.error("Erreur lors du chargement des comptes:", e);
+				console.error(t("transfer.new.errors.loadAccounts"), e);
 			}
 		}
 		loadAccounts();
@@ -62,7 +65,7 @@ export default function NewTransferPage() {
 								filtered = filtered.filter(acc => acc.currency === fromAcc.currency);
 							}
 						} catch (e) {
-							console.error("Erreur lors du chargement du compte source:", e);
+							console.error(t("transfer.new.errors.loadSourceAccount"), e);
 						}
 					}
 					setDestinationAccounts(filtered);
@@ -79,7 +82,7 @@ export default function NewTransferPage() {
 						return prev; // Garder la valeur actuelle
 					});
 				} catch (e) {
-					console.error("Erreur lors du chargement des comptes du client:", e);
+					console.error(t("transfer.new.errors.loadClientAccounts"), e);
 				}
 			}
 			loadClientAccounts();
@@ -90,8 +93,8 @@ export default function NewTransferPage() {
 			// Recharger tous les comptes si aucun client n'est sélectionné
 			async function loadAllAccounts() {
 				try {
-					const data = await accountsApi.list();
-					let filtered = data.filter((acc) => acc.status === "ACTIVE");
+					const response = await accountsApi.list({ size: 1000 });
+					let filtered = response.content.filter((acc) => acc.status === "ACTIVE");
 					
 					// Filtrer par devise si un compte source est sélectionné
 					if (fromAccountId) {
@@ -101,12 +104,12 @@ export default function NewTransferPage() {
 								filtered = filtered.filter(acc => acc.currency === fromAcc.currency);
 							}
 						} catch (e) {
-							console.error("Erreur lors du chargement du compte source:", e);
+							console.error(t("transfer.new.errors.loadSourceAccount"), e);
 						}
 					}
 					setDestinationAccounts(filtered);
 				} catch (e) {
-					console.error("Erreur lors du chargement des comptes:", e);
+					console.error(t("transfer.new.errors.loadAccounts"), e);
 				}
 			}
 			loadAllAccounts();
@@ -157,8 +160,8 @@ export default function NewTransferPage() {
 	return (
 		<TransactionForm
 			transactionType="TRANSFER"
-			title="Nouveau virement"
-			description="Effectuer un virement entre deux comptes"
+			title={t("transfer.new.title")}
+			description={t("transfer.new.description")}
 			icon={
 				<div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
 					<svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +174,7 @@ export default function NewTransferPage() {
 					{/* Destinataire */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Destinataire <span className="text-red-500">*</span>
+							{t("transfer.new.recipient.label")} <span className="text-red-500">{t("transfer.new.recipient.required")}</span>
 						</label>
 						
 						{!fromAccountId ? (
@@ -184,7 +187,7 @@ export default function NewTransferPage() {
 								<svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 								</svg>
-								Sélectionnez d'abord le compte émetteur
+								{t("transfer.new.recipient.selectFirst")}
 							</Button>
 						) : !toClient ? (
 							<Button
@@ -199,7 +202,7 @@ export default function NewTransferPage() {
 								<svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 								</svg>
-								Rechercher et sélectionner destinataire
+								{t("transfer.new.recipient.searchAndSelect")}
 							</Button>
 						) : (
 							<div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
@@ -238,7 +241,7 @@ export default function NewTransferPage() {
 												<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
 													<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
 												</svg>
-												{toClient.status}
+												{t(`customer.statuses.${toClient.status}`)}
 											</span>
 										</div>
 									</div>
@@ -251,7 +254,7 @@ export default function NewTransferPage() {
 											}}
 											className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-md transition-colors"
 										>
-											Modifier
+											{t("transfer.new.recipient.edit")}
 										</button>
 										<button
 											type="button"
@@ -289,7 +292,7 @@ export default function NewTransferPage() {
 								<div className="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-2xl">
 									<div className="px-6 py-4 border-b border-gray-200">
 										<div className="flex items-center justify-between">
-											<h3 className="text-lg font-semibold text-gray-900">Rechercher un destinataire</h3>
+											<h3 className="text-lg font-semibold text-gray-900">{t("transfer.new.recipient.searchModal.title")}</h3>
 											<button
 												type="button"
 												onClick={() => {
@@ -309,7 +312,7 @@ export default function NewTransferPage() {
 											<div className="relative">
 												<Input
 													type="text"
-													placeholder="Rechercher par nom, email, téléphone..."
+													placeholder={t("transfer.new.recipient.searchModal.searchPlaceholder")}
 													value={toClientSearch}
 													onChange={(e) => setToClientSearch(e.target.value)}
 													className="w-full pl-10"
@@ -353,14 +356,14 @@ export default function NewTransferPage() {
 																	<svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 																	</svg>
-																	<p className="text-sm">Aucun client ne correspond à votre recherche</p>
+																	<p className="text-sm">{t("transfer.new.recipient.searchModal.noResults")}</p>
 																</div>
 															) : (
 																<div>
 																	<svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 																	</svg>
-																	<p className="text-sm">Tapez pour rechercher un client</p>
+																	<p className="text-sm">{t("transfer.new.recipient.searchModal.startTyping")}</p>
 																</div>
 															)}
 														</div>
@@ -404,7 +407,7 @@ export default function NewTransferPage() {
 																	</div>
 																	<div className="ml-4">
 																		<span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-																			✓ {client.status}
+																			✓ {t(`customer.statuses.${client.status}`)}
 																		</span>
 																	</div>
 																</div>
@@ -425,7 +428,7 @@ export default function NewTransferPage() {
 													setToClientSearch("");
 												}}
 											>
-												Fermer
+												{t("transfer.new.recipient.searchModal.close")}
 											</Button>
 										</div>
 									</div>
@@ -437,7 +440,7 @@ export default function NewTransferPage() {
 					{/* Compte destinataire */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Compte destinataire <span className="text-red-500">*</span>
+							{t("transfer.new.destinationAccount.label")} <span className="text-red-500">{t("transfer.new.destinationAccount.required")}</span>
 						</label>
 						<select
 							key={`dest-account-${toClientId}-${destinationAccounts.length}`}
@@ -465,14 +468,14 @@ export default function NewTransferPage() {
 						>
 							<option value="0">
 								{!toClientId 
-									? "Sélectionnez d'abord le client destinataire"
+									? t("transfer.new.destinationAccount.selectRecipientFirst")
 									: destinationAccounts.length === 0
-									? "Aucun compte disponible"
-									: "Sélectionner le compte destinataire"}
+									? t("transfer.new.destinationAccount.noAccountsAvailable")
+									: t("transfer.new.destinationAccount.selectAccount")}
 							</option>
 							{destinationAccounts.map((acc) => (
 								<option key={`acc-${acc.id}`} value={String(acc.id)}>
-									{acc.accountNumber} - {acc.currency} (Solde: {acc.balance.toFixed(2)})
+									{acc.accountNumber} - {acc.currency} ({t("transfer.new.destinationAccount.balance")}: {acc.balance.toFixed(2)})
 								</option>
 							))}
 						</select>
@@ -480,15 +483,15 @@ export default function NewTransferPage() {
 							<div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-lg">
 								<div className="grid grid-cols-2 gap-3 text-sm">
 									<div>
-										<span className="text-gray-600">Compte:</span>
+										<span className="text-gray-600">{t("transfer.new.destinationAccount.account")}</span>
 										<span className="ml-2 font-semibold text-gray-900">
 											{destinationAccount.accountNumber}
 										</span>
 									</div>
 									<div>
-										<span className="text-gray-600">Solde:</span>
+										<span className="text-gray-600">{t("transfer.new.destinationAccount.balance")}</span>
 										<span className="ml-2 font-semibold text-green-700">
-											{destinationAccount.balance.toFixed(2)} {destinationAccount.currency}
+											{t("transfer.new.destinationAccount.balanceFormat", { balance: destinationAccount.balance.toFixed(2), currency: destinationAccount.currency })}
 										</span>
 									</div>
 								</div>
@@ -500,6 +503,8 @@ export default function NewTransferPage() {
 			onSubmit={async (data: CreateTransactionRequest) => {
 				// Pour un virement, on utilise l'endpoint dédié /api/transfers
 				const { transfersApi } = await import("@/lib/api");
+				// Générer une clé d'idempotence unique pour éviter les doublons
+				const idempotencyKey = generateIdempotencyKey(`transfer-${data.accountId}-${destinationAccountId}`);
 				const transfer = await transfersApi.create({
 					fromAccountId: data.accountId,
 					toAccountId: destinationAccountId,
@@ -508,7 +513,7 @@ export default function NewTransferPage() {
 					description: data.description,
 					valueDate: data.valueDate,
 					reference: data.metadata
-				});
+				}, idempotencyKey);
 				// Rediriger vers la transaction de débit associée au transfert
 				if (transfer.fromTransactionId) {
 					window.location.href = `/transactions/${transfer.fromTransactionId}`;

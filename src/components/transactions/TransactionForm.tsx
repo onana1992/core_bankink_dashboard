@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { accountsApi, customersApi, transactionsApi } from "@/lib/api";
+import { generateIdempotencyKey } from "@/lib/idempotency";
 import type { Account, CreateTransactionRequest, Customer, TransactionType } from "@/types";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -23,6 +25,7 @@ export default function TransactionForm({
 	additionalFields,
 	onSubmit
 }: TransactionFormProps) {
+	const { t } = useTranslation();
 	const [clientId, setClientId] = useState<number>(0);
 	const [client, setClient] = useState<Customer | null>(null);
 	const [accounts, setAccounts] = useState<Account[]>([]);
@@ -47,7 +50,7 @@ export default function TransactionForm({
 				const response = await customersApi.list({ status: "VERIFIED", size: 1000 }); // Load all verified customers
 				setCustomers(response.content);
 			} catch (e) {
-				console.error("Erreur lors du chargement des clients:", e);
+				console.error(t("transaction.form.errors.loadCustomers"), e);
 			}
 		}
 		loadCustomers();
@@ -69,17 +72,17 @@ export default function TransactionForm({
 						setCurrency("");
 					}
 				} catch (e) {
-					console.error("Erreur lors du chargement des comptes:", e);
+					console.error(t("transaction.form.errors.loadAccounts"), e);
 					setAccounts([]);
 				}
 			} else {
 				// Load all accounts if no client selected
 				try {
-					const data = await accountsApi.list();
-					const filtered = data.filter((acc) => acc.status === "ACTIVE");
+					const response = await accountsApi.list({ size: 1000 }); // Charger tous les comptes
+					const filtered = response.content.filter((acc) => acc.status === "ACTIVE");
 					setAccounts(filtered);
 				} catch (e) {
-					console.error("Erreur lors du chargement des comptes:", e);
+					console.error(t("transaction.form.errors.loadAccounts"), e);
 					setAccounts([]);
 				}
 			}
@@ -151,15 +154,18 @@ export default function TransactionForm({
 				valueDate: valueDate || undefined
 			};
 
+			// Générer une clé d'idempotence unique pour éviter les doublons
+			const idempotencyKey = generateIdempotencyKey(transactionType.toLowerCase());
+
 			if (onSubmit) {
 				await onSubmit(data);
 			} else {
-				// Default submission
-				const transaction = await transactionsApi.create(data);
+				// Default submission - passer la clé d'idempotence
+				const transaction = await transactionsApi.create(data, idempotencyKey);
 				window.location.href = `/transactions/${transaction.id}`;
 			}
 		} catch (e: any) {
-			setError(e?.message || "Erreur lors de la création de la transaction");
+			setError(e?.message || t("transaction.form.errors.createError"));
 			setLoading(false);
 		}
 	};
@@ -204,7 +210,7 @@ export default function TransactionForm({
 					{/* Client Selection */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Client <span className="text-red-500">*</span>
+							{t("transaction.form.client.label")} <span className="text-red-500">{t("transaction.form.client.required")}</span>
 						</label>
 						{!client ? (
 							<Button
@@ -219,7 +225,7 @@ export default function TransactionForm({
 								<svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 								</svg>
-								Rechercher et sélectionner un client
+								{t("transaction.form.client.searchAndSelect")}
 							</Button>
 						) : (
 							<div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
@@ -258,7 +264,7 @@ export default function TransactionForm({
 												<svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
 													<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
 												</svg>
-												{client.status}
+												{t(`customer.statuses.${client.status}`)}
 											</span>
 										</div>
 									</div>
@@ -271,7 +277,7 @@ export default function TransactionForm({
 											}}
 											className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded-md transition-colors"
 										>
-											Modifier
+											{t("transaction.form.client.edit")}
 										</button>
 										<button
 											type="button"
@@ -297,7 +303,7 @@ export default function TransactionForm({
 					{/* Account Selection */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Compte <span className="text-red-500">*</span>
+							{t("transaction.form.account.label")} <span className="text-red-500">{t("transaction.form.account.required")}</span>
 						</label>
 						<select
 							data-account-select="true"
@@ -312,12 +318,12 @@ export default function TransactionForm({
 						>
 							<option value="0">
 								{accounts.length === 0
-									? "Aucun compte disponible"
-									: "Sélectionner un compte"}
+									? t("transaction.form.account.noAccountsAvailable")
+									: t("transaction.form.account.selectAccount")}
 							</option>
 							{accounts.map((acc) => (
 								<option key={acc.id} value={String(acc.id)}>
-									{acc.accountNumber} - {acc.currency} (Solde: {acc.balance.toFixed(2)})
+									{acc.accountNumber} - {acc.currency} ({t("transaction.form.account.balance")}: {acc.balance.toFixed(2)})
 								</option>
 							))}
 						</select>
@@ -325,15 +331,15 @@ export default function TransactionForm({
 							<div className="mt-3 p-4 bg-green-50 border border-green-200 rounded-lg">
 								<div className="grid grid-cols-2 gap-3 text-sm">
 									<div>
-										<span className="text-gray-600">Compte:</span>
+										<span className="text-gray-600">{t("transaction.form.account.account")}</span>
 										<span className="ml-2 font-semibold text-gray-900">
 											{selectedAccount.accountNumber}
 										</span>
 									</div>
 									<div>
-										<span className="text-gray-600">Solde:</span>
+										<span className="text-gray-600">{t("transaction.form.account.balance")}</span>
 										<span className="ml-2 font-semibold text-green-700">
-											{selectedAccount.balance.toFixed(2)} {selectedAccount.currency}
+											{t("transaction.form.account.balanceFormat", { balance: selectedAccount.balance.toFixed(2), currency: selectedAccount.currency })}
 										</span>
 									</div>
 								</div>
@@ -347,7 +353,7 @@ export default function TransactionForm({
 					{/* Amount */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Montant <span className="text-red-500">*</span>
+							{t("transaction.form.amount.label")} <span className="text-red-500">{t("transaction.form.amount.required")}</span>
 						</label>
 						<Input
 							type="number"
@@ -355,7 +361,7 @@ export default function TransactionForm({
 							min="0"
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0.00"
+							placeholder={t("transaction.form.amount.placeholder")}
 							required
 							className="w-full"
 						/>
@@ -364,13 +370,13 @@ export default function TransactionForm({
 					{/* Currency */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Devise <span className="text-red-500">*</span>
+							{t("transaction.form.currency.label")} <span className="text-red-500">{t("transaction.form.currency.required")}</span>
 						</label>
 						<Input
 							type="text"
 							value={currency}
 							onChange={(e) => setCurrency(e.target.value)}
-							placeholder="XAF"
+							placeholder={t("transaction.form.currency.placeholder")}
 							required
 							disabled={!!selectedAccount}
 							className="w-full"
@@ -380,13 +386,13 @@ export default function TransactionForm({
 					{/* Description */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Description
+							{t("transaction.form.description.label")}
 						</label>
 						<Input
 							type="text"
 							value={descriptionText}
 							onChange={(e) => setDescriptionText(e.target.value)}
-							placeholder="Description de la transaction"
+							placeholder={t("transaction.form.description.placeholder")}
 							className="w-full"
 						/>
 					</div>
@@ -394,7 +400,7 @@ export default function TransactionForm({
 					{/* Value Date */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							Date de valeur
+							{t("transaction.form.valueDate.label")}
 						</label>
 						<Input
 							type="date"
@@ -412,13 +418,13 @@ export default function TransactionForm({
 							onClick={() => window.history.back()}
 							disabled={loading}
 						>
-							Annuler
+							{t("transaction.form.buttons.cancel")}
 						</Button>
 						<Button
 							type="submit"
 							disabled={loading || !selectedAccountId || !amount || !currency}
 						>
-							{loading ? "Création..." : "Créer la transaction"}
+							{loading ? t("transaction.form.buttons.submitting") : t("transaction.form.buttons.submit")}
 						</Button>
 					</div>
 				</form>
@@ -438,7 +444,7 @@ export default function TransactionForm({
 						<div className="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-2xl">
 							<div className="px-6 py-4 border-b border-gray-200">
 								<div className="flex items-center justify-between">
-									<h3 className="text-lg font-semibold text-gray-900">Rechercher un client</h3>
+									<h3 className="text-lg font-semibold text-gray-900">{t("transaction.form.client.searchModal.title")}</h3>
 									<button
 										type="button"
 										onClick={() => {
@@ -458,7 +464,7 @@ export default function TransactionForm({
 									<div className="relative">
 										<Input
 											type="text"
-											placeholder="Rechercher par nom, email, téléphone..."
+											placeholder={t("transaction.form.client.searchModal.searchPlaceholder")}
 											value={clientSearch}
 											onChange={(e) => setClientSearch(e.target.value)}
 											className="w-full pl-10"
@@ -490,14 +496,14 @@ export default function TransactionForm({
 													<svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 													</svg>
-													<p className="text-sm">Aucun client ne correspond à votre recherche</p>
+													<p className="text-sm">{t("transaction.form.client.searchModal.noResults")}</p>
 												</div>
 											) : (
 												<div>
 													<svg className="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 													</svg>
-													<p className="text-sm">Tapez pour rechercher un client</p>
+													<p className="text-sm">{t("transaction.form.client.searchModal.startTyping")}</p>
 												</div>
 											)}
 										</div>
@@ -539,7 +545,7 @@ export default function TransactionForm({
 														</div>
 														<div className="ml-4">
 															<span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-																✓ {customer.status}
+																✓ {t(`customer.statuses.${customer.status}`)}
 															</span>
 														</div>
 													</div>
@@ -559,7 +565,7 @@ export default function TransactionForm({
 											setClientSearch("");
 										}}
 									>
-										Fermer
+										{t("transaction.form.client.searchModal.close")}
 									</Button>
 								</div>
 							</div>

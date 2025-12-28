@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -13,14 +15,6 @@ const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 	COMPLETED: "bg-green-100 text-green-800",
 	FAILED: "bg-red-100 text-red-800",
 	REVERSED: "bg-gray-100 text-gray-800"
-};
-
-const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
-	PENDING: "En attente",
-	PROCESSING: "En traitement",
-	COMPLETED: "Terminée",
-	FAILED: "Échouée",
-	REVERSED: "Annulée"
 };
 
 interface TransactionListByTypeProps {
@@ -38,6 +32,7 @@ export default function TransactionListByType({
 	newPagePath,
 	icon
 }: TransactionListByTypeProps) {
+	const { t } = useTranslation();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -54,10 +49,10 @@ export default function TransactionListByType({
 	useEffect(() => {
 		async function load() {
 			try {
-				const data = await accountsApi.list();
-				setAccounts(data);
+				const response = await accountsApi.list({ size: 1000 }); // Charger tous les comptes pour le filtre
+				setAccounts(response.content);
 			} catch (e: any) {
-				console.error("Erreur lors du chargement des comptes:", e);
+				console.error(t("transaction.byType.errors.loadAccounts"), e);
 			}
 		}
 		load();
@@ -88,7 +83,7 @@ export default function TransactionListByType({
 				setTotalPages(response.totalPages || 0);
 				setTotalElements(response.totalElements || 0);
 			} catch (e: any) {
-				setError(e?.message ?? `Erreur lors du chargement des ${title.toLowerCase()}`);
+				setError(e?.message ?? t("transaction.byType.errors.loadTransactions", { type: title.toLowerCase() }));
 			} finally {
 				setLoading(false);
 			}
@@ -117,14 +112,18 @@ export default function TransactionListByType({
 	}, [transactions, totalElements]);
 
 	function formatAmount(amount: number, currency: string): string {
-		return new Intl.NumberFormat("fr-FR", {
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Intl.NumberFormat(locale, {
 			style: "currency",
 			currency: currency || "XAF"
 		}).format(amount);
 	}
 
 	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleDateString("fr-FR", {
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Date(dateString).toLocaleDateString(locale, {
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric",
@@ -141,7 +140,7 @@ export default function TransactionListByType({
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 						</svg>
-						Retour aux transactions
+						{t("transaction.byType.backToTransactions")}
 					</Link>
 					<h1 className="text-3xl font-bold text-gray-900">{title}</h1>
 					<p className="text-gray-600 mt-1">{description}</p>
@@ -151,7 +150,7 @@ export default function TransactionListByType({
 						<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 						</svg>
-						Nouveau
+						{t("transaction.byType.new")}
 					</Button>
 				</Link>
 			</div>
@@ -170,7 +169,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">Total</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("transaction.byType.stats.total")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.total}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -183,7 +182,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-green-700 mb-1">Terminées</div>
+							<div className="text-sm font-medium text-green-700 mb-1">{t("transaction.byType.stats.completed")}</div>
 							<div className="text-3xl font-bold text-green-900">{stats.completed}</div>
 						</div>
 						<div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
@@ -196,7 +195,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-5 rounded-xl shadow-sm border border-yellow-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-yellow-700 mb-1">En attente</div>
+							<div className="text-sm font-medium text-yellow-700 mb-1">{t("transaction.byType.stats.pending")}</div>
 							<div className="text-3xl font-bold text-yellow-900">{stats.pending}</div>
 						</div>
 						<div className="w-12 h-12 bg-yellow-200 rounded-lg flex items-center justify-center">
@@ -209,7 +208,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">En traitement</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("transaction.byType.stats.processing")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.processing}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -222,7 +221,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-red-700 mb-1">Échouées</div>
+							<div className="text-sm font-medium text-red-700 mb-1">{t("transaction.byType.stats.failed")}</div>
 							<div className="text-3xl font-bold text-red-900">{stats.failed}</div>
 						</div>
 						<div className="w-12 h-12 bg-red-200 rounded-lg flex items-center justify-center">
@@ -239,7 +238,7 @@ export default function TransactionListByType({
 				<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-5 rounded-xl shadow-sm border border-indigo-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-indigo-700 mb-1">Montant total (terminées)</div>
+							<div className="text-sm font-medium text-indigo-700 mb-1">{t("transaction.byType.stats.totalAmount")}</div>
 							<div className="text-2xl font-bold text-indigo-900">
 								{formatAmount(stats.totalAmount, transactions[0]?.currency || "XAF")}
 							</div>
@@ -256,14 +255,14 @@ export default function TransactionListByType({
 			{loading ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement...</p>
+					<p className="mt-4 text-gray-600">{t("transaction.byType.loading")}</p>
 				</div>
 			) : transactions.length === 0 ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
 					</svg>
-					<p className="text-gray-500 text-lg font-medium">Aucune transaction trouvée</p>
+					<p className="text-gray-500 text-lg font-medium">{t("transaction.byType.noTransactions")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -283,7 +282,7 @@ export default function TransactionListByType({
 										}}
 									>
 										<div className="flex items-center gap-2">
-											Numéro
+											{t("transaction.byType.table.number")}
 											{sortBy === "transactionNumber" && (
 												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -291,7 +290,7 @@ export default function TransactionListByType({
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.byType.table.account")}</th>
 									<th 
 										className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
@@ -304,7 +303,7 @@ export default function TransactionListByType({
 										}}
 									>
 										<div className="flex items-center justify-end gap-2">
-											Montant
+											{t("transaction.byType.table.amount")}
 											{sortBy === "amount" && (
 												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -312,7 +311,7 @@ export default function TransactionListByType({
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.byType.table.status")}</th>
 									<th 
 										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
@@ -325,7 +324,7 @@ export default function TransactionListByType({
 										}}
 									>
 										<div className="flex items-center gap-2">
-											Date
+											{t("transaction.byType.table.date")}
 											{sortBy === "transactionDate" && (
 												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -333,7 +332,7 @@ export default function TransactionListByType({
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.byType.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -362,7 +361,7 @@ export default function TransactionListByType({
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge className={TRANSACTION_STATUS_COLORS[txn.status]}>
-												{TRANSACTION_STATUS_LABELS[txn.status]}
+												{t(`transaction.detail.statuses.${txn.status}`)}
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-gray-600">
@@ -375,7 +374,7 @@ export default function TransactionListByType({
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 													</svg>
-													Voir
+													{t("transaction.byType.table.view")}
 												</Button>
 											</Link>
 										</td>
@@ -389,7 +388,10 @@ export default function TransactionListByType({
 						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-gray-600">
-									Affichage de <span className="font-semibold">{transactions.length}</span> sur <span className="font-semibold">{totalElements}</span> transaction{totalElements > 1 ? "s" : ""}
+									{totalElements > 1 
+										? t("transaction.byType.pagination.showingPlural", { count: transactions.length, total: totalElements })
+										: t("transaction.byType.pagination.showing", { count: transactions.length, total: totalElements })
+									}
 								</div>
 								<div className="flex gap-2">
 									<Button
@@ -402,10 +404,10 @@ export default function TransactionListByType({
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 										</svg>
-										Précédent
+										{t("transaction.byType.pagination.previous")}
 									</Button>
 									<span className="flex items-center px-4 text-sm text-gray-700">
-										Page {page + 1} sur {totalPages || 1}
+										{t("transaction.byType.pagination.page", { current: page + 1, total: totalPages || 1 })}
 									</span>
 									<Button
 										variant="outline"
@@ -414,7 +416,7 @@ export default function TransactionListByType({
 										disabled={page >= totalPages - 1}
 										className="flex items-center gap-1"
 									>
-										Suivant
+										{t("transaction.byType.pagination.next")}
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
 										</svg>

@@ -19,9 +19,13 @@
 		"glAccounts": "Comptes généraux",
 		"chartOfAccounts": "Plan comptable",
 		"transactions": "Transactions",
+		"allTransactions": "Toutes les transactions",
 		"journal": "Journal",
 		"transfers": "Virements",
 		"holds": "Blocages",
+		"users": "Utilisateurs",
+		"roles": "Rôles",
+		"permissions": "Permissions",
 		"payments": "Paiements",
 		"outgoingTransfers": "Virements sortants",
 		"incomingTransfers": "Virements entrants",
@@ -56,6 +60,46 @@
 	"topbar": {
 		"toggleSidebar": "Basculer la barre latérale"
 	},
+	"dashboard": {
+		"title": "Tableau de bord",
+		"subtitle": "Vue d'ensemble du système bancaire",
+		"loading": "Chargement du tableau de bord...",
+		"stats": {
+			"accounts": "Comptes",
+			"accountsActive": "actifs",
+			"clients": "Clients",
+			"products": "Produits",
+			"productsActive": "actifs",
+			"transactionsToday": "Transactions (aujourd'hui)",
+			"transactionsTotal": "au total",
+			"totalBalance": "Solde total",
+			"interestToday": "Intérêts (aujourd'hui)",
+			"feesToday": "Frais (aujourd'hui)"
+		},
+		"transactionStats": {
+			"title": "Statistiques par type de transaction (30 derniers jours)"
+		},
+		"recentTransactions": {
+			"title": "Transactions récentes",
+			"viewAll": "Voir tout",
+			"noTransactions": "Aucune transaction récente"
+		},
+		"recentAccounts": {
+			"title": "Comptes récents",
+			"viewAll": "Voir tout",
+			"noAccounts": "Aucun compte récent"
+		},
+		"quickActions": {
+			"title": "Actions rapides",
+			"newClient": "Nouveau client",
+			"newAccount": "Nouveau compte",
+			"deposit": "Dépôt",
+			"transfer": "Virement"
+		},
+		"errors": {
+			"loadError": "Erreur lors du chargement du dashboard"
+		}
+	},
 	"common": {
 		"users": "Utilisateurs",
 		"customers": "Clients",
@@ -74,7 +118,15 @@
 		"error": "Erreur",
 		"dates": "Dates",
 		"createdAt": "Créé le",
-		"updatedAt": "Modifié le"
+		"updatedAt": "Modifié le",
+		"yes": "Oui",
+		"no": "Non",
+		"accountStatuses": {
+			"ACTIVE": "Actif",
+			"CLOSED": "Fermé",
+			"FROZEN": "Gelé",
+			"SUSPENDED": "Suspendu"
+		}
 	},
 	"customer": {
 		"new": "Nouveau client",
@@ -297,7 +349,112 @@
 			}
 		}
 	},
+	"account": {
+		"new": {
+			"title": "Ouvrir un compte",
+			"subtitle": "Créer un nouveau compte bancaire pour un client",
+			"backToList": "← Retour à la liste",
+			"client": "Client *",
+			"selectClient": "Sélectionner un client",
+			"clientMustBeVerified": "⚠️ Le client doit être vérifié (VERIFIED) pour ouvrir un compte",
+			"product": "Produit *",
+			"selectProduct": "Sélectionner un produit",
+			"period": "Période",
+			"noPeriod": "Aucune période",
+			"openingAmount": "Montant d'ouverture",
+			"currency": "Devise",
+			"currencyHint": "La devise est définie par le produit sélectionné",
+			"currencyLabel": "Devise: {{currency}}",
+			"minAmount": "Montant minimum: {{amount}} {{currency}}",
+			"maxAmount": "Montant maximum: {{amount}} {{currency}}",
+			"interestRate": "Taux d'intérêt: {{rate}}%",
+			"duration": "Durée: {{days}} jours",
+			"periodName": "{{name}} ({{rate}}%)",
+			"periodWithAmounts": "{{name}} ({{rate}}%) - Min: {{min}} Max: {{max}}",
+			"cancel": "Annuler",
+			"open": "Ouvrir le compte",
+			"opening": "Ouverture...",
+			"sourceAccount": "Compte source pour les frais d'ouverture",
+			"selectSourceAccount": "Sélectionner un compte",
+			"sourceAccountHint": "Les frais d'ouverture seront déduits de ce compte.",
+			"noSourceAccountAvailable": "Le client n'a aucun compte courant actif. Veuillez créer un compte courant pour ce client avant d'ouvrir un nouveau compte avec frais d'ouverture.",
+			"openingFeeInfo": "Frais d'ouverture: {{amount}} {{currency}} (sera déduit du compte source sélectionné)",
+			"errors": {
+				"clientRequired": "Le client est requis",
+				"productRequired": "Le produit est requis",
+				"sourceAccountRequired": "Le compte source est obligatoire car le produit a des frais d'ouverture configurés",
+				"sourceAccountDifferentClient": "Le compte source sélectionné n'appartient pas au même client",
+				"loadError": "Erreur lors du chargement des données",
+				"periodsLoadError": "Erreur lors du chargement des périodes",
+				"accountsLoadError": "Erreur lors du chargement des comptes du client",
+				"openError": "Échec de l'ouverture du compte"
+			}
+		},
+		"detail": {
+			"close": {
+				"success": "Le compte a été fermé avec succès",
+				"error": "Erreur lors de la fermeture du compte",
+				"reasonRequired": "Le motif de fermeture est requis"
+			},
+			"suspend": {
+				"success": "Le compte a été suspendu avec succès",
+				"error": "Erreur lors de la suspension du compte"
+			},
+			"unsuspend": {
+				"success": "Le compte a été réactivé avec succès",
+				"error": "Erreur lors de la réactivation du compte"
+			}
+		}
+	},
 	"product": {
+		"list": {
+			"title": "Catalogue de Produits",
+			"subtitle": "Gestion et configuration des produits bancaires",
+			"refresh": "Actualiser",
+			"new": "Nouveau produit",
+			"stats": {
+				"total": "Total",
+				"active": "Actifs",
+				"draft": "Brouillons",
+				"inactive": "Inactifs"
+			},
+			"filters": {
+				"title": "Filtres",
+				"search": "Recherche",
+				"searchPlaceholder": "Nom, code ou description...",
+				"status": "Statut",
+				"statusAll": "Tous les statuts",
+				"category": "Catégorie",
+				"categoryAll": "Toutes les catégories"
+			},
+			"table": {
+				"code": "Code",
+				"name": "Nom",
+				"category": "Catégorie",
+				"status": "Statut",
+				"currency": "Devise",
+				"interestRate": "Taux d'intérêt",
+				"actions": "Actions",
+				"view": "Voir"
+			},
+			"pagination": {
+				"showing": "Affichage de",
+				"of": "sur",
+				"product": "produit",
+				"products": "produits",
+				"itemsPerPage": "Éléments par page:",
+				"page": "Page",
+				"on": "sur"
+			},
+			"errors": {
+				"loadError": "Erreur lors du chargement des produits"
+			},
+			"empty": {
+				"title": "Aucun produit trouvé",
+				"message": "Essayez de modifier vos filtres de recherche"
+			},
+			"loading": "Chargement des produits..."
+		},
 		"detail": {
 			"title": "Détails du produit",
 			"subtitle": "Détails et configuration du produit bancaire",
@@ -326,6 +483,11 @@
 				"TERM_DEPOSIT": "Dépôt à terme",
 				"LOAN": "Prêt",
 				"CARD": "Carte"
+			},
+			"statuses": {
+				"ACTIVE": "Actif",
+				"DRAFT": "Brouillon",
+				"INACTIVE": "Inactif"
 			},
 			"overview": {
 				"edit": "Modifier",
@@ -377,7 +539,77 @@
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"count": "Frais ({{count}})",
+				"noFees": "Aucun frais configuré",
+				"form": {
+					"feeType": "Type de frais *",
+					"transactionType": "Type de transaction",
+					"transactionTypeAll": "Tous les types (NULL)",
+					"transactionTypeHint": "Laissez vide pour que le frais s'applique à tous les types de transactions",
+					"feeName": "Nom du frais *",
+					"calculationBase": "Base de calcul *",
+					"feeAmount": "Montant fixe",
+					"feeAmountDisabled": "Non applicable pour \"Montant transaction\"",
+					"feePercentage": "Pourcentage",
+					"feePercentageDisabled": "Non applicable pour \"Fixe\"",
+					"minFee": "Frais minimum",
+					"maxFee": "Frais maximum",
+					"effectiveFrom": "Date d'effet *",
+					"effectiveTo": "Date de fin",
+					"currency": "Devise *",
+					"currencyHint": "Code devise ISO-3 (ex: USD, EUR, XAF). Doit correspondre à la devise du produit ({{currency}}).",
+					"isWaivable": "Dispensable",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"editTitle": "Modifier le frais"
+				},
+				"feeTypes": {
+					"OPENING": "Ouverture",
+					"MONTHLY": "Mensuel",
+					"ANNUAL": "Annuel",
+					"TRANSACTION": "Transaction",
+					"WITHDRAWAL": "Retrait",
+					"OVERDRAFT": "Découvert",
+					"LATE_PAYMENT": "Retard de paiement",
+					"EARLY_WITHDRAWAL": "Retrait anticipé",
+					"CARD_ISSUANCE": "Émission de carte",
+					"CARD_RENEWAL": "Renouvellement de carte",
+					"OTHER": "Autre"
+				},
+				"transactionTypes": {
+					"DEPOSIT": "Dépôt",
+					"WITHDRAWAL": "Retrait",
+					"TRANSFER": "Virement",
+					"FEE": "Frais",
+					"INTEREST": "Intérêt",
+					"ADJUSTMENT": "Ajustement",
+					"REVERSAL": "Réversion"
+				},
+				"calculationBases": {
+					"FIXED": "Fixe",
+					"BALANCE": "Solde",
+					"TRANSACTION_AMOUNT": "Montant transaction",
+					"OUTSTANDING_BALANCE": "Solde impayé"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Nom",
+					"amount": "Montant",
+					"base": "Base",
+					"waivable": "Dispensable",
+					"actions": "Actions"
+				},
+				"menu": {
+					"view": "Voir",
+					"edit": "Modifier",
+					"delete": "Supprimer"
+				},
+				"deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce frais ?"
 			},
 			"limits": {
 				"title": "Limites",
@@ -631,6 +863,290 @@
 			"displaying_other": "Affichage de {{count}} écritures"
 		}
 	},
+	"transfer": {
+		"new": {
+			"title": "Nouveau virement",
+			"description": "Effectuer un virement entre deux comptes",
+			"recipient": {
+				"label": "Destinataire",
+				"required": "*",
+				"selectFirst": "Sélectionnez d'abord le compte émetteur",
+				"searchAndSelect": "Rechercher et sélectionner destinataire",
+				"edit": "Modifier",
+				"searchModal": {
+					"title": "Rechercher un destinataire",
+					"searchPlaceholder": "Rechercher par nom, email, téléphone...",
+					"noResults": "Aucun client ne correspond à votre recherche",
+					"startTyping": "Tapez pour rechercher un client",
+					"close": "Fermer"
+				}
+			},
+			"destinationAccount": {
+				"label": "Compte destinataire",
+				"required": "*",
+				"selectRecipientFirst": "Sélectionnez d'abord le client destinataire",
+				"noAccountsAvailable": "Aucun compte disponible",
+				"selectAccount": "Sélectionner le compte destinataire",
+				"account": "Compte:",
+				"balance": "Solde:",
+				"balanceFormat": "{{balance}} {{currency}}"
+			},
+			"errors": {
+				"loadCustomers": "Erreur lors du chargement des clients",
+				"loadAccounts": "Erreur lors du chargement des comptes",
+				"loadClientAccounts": "Erreur lors du chargement des comptes du client",
+				"loadSourceAccount": "Erreur lors du chargement du compte source"
+			}
+		}
+	},
+	"transaction": {
+		"form": {
+			"client": {
+				"label": "Client",
+				"required": "*",
+				"searchAndSelect": "Rechercher et sélectionner un client",
+				"edit": "Modifier",
+				"searchModal": {
+					"title": "Rechercher un client",
+					"searchPlaceholder": "Rechercher par nom, email, téléphone...",
+					"noResults": "Aucun client ne correspond à votre recherche",
+					"startTyping": "Tapez pour rechercher un client",
+					"close": "Fermer"
+				}
+			},
+			"account": {
+				"label": "Compte",
+				"required": "*",
+				"noAccountsAvailable": "Aucun compte disponible",
+				"selectAccount": "Sélectionner un compte",
+				"account": "Compte:",
+				"balance": "Solde:",
+				"balanceFormat": "{{balance}} {{currency}}"
+			},
+			"amount": {
+				"label": "Montant",
+				"required": "*",
+				"placeholder": "0.00"
+			},
+			"currency": {
+				"label": "Devise",
+				"required": "*",
+				"placeholder": "XAF"
+			},
+			"description": {
+				"label": "Description",
+				"placeholder": "Description de la transaction"
+			},
+			"valueDate": {
+				"label": "Date de valeur"
+			},
+			"buttons": {
+				"cancel": "Annuler",
+				"submit": "Créer la transaction",
+				"submitting": "Création..."
+			},
+			"errors": {
+				"selectAccount": "Veuillez sélectionner un compte",
+				"validAmount": "Veuillez saisir un montant valide",
+				"selectCurrency": "Veuillez sélectionner une devise",
+				"createError": "Erreur lors de la création de la transaction",
+				"loadCustomers": "Erreur lors du chargement des clients",
+				"loadAccounts": "Erreur lors du chargement des comptes"
+			}
+		},
+		"detail": {
+			"title": "Transaction {{number}}",
+			"subtitle": "Détails et écritures comptables",
+			"backToList": "Retour à la liste des transactions",
+			"back": "Retour à la liste",
+			"loading": "Chargement des informations de la transaction...",
+			"error": "Erreur",
+			"notFound": "Transaction non trouvée",
+			"reverse": {
+				"button": "Annuler la transaction",
+				"title": "Annuler la transaction",
+				"reason": "Raison de l'annulation *",
+				"reasonPlaceholder": "Expliquez la raison de l'annulation...",
+				"cancel": "Annuler",
+				"confirm": "Confirmer l'annulation",
+				"processing": "Traitement...",
+				"reasonRequired": "La raison de l'annulation est requise",
+				"error": "Erreur lors de l'annulation de la transaction"
+			},
+			"sections": {
+				"general": {
+					"title": "Informations générales",
+					"subtitle": "Détails de la transaction",
+					"number": "Numéro",
+					"type": "Type",
+					"status": "Statut",
+					"amount": "Montant",
+					"account": "Compte",
+					"description": "Description",
+					"internalTransfer": "Transfert interne"
+				},
+				"dates": {
+					"title": "Dates",
+					"subtitle": "Horodatage de la transaction",
+					"transactionDate": "Date de transaction",
+					"valueDate": "Date de valeur",
+					"createdAt": "Créée le",
+					"updatedAt": "Modifiée le"
+				},
+				"transfer": {
+					"title": "Informations du transfert",
+					"subtitle": "Émetteur et destinataire",
+					"sender": "Émetteur",
+					"recipient": "Destinataire",
+					"client": "Client",
+					"account": "Compte",
+					"balance": "Solde:",
+					"fee": "Frais de transfert:",
+					"notFound": {
+						"title": "Transfert non trouvé",
+						"message": "Cette transaction référence un transfert (ID: {{id}}) qui n'a pas pu être chargé. La transaction peut exister indépendamment du transfert."
+					}
+				},
+				"entries": {
+					"title": "Écritures comptables",
+					"subtitle": "Double écriture (débit/crédit)",
+					"noEntries": "Aucune écriture trouvée",
+					"table": {
+						"type": "Type",
+						"amount": "Montant",
+						"currency": "Devise",
+						"glAccount": "Compte GL",
+						"date": "Date"
+					}
+				}
+			},
+			"types": {
+				"DEPOSIT": "Dépôt",
+				"WITHDRAWAL": "Retrait",
+				"TRANSFER": "Virement",
+				"FEE": "Frais",
+				"INTEREST": "Intérêts",
+				"ADJUSTMENT": "Ajustement",
+				"REVERSAL": "Réversal"
+			},
+			"statuses": {
+				"PENDING": "En attente",
+				"PROCESSING": "En traitement",
+				"COMPLETED": "Terminée",
+				"FAILED": "Échouée",
+				"REVERSED": "Annulée"
+			},
+			"entryTypes": {
+				"DEBIT": "Débit",
+				"CREDIT": "Crédit"
+			},
+			"errors": {
+				"loadError": "Erreur lors du chargement de la transaction",
+				"loadAccount": "Erreur lors du chargement du compte",
+				"loadTransfer": "Erreur lors du chargement du transfert",
+				"loadSenderClient": "Erreur lors du chargement du client source",
+				"loadRecipientClient": "Erreur lors du chargement du client destination"
+			}
+		},
+		"list": {
+			"title": "Transactions",
+			"subtitle": "Gestion et suivi des transactions bancaires",
+			"types": {
+				"title": "Types de transactions",
+				"viewAll": "Voir tous",
+				"create": "Créer une transaction",
+				"deposits": "Dépôts",
+				"withdrawals": "Retraits",
+				"transfers": "Virements",
+				"fees": "Frais",
+				"interests": "Intérêts",
+				"adjustments": "Ajustements",
+				"reversals": "Réversions",
+				"deposit": "Dépôt",
+				"withdrawal": "Retrait",
+				"transfer": "Virement",
+				"fee": "Frais",
+				"interest": "Intérêts",
+				"adjustment": "Ajustement",
+				"reversal": "Réversion"
+			},
+			"stats": {
+				"total": "Total",
+				"completed": "Terminées",
+				"pending": "En attente",
+				"processing": "En traitement",
+				"failed": "Échouées"
+			},
+			"filters": {
+				"title": "Filtres",
+				"account": "Compte",
+				"type": "Type",
+				"status": "Statut",
+				"fromDate": "Date début",
+				"toDate": "Date fin",
+				"all": "Tous",
+				"reset": "Réinitialiser"
+			},
+			"table": {
+				"number": "Numéro",
+				"type": "Type",
+				"account": "Compte",
+				"amount": "Montant",
+				"status": "Statut",
+				"date": "Date",
+				"actions": "Actions",
+				"view": "Voir"
+			},
+			"loading": "Chargement des transactions...",
+			"noTransactions": "Aucune transaction trouvée",
+			"noTransactionsHint": "Essayez de modifier vos filtres de recherche",
+			"pagination": {
+				"showing": "Affichage de {{count}} sur {{total}} transaction",
+				"showingPlural": "Affichage de {{count}} sur {{total}} transactions",
+				"page": "Page {{current}} sur {{total}}",
+				"previous": "Précédent",
+				"next": "Suivant"
+			},
+			"errors": {
+				"loadAccounts": "Erreur lors du chargement des comptes",
+				"loadTransactions": "Erreur lors du chargement des transactions"
+			}
+		},
+		"byType": {
+			"backToTransactions": "Retour aux transactions",
+			"new": "Nouveau",
+			"stats": {
+				"total": "Total",
+				"completed": "Terminées",
+				"pending": "En attente",
+				"processing": "En traitement",
+				"failed": "Échouées",
+				"totalAmount": "Montant total (terminées)"
+			},
+			"loading": "Chargement...",
+			"noTransactions": "Aucune transaction trouvée",
+			"table": {
+				"number": "Numéro",
+				"account": "Compte",
+				"amount": "Montant",
+				"status": "Statut",
+				"date": "Date",
+				"actions": "Actions",
+				"view": "Voir"
+			},
+			"pagination": {
+				"showing": "Affichage de {{count}} sur {{total}} transaction",
+				"showingPlural": "Affichage de {{count}} sur {{total}} transactions",
+				"page": "Page {{current}} sur {{total}}",
+				"previous": "Précédent",
+				"next": "Suivant"
+			},
+			"errors": {
+				"loadAccounts": "Erreur lors du chargement des comptes",
+				"loadTransactions": "Erreur lors du chargement des {{type}}"
+			}
+		}
+	},
 	"common": {
 		"users": "Utilisateurs",
 		"customers": "Clients",
@@ -649,6 +1165,8 @@
 		"error": "Erreur",
 		"dates": "Dates",
 		"createdAt": "Créé le",
-		"updatedAt": "Modifié le"
+		"updatedAt": "Modifié le",
+		"yes": "Oui",
+		"no": "Non"
 	}
 }

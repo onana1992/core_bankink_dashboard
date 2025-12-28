@@ -471,6 +471,7 @@ export default function ProductDetailPage() {
 				{activeTab === "fees" && (
 					<FeesTab
 						productId={id}
+						productCurrency={product?.currency}
 						fees={fees}
 						loading={loadingConfigs}
 						onAdd={() => setShowFeeForm(true)}
@@ -1647,6 +1648,7 @@ function InterestRatesTab({
 // Component for Fees Tab
 function FeesTab({
 	productId,
+	productCurrency,
 	fees,
 	loading,
 	onAdd,
@@ -1656,6 +1658,7 @@ function FeesTab({
 	onCloseForm
 }: {
 	productId: string;
+	productCurrency?: string;
 	fees: ProductFee[];
 	loading?: boolean;
 	onAdd: () => void;
@@ -1664,11 +1667,13 @@ function FeesTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductFeeRequest>({
 		feeType: "MONTHLY",
 		transactionType: null,
 		feeName: "",
 		feeCalculationBase: "FIXED",
+		currency: productCurrency ?? "USD",
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
@@ -1701,6 +1706,7 @@ function FeesTab({
 				transactionType: null,
 				feeName: "",
 				feeCalculationBase: "FIXED",
+				currency: productCurrency ?? "USD",
 				effectiveFrom: new Date().toISOString().split('T')[0],
 				isActive: true
 			});
@@ -1713,14 +1719,14 @@ function FeesTab({
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.fees.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Frais ({fees.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter un frais</Button>}
+				<h3 className="text-lg font-semibold">{t("product.detail.fees.count", { count: fees.length })}</h3>
+				{!showForm && <Button onClick={onAdd}>{t("product.detail.fees.addButton")}</Button>}
 			</div>
 
 			{showForm && (
@@ -1728,7 +1734,7 @@ function FeesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de frais *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeType}
@@ -1753,22 +1759,21 @@ function FeesTab({
 								}}
 								required
 							>
-								<option value="OPENING">Ouverture</option>
-								<option value="MONTHLY">Mensuel</option>
-								<option value="ANNUAL">Annuel</option>
-								<option value="TRANSACTION">Transaction</option>
-								<option value="WITHDRAWAL">Retrait</option>
-								<option value="OVERDRAFT">Découvert</option>
-								<option value="LATE_PAYMENT">Retard de paiement</option>
-								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
-								<option value="CARD_ISSUANCE">Émission de carte</option>
-								<option value="CARD_RENEWAL">Renouvellement de carte</option>
-								<option value="OTHER">Autre</option>
+								<option value="OPENING">{t("product.detail.fees.feeTypes.OPENING")}</option>
+								<option value="MONTHLY">{t("product.detail.fees.feeTypes.MONTHLY")}</option>
+								<option value="ANNUAL">{t("product.detail.fees.feeTypes.ANNUAL")}</option>
+								<option value="TRANSACTION">{t("product.detail.fees.feeTypes.TRANSACTION")}</option>
+								<option value="OVERDRAFT">{t("product.detail.fees.feeTypes.OVERDRAFT")}</option>
+								<option value="LATE_PAYMENT">{t("product.detail.fees.feeTypes.LATE_PAYMENT")}</option>
+								<option value="EARLY_WITHDRAWAL">{t("product.detail.fees.feeTypes.EARLY_WITHDRAWAL")}</option>
+								<option value="CARD_ISSUANCE">{t("product.detail.fees.feeTypes.CARD_ISSUANCE")}</option>
+								<option value="CARD_RENEWAL">{t("product.detail.fees.feeTypes.CARD_RENEWAL")}</option>
+								<option value="OTHER">{t("product.detail.fees.feeTypes.OTHER")}</option>
 							</select>
 						</div>
 						{form.feeType === "TRANSACTION" && (
 							<div>
-								<label className="block text-sm mb-1">Type de transaction</label>
+								<label className="block text-sm mb-1">{t("product.detail.fees.form.transactionType")}</label>
 								<select
 									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 									value={form.transactionType ?? ""}
@@ -1789,22 +1794,22 @@ function FeesTab({
 										});
 									}}
 								>
-									<option value="">Tous les types (NULL)</option>
-									<option value="DEPOSIT">Dépôt</option>
-									<option value="WITHDRAWAL">Retrait</option>
-									<option value="TRANSFER">Virement</option>
-									<option value="FEE">Frais</option>
-									<option value="INTEREST">Intérêt</option>
-									<option value="ADJUSTMENT">Ajustement</option>
-									<option value="REVERSAL">Réversion</option>
+									<option value="">{t("product.detail.fees.form.transactionTypeAll")}</option>
+									<option value="DEPOSIT">{t("product.detail.fees.transactionTypes.DEPOSIT")}</option>
+									<option value="WITHDRAWAL">{t("product.detail.fees.transactionTypes.WITHDRAWAL")}</option>
+									<option value="TRANSFER">{t("product.detail.fees.transactionTypes.TRANSFER")}</option>
+									<option value="FEE">{t("product.detail.fees.transactionTypes.FEE")}</option>
+									<option value="INTEREST">{t("product.detail.fees.transactionTypes.INTEREST")}</option>
+									<option value="ADJUSTMENT">{t("product.detail.fees.transactionTypes.ADJUSTMENT")}</option>
+									<option value="REVERSAL">{t("product.detail.fees.transactionTypes.REVERSAL")}</option>
 								</select>
 								<p className="text-xs text-gray-500 mt-1">
-									Laissez vide pour que le frais s'applique à tous les types de transactions
+									{t("product.detail.fees.form.transactionTypeHint")}
 								</p>
 							</div>
 						)}
 						<div>
-							<label className="block text-sm mb-1">Nom du frais *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeName")}</label>
 							<Input
 								value={form.feeName}
 								onChange={e => setForm({ ...form, feeName: e.target.value })}
@@ -1812,7 +1817,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Base de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.calculationBase")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeCalculationBase}
@@ -1832,21 +1837,21 @@ function FeesTab({
 								{/* Si type de transaction est TRANSFER, afficher uniquement FIXED et TRANSACTION_AMOUNT */}
 								{form.feeType === "TRANSACTION" && form.transactionType === "TRANSFER" ? (
 									<>
-										<option value="FIXED">Fixe</option>
-										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+										<option value="FIXED">{t("product.detail.fees.calculationBases.FIXED")}</option>
+										<option value="TRANSACTION_AMOUNT">{t("product.detail.fees.calculationBases.TRANSACTION_AMOUNT")}</option>
 									</>
 								) : (
 									<>
-										<option value="FIXED">Fixe</option>
-										<option value="BALANCE">Solde</option>
-										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
-										<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+										<option value="FIXED">{t("product.detail.fees.calculationBases.FIXED")}</option>
+										<option value="BALANCE">{t("product.detail.fees.calculationBases.BALANCE")}</option>
+										<option value="TRANSACTION_AMOUNT">{t("product.detail.fees.calculationBases.TRANSACTION_AMOUNT")}</option>
+										<option value="OUTSTANDING_BALANCE">{t("product.detail.fees.calculationBases.OUTSTANDING_BALANCE")}</option>
 									</>
 								)}
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant fixe</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1856,11 +1861,11 @@ function FeesTab({
 								className={form.feeCalculationBase === "TRANSACTION_AMOUNT" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
 							{form.feeCalculationBase === "TRANSACTION_AMOUNT" && (
-								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Montant transaction"</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.fees.form.feeAmountDisabled")}</p>
 							)}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pourcentage</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feePercentage")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -1870,11 +1875,11 @@ function FeesTab({
 								className={form.feeCalculationBase === "FIXED" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
 							{form.feeCalculationBase === "FIXED" && (
-								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Fixe"</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.fees.form.feePercentageDisabled")}</p>
 							)}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Frais minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.minFee")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1883,7 +1888,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Frais maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.maxFee")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1892,16 +1897,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Dispensable</label>
-							<input
-								type="checkbox"
-								checked={form.isWaivable ?? false}
-								onChange={e => setForm({ ...form, isWaivable: e.target.checked })}
-								className="rounded"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -1910,44 +1906,66 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
 								onChange={e => setForm({ ...form, effectiveTo: e.target.value || undefined })}
 							/>
 						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.currency")}</label>
+							<Input
+								value={form.currency ?? productCurrency ?? "USD"}
+								onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+								maxLength={3}
+								placeholder="USD"
+								required
+							/>
+							<p className="text-xs text-gray-500 mt-1">
+								{t("product.detail.fees.form.currencyHint", { currency: productCurrency ?? "N/A" })}
+							</p>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.isWaivable")}</label>
+							<input
+								type="checkbox"
+								checked={form.isWaivable ?? false}
+								onChange={e => setForm({ ...form, isWaivable: e.target.checked })}
+								className="rounded"
+							/>
+						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.fees.form.adding") : t("product.detail.fees.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.fees.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
 
 			{fees.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucun frais configuré</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.fees.noFees")}</div>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Type</th>
-								<th className="px-4 py-2 text-left">Nom</th>
-								<th className="px-4 py-2 text-left">Montant</th>
-								<th className="px-4 py-2 text-left">Base</th>
-								<th className="px-4 py-2 text-left">Dispensable</th>
-								<th className="px-4 py-2 text-left">Actif</th>
-								<th className="px-4 py-2 text-left"></th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.type")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.name")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.amount")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.base")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.waivable")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.form.isActive")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.actions")}</th>
 							</tr>
 						</thead>
 						<tbody>
 							{fees.map(fee => (
 								<tr key={fee.id} className="border-t">
 									<td className="px-4 py-2">
-										{fee.feeType}
+										{t(`product.detail.fees.feeTypes.${fee.feeType}`)}
 										{fee.feeType === "TRANSACTION" && fee.transactionType && (
-											<span className="text-xs text-gray-500 ml-1">({fee.transactionType})</span>
+											<span className="text-xs text-gray-500 ml-1">({t(`product.detail.fees.transactionTypes.${fee.transactionType}`)})</span>
 										)}
 									</td>
 									<td className="px-4 py-2">{fee.feeName}</td>
@@ -1955,11 +1973,11 @@ function FeesTab({
 										{fee.feeAmount != null ? `${fee.feeAmount} ${fee.currency}` : ""}
 										{fee.feePercentage != null ? `${fee.feePercentage}%` : ""}
 									</td>
-									<td className="px-4 py-2">{fee.feeCalculationBase}</td>
-									<td className="px-4 py-2">{fee.isWaivable ? "Oui" : "Non"}</td>
+									<td className="px-4 py-2">{t(`product.detail.fees.calculationBases.${fee.feeCalculationBase}`)}</td>
+									<td className="px-4 py-2">{fee.isWaivable ? t("common.yes") : t("common.no")}</td>
 									<td className="px-4 py-2">
 										<Badge variant={fee.isActive ? "success" : "neutral"}>
-											{fee.isActive ? "Oui" : "Non"}
+											{fee.isActive ? t("common.yes") : t("common.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -2008,7 +2026,7 @@ function FeesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.fees.menu.view")}
 														</button>
 														<button
 															type="button"
@@ -2039,7 +2057,7 @@ function FeesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.fees.menu.edit")}
 														</button>
 														<button
 															type="button"
@@ -2051,7 +2069,7 @@ function FeesTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.fees.menu.delete")}
 														</button>
 													</div>
 												</>
@@ -2298,7 +2316,7 @@ function FeesTab({
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier le frais</h4>
+						<h4 className="font-semibold">{t("product.detail.fees.form.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
@@ -2314,7 +2332,7 @@ function FeesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de frais *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeType}
@@ -2329,22 +2347,21 @@ function FeesTab({
 								}}
 								required
 							>
-								<option value="OPENING">Ouverture</option>
-								<option value="MONTHLY">Mensuel</option>
-								<option value="ANNUAL">Annuel</option>
-								<option value="TRANSACTION">Transaction</option>
-								<option value="WITHDRAWAL">Retrait</option>
-								<option value="OVERDRAFT">Découvert</option>
-								<option value="LATE_PAYMENT">Retard de paiement</option>
-								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
-								<option value="CARD_ISSUANCE">Émission de carte</option>
-								<option value="CARD_RENEWAL">Renouvellement de carte</option>
-								<option value="OTHER">Autre</option>
+								<option value="OPENING">{t("product.detail.fees.feeTypes.OPENING")}</option>
+								<option value="MONTHLY">{t("product.detail.fees.feeTypes.MONTHLY")}</option>
+								<option value="ANNUAL">{t("product.detail.fees.feeTypes.ANNUAL")}</option>
+								<option value="TRANSACTION">{t("product.detail.fees.feeTypes.TRANSACTION")}</option>
+								<option value="OVERDRAFT">{t("product.detail.fees.feeTypes.OVERDRAFT")}</option>
+								<option value="LATE_PAYMENT">{t("product.detail.fees.feeTypes.LATE_PAYMENT")}</option>
+								<option value="EARLY_WITHDRAWAL">{t("product.detail.fees.feeTypes.EARLY_WITHDRAWAL")}</option>
+								<option value="CARD_ISSUANCE">{t("product.detail.fees.feeTypes.CARD_ISSUANCE")}</option>
+								<option value="CARD_RENEWAL">{t("product.detail.fees.feeTypes.CARD_RENEWAL")}</option>
+								<option value="OTHER">{t("product.detail.fees.feeTypes.OTHER")}</option>
 							</select>
 						</div>
 						{form.feeType === "TRANSACTION" && (
 							<div>
-								<label className="block text-sm mb-1">Type de transaction</label>
+								<label className="block text-sm mb-1">{t("product.detail.fees.form.transactionType")}</label>
 								<select
 									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 									value={form.transactionType ?? ""}
@@ -2365,22 +2382,22 @@ function FeesTab({
 										});
 									}}
 								>
-									<option value="">Tous les types (NULL)</option>
-									<option value="DEPOSIT">Dépôt</option>
-									<option value="WITHDRAWAL">Retrait</option>
-									<option value="TRANSFER">Virement</option>
-									<option value="FEE">Frais</option>
-									<option value="INTEREST">Intérêt</option>
-									<option value="ADJUSTMENT">Ajustement</option>
-									<option value="REVERSAL">Réversion</option>
+									<option value="">{t("product.detail.fees.form.transactionTypeAll")}</option>
+									<option value="DEPOSIT">{t("product.detail.fees.transactionTypes.DEPOSIT")}</option>
+									<option value="WITHDRAWAL">{t("product.detail.fees.transactionTypes.WITHDRAWAL")}</option>
+									<option value="TRANSFER">{t("product.detail.fees.transactionTypes.TRANSFER")}</option>
+									<option value="FEE">{t("product.detail.fees.transactionTypes.FEE")}</option>
+									<option value="INTEREST">{t("product.detail.fees.transactionTypes.INTEREST")}</option>
+									<option value="ADJUSTMENT">{t("product.detail.fees.transactionTypes.ADJUSTMENT")}</option>
+									<option value="REVERSAL">{t("product.detail.fees.transactionTypes.REVERSAL")}</option>
 								</select>
 								<p className="text-xs text-gray-500 mt-1">
-									Laissez vide pour que le frais s'applique à tous les types de transactions
+									{t("product.detail.fees.form.transactionTypeHint")}
 								</p>
 							</div>
 						)}
 						<div>
-							<label className="block text-sm mb-1">Nom du frais *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeName")}</label>
 							<Input
 								value={form.feeName}
 								onChange={e => setForm({ ...form, feeName: e.target.value })}
@@ -2388,7 +2405,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Base de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.calculationBase")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.feeCalculationBase}
@@ -2408,21 +2425,21 @@ function FeesTab({
 								{/* Si type de transaction est TRANSFER, afficher uniquement FIXED et TRANSACTION_AMOUNT */}
 								{form.feeType === "TRANSACTION" && form.transactionType === "TRANSFER" ? (
 									<>
-										<option value="FIXED">Fixe</option>
-										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+										<option value="FIXED">{t("product.detail.fees.calculationBases.FIXED")}</option>
+										<option value="TRANSACTION_AMOUNT">{t("product.detail.fees.calculationBases.TRANSACTION_AMOUNT")}</option>
 									</>
 								) : (
 									<>
-										<option value="FIXED">Fixe</option>
-										<option value="BALANCE">Solde</option>
-										<option value="TRANSACTION_AMOUNT">Montant transaction</option>
-										<option value="OUTSTANDING_BALANCE">Solde impayé</option>
+										<option value="FIXED">{t("product.detail.fees.calculationBases.FIXED")}</option>
+										<option value="BALANCE">{t("product.detail.fees.calculationBases.BALANCE")}</option>
+										<option value="TRANSACTION_AMOUNT">{t("product.detail.fees.calculationBases.TRANSACTION_AMOUNT")}</option>
+										<option value="OUTSTANDING_BALANCE">{t("product.detail.fees.calculationBases.OUTSTANDING_BALANCE")}</option>
 									</>
 								)}
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant fixe</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feeAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -2432,11 +2449,11 @@ function FeesTab({
 								className={form.feeCalculationBase === "TRANSACTION_AMOUNT" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
 							{form.feeCalculationBase === "TRANSACTION_AMOUNT" && (
-								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Montant transaction"</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.fees.form.feeAmountDisabled")}</p>
 							)}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pourcentage</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.feePercentage")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -2446,11 +2463,11 @@ function FeesTab({
 								className={form.feeCalculationBase === "FIXED" ? "bg-gray-100 cursor-not-allowed" : ""}
 							/>
 							{form.feeCalculationBase === "FIXED" && (
-								<p className="text-xs text-gray-500 mt-1">Non applicable pour "Fixe"</p>
+								<p className="text-xs text-gray-500 mt-1">{t("product.detail.fees.form.feePercentageDisabled")}</p>
 							)}
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Frais minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.minFee")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -2459,7 +2476,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Frais maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.maxFee")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -2468,24 +2485,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Devise</label>
-							<Input
-								value={form.currency ?? "USD"}
-								onChange={e => setForm({ ...form, currency: e.target.value })}
-								maxLength={3}
-							/>
-						</div>
-						<div>
-							<label className="block text-sm mb-1">Dispensable</label>
-							<input
-								type="checkbox"
-								checked={form.isWaivable ?? false}
-								onChange={e => setForm({ ...form, isWaivable: e.target.checked })}
-								className="rounded"
-							/>
-						</div>
-						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -2494,7 +2494,7 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -2502,24 +2502,46 @@ function FeesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.currency")}</label>
+							<Input
+								value={form.currency ?? productCurrency ?? "USD"}
+								onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+								maxLength={3}
+								placeholder="USD"
+								required
+							/>
+							<p className="text-xs text-gray-500 mt-1">
+								{t("product.detail.fees.form.currencyHint", { currency: productCurrency ?? "N/A" })}
+							</p>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.isActive ? "true" : "false"}
 								onChange={e => setForm({ ...form, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("common.yes", { defaultValue: "Oui" })}</option>
+								<option value="false">{t("common.no", { defaultValue: "Non" })}</option>
 							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.fees.form.isWaivable")}</label>
+							<input
+								type="checkbox"
+								checked={form.isWaivable ?? false}
+								onChange={e => setForm({ ...form, isWaivable: e.target.checked })}
+								className="rounded"
+							/>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.fees.form.editing") : t("product.detail.fees.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedFee(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.fees.form.cancel")}</Button>
 					</div>
 				</form>
 			)}

@@ -1,22 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import i18n from "@/lib/i18n";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { transactionsApi, accountsApi } from "@/lib/api";
 import type { Transaction, TransactionType, TransactionStatus, Account } from "@/types";
-
-const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-	DEPOSIT: "Dépôt",
-	WITHDRAWAL: "Retrait",
-	TRANSFER: "Virement",
-	FEE: "Frais",
-	INTEREST: "Intérêts",
-	ADJUSTMENT: "Ajustement",
-	REVERSAL: "Réversal"
-};
 
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 	PENDING: "bg-yellow-100 text-yellow-800",
@@ -26,15 +18,8 @@ const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
 	REVERSED: "bg-gray-100 text-gray-800"
 };
 
-const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
-	PENDING: "En attente",
-	PROCESSING: "En traitement",
-	COMPLETED: "Terminée",
-	FAILED: "Échouée",
-	REVERSED: "Annulée"
-};
-
 export default function TransactionsPage() {
+	const { t } = useTranslation();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -59,10 +44,10 @@ export default function TransactionsPage() {
 
 	async function loadAccounts() {
 		try {
-			const data = await accountsApi.list();
-			setAccounts(data);
+			const response = await accountsApi.list({ size: 1000 }); // Charger tous les comptes pour le filtre
+			setAccounts(response.content);
 		} catch (e: any) {
-			console.error("Erreur lors du chargement des comptes:", e);
+			console.error(t("transaction.list.errors.loadAccounts"), e);
 		}
 	}
 
@@ -100,7 +85,7 @@ export default function TransactionsPage() {
 			setTotalPages(response.totalPages || 0);
 			setTotalElements(response.totalElements || 0);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement des transactions");
+			setError(e?.message ?? t("transaction.list.errors.loadTransactions"));
 		} finally {
 			setLoading(false);
 		}
@@ -130,14 +115,18 @@ export default function TransactionsPage() {
 	}, [transactions, totalElements]);
 
 	function formatAmount(amount: number, currency: string): string {
-		return new Intl.NumberFormat("fr-FR", {
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Intl.NumberFormat(locale, {
 			style: "currency",
 			currency: currency || "XAF"
 		}).format(amount);
 	}
 
 	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleDateString("fr-FR", {
+		const currentLang = i18n.language || "fr";
+		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
+		return new Date(dateString).toLocaleDateString(locale, {
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric",
@@ -160,14 +149,14 @@ export default function TransactionsPage() {
 			{/* En-tête */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-					<p className="text-gray-600 mt-1">Gestion et suivi des transactions bancaires</p>
+					<h1 className="text-3xl font-bold text-gray-900">{t("transaction.list.title")}</h1>
+					<p className="text-gray-600 mt-1">{t("transaction.list.subtitle")}</p>
 				</div>
 			</div>
 
 			{/* Liens vers les pages spécifiques par type */}
 			<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-				<h2 className="text-lg font-semibold text-gray-900 mb-4">Types de transactions</h2>
+				<h2 className="text-lg font-semibold text-gray-900 mb-4">{t("transaction.list.types.title")}</h2>
 				<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
 					<Link href="/transactions/deposit" className="group">
 						<div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:shadow-md transition-all cursor-pointer">
@@ -176,8 +165,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Dépôts</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.deposits")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/withdrawal" className="group">
@@ -187,8 +176,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Retraits</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.withdrawals")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/transfer" className="group">
@@ -198,8 +187,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Virements</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.transfers")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/fee" className="group">
@@ -209,8 +198,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Frais</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.fees")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/interest" className="group">
@@ -220,8 +209,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Intérêts</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.interests")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/adjustment" className="group">
@@ -231,8 +220,8 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Ajustements</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.adjustments")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 					<Link href="/transactions/reversal" className="group">
@@ -242,20 +231,20 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
 								</svg>
 							</div>
-							<div className="font-semibold text-gray-900 text-sm">Réversions</div>
-							<div className="text-xs text-gray-600 mt-1">Voir tous</div>
+							<div className="font-semibold text-gray-900 text-sm">{t("transaction.list.types.reversals")}</div>
+							<div className="text-xs text-gray-600 mt-1">{t("transaction.list.types.viewAll")}</div>
 						</div>
 					</Link>
 				</div>
 				<div className="mt-6 pt-6 border-t border-gray-200">
-					<h3 className="text-sm font-semibold text-gray-900 mb-3">Créer une transaction</h3>
+					<h3 className="text-sm font-semibold text-gray-900 mb-3">{t("transaction.list.types.create")}</h3>
 					<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
 						<Link href="/transactions/deposit/new">
 							<Button variant="outline" size="sm" className="w-full justify-center">
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 								</svg>
-								Dépôt
+								{t("transaction.list.types.deposit")}
 							</Button>
 						</Link>
 						<Link href="/transactions/withdrawal/new">
@@ -263,7 +252,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
 								</svg>
-								Retrait
+								{t("transaction.list.types.withdrawal")}
 							</Button>
 						</Link>
 						<Link href="/transactions/transfer/new">
@@ -271,7 +260,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
 								</svg>
-								Virement
+								{t("transaction.list.types.transfer")}
 							</Button>
 						</Link>
 						<Link href="/transactions/fee/new">
@@ -279,7 +268,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Frais
+								{t("transaction.list.types.fee")}
 							</Button>
 						</Link>
 						<Link href="/transactions/interest/new">
@@ -287,7 +276,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 								</svg>
-								Intérêts
+								{t("transaction.list.types.interest")}
 							</Button>
 						</Link>
 						<Link href="/transactions/adjustment/new">
@@ -295,7 +284,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 								</svg>
-								Ajustement
+								{t("transaction.list.types.adjustment")}
 							</Button>
 						</Link>
 						<Link href="/transactions/reversal/new">
@@ -303,7 +292,7 @@ export default function TransactionsPage() {
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
 								</svg>
-								Réversion
+								{t("transaction.list.types.reversal")}
 							</Button>
 						</Link>
 					</div>
@@ -315,7 +304,7 @@ export default function TransactionsPage() {
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">Total</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("transaction.list.stats.total")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.total}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -328,7 +317,7 @@ export default function TransactionsPage() {
 				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-green-700 mb-1">Terminées</div>
+							<div className="text-sm font-medium text-green-700 mb-1">{t("transaction.list.stats.completed")}</div>
 							<div className="text-3xl font-bold text-green-900">{stats.completed}</div>
 						</div>
 						<div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
@@ -341,7 +330,7 @@ export default function TransactionsPage() {
 				<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-5 rounded-xl shadow-sm border border-yellow-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-yellow-700 mb-1">En attente</div>
+							<div className="text-sm font-medium text-yellow-700 mb-1">{t("transaction.list.stats.pending")}</div>
 							<div className="text-3xl font-bold text-yellow-900">{stats.pending}</div>
 						</div>
 						<div className="w-12 h-12 bg-yellow-200 rounded-lg flex items-center justify-center">
@@ -354,7 +343,7 @@ export default function TransactionsPage() {
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">En traitement</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("transaction.list.stats.processing")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.processing}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -367,7 +356,7 @@ export default function TransactionsPage() {
 				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-red-700 mb-1">Échouées</div>
+							<div className="text-sm font-medium text-red-700 mb-1">{t("transaction.list.stats.failed")}</div>
 							<div className="text-3xl font-bold text-red-900">{stats.failed}</div>
 						</div>
 						<div className="w-12 h-12 bg-red-200 rounded-lg flex items-center justify-center">
@@ -385,11 +374,11 @@ export default function TransactionsPage() {
 					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">Filtres</h2>
+					<h2 className="text-lg font-semibold text-gray-900">{t("transaction.list.filters.title")}</h2>
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Compte</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("transaction.list.filters.account")}</label>
 						<select
 							value={accountId}
 							onChange={(e) => {
@@ -398,7 +387,7 @@ export default function TransactionsPage() {
 							}}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						>
-							<option value="">Tous</option>
+							<option value="">{t("transaction.list.filters.all")}</option>
 							{accounts.map((acc) => (
 								<option key={acc.id} value={acc.id}>
 									{acc.accountNumber}
@@ -407,7 +396,7 @@ export default function TransactionsPage() {
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("transaction.list.filters.type")}</label>
 						<select
 							value={type}
 							onChange={(e) => {
@@ -416,16 +405,16 @@ export default function TransactionsPage() {
 							}}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						>
-							<option value="">Tous</option>
-							{Object.entries(TRANSACTION_TYPE_LABELS).map(([value, label]) => (
+							<option value="">{t("transaction.list.filters.all")}</option>
+							{(["DEPOSIT", "WITHDRAWAL", "TRANSFER", "FEE", "INTEREST", "ADJUSTMENT", "REVERSAL"] as TransactionType[]).map((value) => (
 								<option key={value} value={value}>
-									{label}
+									{t(`transaction.detail.types.${value}`)}
 								</option>
 							))}
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("transaction.list.filters.status")}</label>
 						<select
 							value={status}
 							onChange={(e) => {
@@ -434,16 +423,16 @@ export default function TransactionsPage() {
 							}}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						>
-							<option value="">Tous</option>
-							{Object.entries(TRANSACTION_STATUS_LABELS).map(([value, label]) => (
+							<option value="">{t("transaction.list.filters.all")}</option>
+							{(["PENDING", "PROCESSING", "COMPLETED", "FAILED", "REVERSED"] as TransactionStatus[]).map((value) => (
 								<option key={value} value={value}>
-									{label}
+									{t(`transaction.detail.statuses.${value}`)}
 								</option>
 							))}
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Date début</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("transaction.list.filters.fromDate")}</label>
 						<Input
 							type="date"
 							value={fromDate}
@@ -454,7 +443,7 @@ export default function TransactionsPage() {
 						/>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Date fin</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("transaction.list.filters.toDate")}</label>
 						<Input
 							type="date"
 							value={toDate}
@@ -466,7 +455,7 @@ export default function TransactionsPage() {
 					</div>
 					<div className="flex items-end">
 						<Button onClick={handleResetFilters} variant="outline" className="w-full">
-							Réinitialiser
+							{t("transaction.list.filters.reset")}
 						</Button>
 					</div>
 				</div>
@@ -486,15 +475,15 @@ export default function TransactionsPage() {
 			{loading ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement des transactions...</p>
+					<p className="mt-4 text-gray-600">{t("transaction.list.loading")}</p>
 				</div>
 			) : transactions.length === 0 ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
 					</svg>
-					<p className="text-gray-500 text-lg font-medium">Aucune transaction trouvée</p>
-					<p className="text-gray-400 text-sm mt-2">Essayez de modifier vos filtres de recherche</p>
+					<p className="text-gray-500 text-lg font-medium">{t("transaction.list.noTransactions")}</p>
+					<p className="text-gray-400 text-sm mt-2">{t("transaction.list.noTransactionsHint")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -514,7 +503,7 @@ export default function TransactionsPage() {
 										}}
 									>
 										<div className="flex items-center gap-2">
-											Numéro
+											{t("transaction.list.table.number")}
 											{sortBy === "transactionNumber" && (
 												<svg className={`w-4 h-4 ${sortDirection === "asc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -522,8 +511,8 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.type")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.account")}</th>
 									<th 
 										className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
@@ -536,7 +525,7 @@ export default function TransactionsPage() {
 										}}
 									>
 										<div className="flex items-center justify-end gap-2">
-											Montant
+											{t("transaction.list.table.amount")}
 											{sortBy === "amount" && (
 												<svg className={`w-4 h-4 ${sortDirection === "asc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -544,7 +533,7 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.status")}</th>
 									<th 
 										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
@@ -557,7 +546,7 @@ export default function TransactionsPage() {
 										}}
 									>
 										<div className="flex items-center gap-2">
-											Date
+											{t("transaction.list.table.date")}
 											{sortBy === "transactionDate" && (
 												<svg className={`w-4 h-4 ${sortDirection === "desc" ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -565,7 +554,7 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -580,7 +569,7 @@ export default function TransactionsPage() {
 											</Link>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											<span className="text-gray-900 font-medium">{TRANSACTION_TYPE_LABELS[txn.type]}</span>
+											<span className="text-gray-900 font-medium">{t(`transaction.detail.types.${txn.type}`)}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Link
@@ -597,7 +586,7 @@ export default function TransactionsPage() {
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge className={TRANSACTION_STATUS_COLORS[txn.status]}>
-												{TRANSACTION_STATUS_LABELS[txn.status]}
+												{t(`transaction.detail.statuses.${txn.status}`)}
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-gray-600">
@@ -610,7 +599,7 @@ export default function TransactionsPage() {
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 													</svg>
-													Voir
+													{t("transaction.list.table.view")}
 												</Button>
 											</Link>
 										</td>
@@ -625,7 +614,10 @@ export default function TransactionsPage() {
 						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
 							<div className="flex items-center justify-between">
 								<div className="text-sm text-gray-600">
-									Affichage de <span className="font-semibold">{transactions.length}</span> sur <span className="font-semibold">{totalElements}</span> transaction{totalElements > 1 ? "s" : ""}
+									{totalElements > 1 
+										? t("transaction.list.pagination.showingPlural", { count: transactions.length, total: totalElements })
+										: t("transaction.list.pagination.showing", { count: transactions.length, total: totalElements })
+									}
 								</div>
 								<div className="flex gap-2">
 									<Button
@@ -638,10 +630,10 @@ export default function TransactionsPage() {
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 										</svg>
-										Précédent
+										{t("transaction.list.pagination.previous")}
 									</Button>
 									<span className="flex items-center px-4 text-sm text-gray-700">
-										Page {page + 1} sur {totalPages || 1}
+										{t("transaction.list.pagination.page", { current: page + 1, total: totalPages || 1 })}
 									</span>
 									<Button
 										variant="outline"
@@ -650,7 +642,7 @@ export default function TransactionsPage() {
 										disabled={page >= totalPages - 1}
 										className="flex items-center gap-1"
 									>
-										Suivant
+										{t("transaction.list.pagination.next")}
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
 										</svg>

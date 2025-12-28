@@ -19,9 +19,13 @@
 		"glAccounts": "GL Accounts",
 		"chartOfAccounts": "Chart of Accounts",
 		"transactions": "Transactions",
+		"allTransactions": "All Transactions",
 		"journal": "Journal",
 		"transfers": "Transfers",
 		"holds": "Holds",
+		"users": "Users",
+		"roles": "Roles",
+		"permissions": "Permissions",
 		"payments": "Payments",
 		"outgoingTransfers": "Outgoing Transfers",
 		"incomingTransfers": "Incoming Transfers",
@@ -56,6 +60,46 @@
 	"topbar": {
 		"toggleSidebar": "Toggle sidebar"
 	},
+	"dashboard": {
+		"title": "Dashboard",
+		"subtitle": "Banking system overview",
+		"loading": "Loading dashboard...",
+		"stats": {
+			"accounts": "Accounts",
+			"accountsActive": "active",
+			"clients": "Clients",
+			"products": "Products",
+			"productsActive": "active",
+			"transactionsToday": "Transactions (today)",
+			"transactionsTotal": "total",
+			"totalBalance": "Total Balance",
+			"interestToday": "Interest (today)",
+			"feesToday": "Fees (today)"
+		},
+		"transactionStats": {
+			"title": "Transaction statistics by type (last 30 days)"
+		},
+		"recentTransactions": {
+			"title": "Recent Transactions",
+			"viewAll": "View all",
+			"noTransactions": "No recent transactions"
+		},
+		"recentAccounts": {
+			"title": "Recent Accounts",
+			"viewAll": "View all",
+			"noAccounts": "No recent accounts"
+		},
+		"quickActions": {
+			"title": "Quick Actions",
+			"newClient": "New Client",
+			"newAccount": "New Account",
+			"deposit": "Deposit",
+			"transfer": "Transfer"
+		},
+		"errors": {
+			"loadError": "Error loading dashboard"
+		}
+	},
 	"common": {
 		"users": "Users",
 		"customers": "Customers",
@@ -74,7 +118,15 @@
 		"error": "Error",
 		"dates": "Dates",
 		"createdAt": "Created on",
-		"updatedAt": "Updated on"
+		"updatedAt": "Updated on",
+		"yes": "Yes",
+		"no": "No",
+		"accountStatuses": {
+			"ACTIVE": "Active",
+			"CLOSED": "Closed",
+			"FROZEN": "Frozen",
+			"SUSPENDED": "Suspended"
+		}
 	},
 	"customer": {
 		"new": "New Customer",
@@ -297,7 +349,112 @@
 			}
 		}
 	},
+	"account": {
+		"new": {
+			"title": "Open Account",
+			"subtitle": "Create a new bank account for a client",
+			"backToList": "← Back to list",
+			"client": "Client *",
+			"selectClient": "Select a client",
+			"clientMustBeVerified": "⚠️ The client must be verified (VERIFIED) to open an account",
+			"product": "Product *",
+			"selectProduct": "Select a product",
+			"period": "Period",
+			"noPeriod": "No period",
+			"openingAmount": "Opening Amount",
+			"currency": "Currency",
+			"currencyHint": "Currency is defined by the selected product",
+			"currencyLabel": "Currency: {{currency}}",
+			"minAmount": "Minimum amount: {{amount}} {{currency}}",
+			"maxAmount": "Maximum amount: {{amount}} {{currency}}",
+			"interestRate": "Interest rate: {{rate}}%",
+			"duration": "Duration: {{days}} days",
+			"periodName": "{{name}} ({{rate}}%)",
+			"periodWithAmounts": "{{name}} ({{rate}}%) - Min: {{min}} Max: {{max}}",
+			"cancel": "Cancel",
+			"open": "Open Account",
+			"opening": "Opening...",
+			"sourceAccount": "Source account for opening fees",
+			"selectSourceAccount": "Select an account",
+			"sourceAccountHint": "Opening fees will be deducted from this account.",
+			"noSourceAccountAvailable": "The client has no active current accounts. Please create a current account for this client before opening a new account with opening fees.",
+			"openingFeeInfo": "Opening fee: {{amount}} {{currency}} (will be deducted from the selected source account)",
+			"errors": {
+				"clientRequired": "Client is required",
+				"productRequired": "Product is required",
+				"sourceAccountRequired": "Source account is required because the product has opening fees configured",
+				"sourceAccountDifferentClient": "The selected source account does not belong to the same client",
+				"loadError": "Error loading data",
+				"periodsLoadError": "Error loading periods",
+				"accountsLoadError": "Error loading client accounts",
+				"openError": "Failed to open account"
+			}
+		},
+		"detail": {
+			"close": {
+				"success": "Account closed successfully",
+				"error": "Error closing account",
+				"reasonRequired": "Close reason is required"
+			},
+			"suspend": {
+				"success": "Account suspended successfully",
+				"error": "Error suspending account"
+			},
+			"unsuspend": {
+				"success": "Account reactivated successfully",
+				"error": "Error reactivating account"
+			}
+		}
+	},
 	"product": {
+		"list": {
+			"title": "Product Catalog",
+			"subtitle": "Banking product management and configuration",
+			"refresh": "Refresh",
+			"new": "New product",
+			"stats": {
+				"total": "Total",
+				"active": "Active",
+				"draft": "Drafts",
+				"inactive": "Inactive"
+			},
+			"filters": {
+				"title": "Filters",
+				"search": "Search",
+				"searchPlaceholder": "Name, code or description...",
+				"status": "Status",
+				"statusAll": "All statuses",
+				"category": "Category",
+				"categoryAll": "All categories"
+			},
+			"table": {
+				"code": "Code",
+				"name": "Name",
+				"category": "Category",
+				"status": "Status",
+				"currency": "Currency",
+				"interestRate": "Interest Rate",
+				"actions": "Actions",
+				"view": "View"
+			},
+			"pagination": {
+				"showing": "Showing",
+				"of": "of",
+				"product": "product",
+				"products": "products",
+				"itemsPerPage": "Items per page:",
+				"page": "Page",
+				"on": "on"
+			},
+			"errors": {
+				"loadError": "Error loading products"
+			},
+			"empty": {
+				"title": "No products found",
+				"message": "Try modifying your search filters"
+			},
+			"loading": "Loading products..."
+		},
 		"detail": {
 			"title": "Product Details",
 			"subtitle": "Banking product details and configuration",
@@ -326,6 +483,11 @@
 				"TERM_DEPOSIT": "Term Deposit",
 				"LOAN": "Loan",
 				"CARD": "Card"
+			},
+			"statuses": {
+				"ACTIVE": "Active",
+				"DRAFT": "Draft",
+				"INACTIVE": "Inactive"
 			},
 			"overview": {
 				"edit": "Edit",
@@ -377,7 +539,77 @@
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"count": "Fees ({{count}})",
+				"noFees": "No fees configured",
+				"form": {
+					"feeType": "Fee Type *",
+					"transactionType": "Transaction Type",
+					"transactionTypeAll": "All types (NULL)",
+					"transactionTypeHint": "Leave empty for the fee to apply to all transaction types",
+					"feeName": "Fee Name *",
+					"calculationBase": "Calculation Base *",
+					"feeAmount": "Fixed Amount",
+					"feeAmountDisabled": "Not applicable for \"Transaction Amount\"",
+					"feePercentage": "Percentage",
+					"feePercentageDisabled": "Not applicable for \"Fixed\"",
+					"minFee": "Minimum Fee",
+					"maxFee": "Maximum Fee",
+					"effectiveFrom": "Effective From *",
+					"effectiveTo": "Effective To",
+					"currency": "Currency *",
+					"currencyHint": "ISO-3 currency code (e.g., USD, EUR, XAF). Must match the product currency ({{currency}}).",
+					"isWaivable": "Waivable",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"editTitle": "Edit Fee"
+				},
+				"feeTypes": {
+					"OPENING": "Opening",
+					"MONTHLY": "Monthly",
+					"ANNUAL": "Annual",
+					"TRANSACTION": "Transaction",
+					"WITHDRAWAL": "Withdrawal",
+					"OVERDRAFT": "Overdraft",
+					"LATE_PAYMENT": "Late Payment",
+					"EARLY_WITHDRAWAL": "Early Withdrawal",
+					"CARD_ISSUANCE": "Card Issuance",
+					"CARD_RENEWAL": "Card Renewal",
+					"OTHER": "Other"
+				},
+				"transactionTypes": {
+					"DEPOSIT": "Deposit",
+					"WITHDRAWAL": "Withdrawal",
+					"TRANSFER": "Transfer",
+					"FEE": "Fee",
+					"INTEREST": "Interest",
+					"ADJUSTMENT": "Adjustment",
+					"REVERSAL": "Reversal"
+				},
+				"calculationBases": {
+					"FIXED": "Fixed",
+					"BALANCE": "Balance",
+					"TRANSACTION_AMOUNT": "Transaction Amount",
+					"OUTSTANDING_BALANCE": "Outstanding Balance"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Name",
+					"amount": "Amount",
+					"base": "Base",
+					"waivable": "Waivable",
+					"actions": "Actions"
+				},
+				"menu": {
+					"view": "View",
+					"edit": "Edit",
+					"delete": "Delete"
+				},
+				"deleteConfirm": "Are you sure you want to delete this fee?"
 			},
 			"limits": {
 				"title": "Limits",
@@ -629,6 +861,290 @@
 			"reference": "Reference",
 			"displaying_one": "Displaying {{count}} entry",
 			"displaying_other": "Displaying {{count}} entries"
+		}
+	},
+	"transfer": {
+		"new": {
+			"title": "New Transfer",
+			"description": "Transfer funds between two accounts",
+			"recipient": {
+				"label": "Recipient",
+				"required": "*",
+				"selectFirst": "Select the source account first",
+				"searchAndSelect": "Search and select recipient",
+				"edit": "Edit",
+				"searchModal": {
+					"title": "Search for a recipient",
+					"searchPlaceholder": "Search by name, email, phone...",
+					"noResults": "No customer matches your search",
+					"startTyping": "Type to search for a customer",
+					"close": "Close"
+				}
+			},
+			"destinationAccount": {
+				"label": "Destination Account",
+				"required": "*",
+				"selectRecipientFirst": "Select the recipient client first",
+				"noAccountsAvailable": "No accounts available",
+				"selectAccount": "Select destination account",
+				"account": "Account:",
+				"balance": "Balance:",
+				"balanceFormat": "{{balance}} {{currency}}"
+			},
+			"errors": {
+				"loadCustomers": "Error loading customers",
+				"loadAccounts": "Error loading accounts",
+				"loadClientAccounts": "Error loading client accounts",
+				"loadSourceAccount": "Error loading source account"
+			}
+		}
+	},
+	"transaction": {
+		"form": {
+			"client": {
+				"label": "Client",
+				"required": "*",
+				"searchAndSelect": "Search and select a client",
+				"edit": "Edit",
+				"searchModal": {
+					"title": "Search for a client",
+					"searchPlaceholder": "Search by name, email, phone...",
+					"noResults": "No customer matches your search",
+					"startTyping": "Type to search for a customer",
+					"close": "Close"
+				}
+			},
+			"account": {
+				"label": "Account",
+				"required": "*",
+				"noAccountsAvailable": "No accounts available",
+				"selectAccount": "Select an account",
+				"account": "Account:",
+				"balance": "Balance:",
+				"balanceFormat": "{{balance}} {{currency}}"
+			},
+			"amount": {
+				"label": "Amount",
+				"required": "*",
+				"placeholder": "0.00"
+			},
+			"currency": {
+				"label": "Currency",
+				"required": "*",
+				"placeholder": "XAF"
+			},
+			"description": {
+				"label": "Description",
+				"placeholder": "Transaction description"
+			},
+			"valueDate": {
+				"label": "Value Date"
+			},
+			"buttons": {
+				"cancel": "Cancel",
+				"submit": "Create Transaction",
+				"submitting": "Creating..."
+			},
+			"errors": {
+				"selectAccount": "Please select an account",
+				"validAmount": "Please enter a valid amount",
+				"selectCurrency": "Please select a currency",
+				"createError": "Error creating transaction",
+				"loadCustomers": "Error loading customers",
+				"loadAccounts": "Error loading accounts"
+			}
+		},
+		"detail": {
+			"title": "Transaction {{number}}",
+			"subtitle": "Details and accounting entries",
+			"backToList": "Back to transactions list",
+			"back": "Back to list",
+			"loading": "Loading transaction information...",
+			"error": "Error",
+			"notFound": "Transaction not found",
+			"reverse": {
+				"button": "Reverse Transaction",
+				"title": "Reverse Transaction",
+				"reason": "Reason for reversal *",
+				"reasonPlaceholder": "Explain the reason for reversal...",
+				"cancel": "Cancel",
+				"confirm": "Confirm Reversal",
+				"processing": "Processing...",
+				"reasonRequired": "The reason for reversal is required",
+				"error": "Error reversing transaction"
+			},
+			"sections": {
+				"general": {
+					"title": "General Information",
+					"subtitle": "Transaction details",
+					"number": "Number",
+					"type": "Type",
+					"status": "Status",
+					"amount": "Amount",
+					"account": "Account",
+					"description": "Description",
+					"internalTransfer": "Internal Transfer"
+				},
+				"dates": {
+					"title": "Dates",
+					"subtitle": "Transaction timestamp",
+					"transactionDate": "Transaction Date",
+					"valueDate": "Value Date",
+					"createdAt": "Created on",
+					"updatedAt": "Updated on"
+				},
+				"transfer": {
+					"title": "Transfer Information",
+					"subtitle": "Sender and recipient",
+					"sender": "Sender",
+					"recipient": "Recipient",
+					"client": "Client",
+					"account": "Account",
+					"balance": "Balance:",
+					"fee": "Transfer fee:",
+					"notFound": {
+						"title": "Transfer not found",
+						"message": "This transaction references a transfer (ID: {{id}}) that could not be loaded. The transaction may exist independently of the transfer."
+					}
+				},
+				"entries": {
+					"title": "Accounting Entries",
+					"subtitle": "Double entry (debit/credit)",
+					"noEntries": "No entries found",
+					"table": {
+						"type": "Type",
+						"amount": "Amount",
+						"currency": "Currency",
+						"glAccount": "GL Account",
+						"date": "Date"
+					}
+				}
+			},
+			"types": {
+				"DEPOSIT": "Deposit",
+				"WITHDRAWAL": "Withdrawal",
+				"TRANSFER": "Transfer",
+				"FEE": "Fee",
+				"INTEREST": "Interest",
+				"ADJUSTMENT": "Adjustment",
+				"REVERSAL": "Reversal"
+			},
+			"statuses": {
+				"PENDING": "Pending",
+				"PROCESSING": "Processing",
+				"COMPLETED": "Completed",
+				"FAILED": "Failed",
+				"REVERSED": "Reversed"
+			},
+			"entryTypes": {
+				"DEBIT": "Debit",
+				"CREDIT": "Credit"
+			},
+			"errors": {
+				"loadError": "Error loading transaction",
+				"loadAccount": "Error loading account",
+				"loadTransfer": "Error loading transfer",
+				"loadSenderClient": "Error loading sender client",
+				"loadRecipientClient": "Error loading recipient client"
+			}
+		},
+		"list": {
+			"title": "Transactions",
+			"subtitle": "Banking transaction management and tracking",
+			"types": {
+				"title": "Transaction Types",
+				"viewAll": "View all",
+				"create": "Create Transaction",
+				"deposits": "Deposits",
+				"withdrawals": "Withdrawals",
+				"transfers": "Transfers",
+				"fees": "Fees",
+				"interests": "Interests",
+				"adjustments": "Adjustments",
+				"reversals": "Reversals",
+				"deposit": "Deposit",
+				"withdrawal": "Withdrawal",
+				"transfer": "Transfer",
+				"fee": "Fee",
+				"interest": "Interest",
+				"adjustment": "Adjustment",
+				"reversal": "Reversal"
+			},
+			"stats": {
+				"total": "Total",
+				"completed": "Completed",
+				"pending": "Pending",
+				"processing": "Processing",
+				"failed": "Failed"
+			},
+			"filters": {
+				"title": "Filters",
+				"account": "Account",
+				"type": "Type",
+				"status": "Status",
+				"fromDate": "Start Date",
+				"toDate": "End Date",
+				"all": "All",
+				"reset": "Reset"
+			},
+			"table": {
+				"number": "Number",
+				"type": "Type",
+				"account": "Account",
+				"amount": "Amount",
+				"status": "Status",
+				"date": "Date",
+				"actions": "Actions",
+				"view": "View"
+			},
+			"loading": "Loading transactions...",
+			"noTransactions": "No transactions found",
+			"noTransactionsHint": "Try modifying your search filters",
+			"pagination": {
+				"showing": "Showing {{count}} of {{total}} transaction",
+				"showingPlural": "Showing {{count}} of {{total}} transactions",
+				"page": "Page {{current}} of {{total}}",
+				"previous": "Previous",
+				"next": "Next"
+			},
+			"errors": {
+				"loadAccounts": "Error loading accounts",
+				"loadTransactions": "Error loading transactions"
+			}
+		},
+		"byType": {
+			"backToTransactions": "Back to transactions",
+			"new": "New",
+			"stats": {
+				"total": "Total",
+				"completed": "Completed",
+				"pending": "Pending",
+				"processing": "Processing",
+				"failed": "Failed",
+				"totalAmount": "Total Amount (completed)"
+			},
+			"loading": "Loading...",
+			"noTransactions": "No transactions found",
+			"table": {
+				"number": "Number",
+				"account": "Account",
+				"amount": "Amount",
+				"status": "Status",
+				"date": "Date",
+				"actions": "Actions",
+				"view": "View"
+			},
+			"pagination": {
+				"showing": "Showing {{count}} of {{total}} transaction",
+				"showingPlural": "Showing {{count}} of {{total}} transactions",
+				"page": "Page {{current}} of {{total}}",
+				"previous": "Previous",
+				"next": "Next"
+			},
+			"errors": {
+				"loadAccounts": "Error loading accounts",
+				"loadTransactions": "Error loading {{type}}"
+			}
 		}
 	}
 }

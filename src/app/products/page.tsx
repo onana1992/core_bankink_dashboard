@@ -14,6 +14,10 @@ export default function ProductsPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [products, setProducts] = useState<Product[]>([]);
+	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(20);
+	const [totalPages, setTotalPages] = useState(0);
+	const [totalElements, setTotalElements] = useState(0);
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -24,13 +28,17 @@ export default function ProductsPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const params: { category?: ProductCategory; status?: ProductStatus } = {};
+			const params: { category?: ProductCategory; status?: ProductStatus; page?: number; size?: number } = {};
 			if (filterCategory !== "ALL") params.category = filterCategory;
 			if (filterStatus !== "ALL") params.status = filterStatus;
-			const data = await productsApi.list(params);
-			setProducts(data);
+			params.page = page;
+			params.size = size;
+			const response = await productsApi.list(params);
+			setProducts(response.content);
+			setTotalPages(response.totalPages);
+			setTotalElements(response.totalElements);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement des produits");
+			setError(e?.message ?? t("product.list.errors.loadError"));
 		} finally {
 			setLoading(false);
 		}
@@ -38,10 +46,9 @@ export default function ProductsPage() {
 
 	useEffect(() => {
 		load();
-	}, [filterCategory, filterStatus]);
+	}, [filterCategory, filterStatus, page, size]);
 
 	const stats = useMemo(() => {
-		const total = products.length;
 		const byStatus: Record<string, number> = {};
 		const byCategory: Record<string, number> = {};
 		for (const p of products) {
@@ -49,12 +56,12 @@ export default function ProductsPage() {
 			byCategory[p.category] = (byCategory[p.category] ?? 0) + 1;
 		}
 		return {
-			total,
+			total: totalElements,
 			active: byStatus["ACTIVE"] ?? 0,
 			inactive: byStatus["INACTIVE"] ?? 0,
 			draft: byStatus["DRAFT"] ?? 0
 		};
-	}, [products]);
+	}, [products, totalElements]);
 
 	function statusBadgeVariant(status: ProductStatus): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -70,14 +77,7 @@ export default function ProductsPage() {
 	}
 
 	function categoryLabel(category: ProductCategory): string {
-		const labels: Record<ProductCategory, string> = {
-			CURRENT_ACCOUNT: "Compte courant",
-			SAVINGS_ACCOUNT: "Compte épargne",
-			TERM_DEPOSIT: "Dépôt à terme",
-			LOAN: "Prêt",
-			CARD: "Carte"
-		};
-		return labels[category] || category;
+		return t(`product.detail.categories.${category}`);
 	}
 
 	const filteredProducts = useMemo(() => {
@@ -96,22 +96,22 @@ export default function ProductsPage() {
 			{/* En-tête */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Catalogue de Produits</h1>
-					<p className="text-gray-600 mt-1">Gestion et configuration des produits bancaires</p>
+					<h1 className="text-3xl font-bold text-gray-900">{t("product.list.title")}</h1>
+					<p className="text-gray-600 mt-1">{t("product.list.subtitle")}</p>
 				</div>
 				<div className="flex gap-3">
 					<Button onClick={load} variant="outline" className="flex items-center gap-2">
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 						</svg>
-						Actualiser
+						{t("product.list.refresh")}
 					</Button>
 					<Link href="/products/new">
 						<Button className="flex items-center gap-2">
 							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 							</svg>
-							Nouveau produit
+							{t("product.list.new")}
 						</Button>
 					</Link>
 				</div>
@@ -122,7 +122,7 @@ export default function ProductsPage() {
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-blue-700 mb-1">Total</div>
+							<div className="text-sm font-medium text-blue-700 mb-1">{t("product.list.stats.total")}</div>
 							<div className="text-3xl font-bold text-blue-900">{stats.total}</div>
 						</div>
 						<div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
@@ -135,7 +135,7 @@ export default function ProductsPage() {
 				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-green-700 mb-1">Actifs</div>
+							<div className="text-sm font-medium text-green-700 mb-1">{t("product.list.stats.active")}</div>
 							<div className="text-3xl font-bold text-green-900">{stats.active}</div>
 						</div>
 						<div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
@@ -148,7 +148,7 @@ export default function ProductsPage() {
 				<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-5 rounded-xl shadow-sm border border-yellow-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-yellow-700 mb-1">Brouillons</div>
+							<div className="text-sm font-medium text-yellow-700 mb-1">{t("product.list.stats.draft")}</div>
 							<div className="text-3xl font-bold text-yellow-900">{stats.draft}</div>
 						</div>
 						<div className="w-12 h-12 bg-yellow-200 rounded-lg flex items-center justify-center">
@@ -161,7 +161,7 @@ export default function ProductsPage() {
 				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
 					<div className="flex items-center justify-between">
 						<div>
-							<div className="text-sm font-medium text-red-700 mb-1">Inactifs</div>
+							<div className="text-sm font-medium text-red-700 mb-1">{t("product.list.stats.inactive")}</div>
 							<div className="text-3xl font-bold text-red-900">{stats.inactive}</div>
 						</div>
 						<div className="w-12 h-12 bg-red-200 rounded-lg flex items-center justify-center">
@@ -179,14 +179,14 @@ export default function ProductsPage() {
 					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">Filtres</h2>
+					<h2 className="text-lg font-semibold text-gray-900">{t("product.list.filters.title")}</h2>
 				</div>
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Recherche</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("product.list.filters.search")}</label>
 						<div className="relative">
 							<Input
-								placeholder="Nom, code ou description..."
+								placeholder={t("product.list.filters.searchPlaceholder")}
 								value={q}
 								onChange={(e) => setQ(e.target.value)}
 								className="pl-10"
@@ -197,31 +197,37 @@ export default function ProductsPage() {
 						</div>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("product.list.filters.status")}</label>
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterStatus}
-							onChange={(e) => setFilterStatus(e.target.value as "ALL" | ProductStatus)}
+							onChange={(e) => {
+								setFilterStatus(e.target.value as "ALL" | ProductStatus);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
-							<option value="ALL">Tous les statuts</option>
-							<option value="ACTIVE">Actif</option>
-							<option value="DRAFT">Brouillon</option>
-							<option value="INACTIVE">Inactif</option>
+							<option value="ALL">{t("product.list.filters.statusAll")}</option>
+							<option value="ACTIVE">{t("product.detail.statuses.ACTIVE")}</option>
+							<option value="DRAFT">{t("product.detail.statuses.DRAFT")}</option>
+							<option value="INACTIVE">{t("product.detail.statuses.INACTIVE")}</option>
 						</select>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
+						<label className="block text-sm font-medium text-gray-700 mb-2">{t("product.list.filters.category")}</label>
 						<select
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={filterCategory}
-							onChange={(e) => setFilterCategory(e.target.value as "ALL" | ProductCategory)}
+							onChange={(e) => {
+								setFilterCategory(e.target.value as "ALL" | ProductCategory);
+								setPage(0); // Reset to first page when filter changes
+							}}
 						>
-							<option value="ALL">Toutes les catégories</option>
-							<option value="CURRENT_ACCOUNT">Compte courant</option>
-							<option value="SAVINGS_ACCOUNT">Compte épargne</option>
-							<option value="TERM_DEPOSIT">Dépôt à terme</option>
-							<option value="LOAN">Prêt</option>
-							<option value="CARD">Carte</option>
+							<option value="ALL">{t("product.list.filters.categoryAll")}</option>
+							<option value="CURRENT_ACCOUNT">{t("product.detail.categories.CURRENT_ACCOUNT")}</option>
+							<option value="SAVINGS_ACCOUNT">{t("product.detail.categories.SAVINGS_ACCOUNT")}</option>
+							<option value="TERM_DEPOSIT">{t("product.detail.categories.TERM_DEPOSIT")}</option>
+							<option value="LOAN">{t("product.detail.categories.LOAN")}</option>
+							<option value="CARD">{t("product.detail.categories.CARD")}</option>
 						</select>
 					</div>
 				</div>
@@ -241,15 +247,15 @@ export default function ProductsPage() {
 			{loading ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement des produits...</p>
+					<p className="mt-4 text-gray-600">{t("product.list.loading")}</p>
 				</div>
 			) : filteredProducts.length === 0 ? (
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
 					</svg>
-					<p className="text-gray-500 text-lg font-medium">Aucun produit trouvé</p>
-					<p className="text-gray-400 text-sm mt-2">Essayez de modifier vos filtres de recherche</p>
+					<p className="text-gray-500 text-lg font-medium">{t("product.list.empty.title")}</p>
+					<p className="text-gray-400 text-sm mt-2">{t("product.list.empty.message")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -257,13 +263,13 @@ export default function ProductsPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Nom</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Catégorie</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Statut</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Taux d'intérêt</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.code")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.name")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.category")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.status")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.currency")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.interestRate")}</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.list.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -281,7 +287,7 @@ export default function ProductsPage() {
 											{categoryLabel(product.category)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											<Badge variant={statusBadgeVariant(product.status)}>{product.status}</Badge>
+											<Badge variant={statusBadgeVariant(product.status)}>{t(`product.detail.statuses.${product.status}`)}</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -298,7 +304,7 @@ export default function ProductsPage() {
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 													</svg>
-													Voir
+													{t("product.list.table.view")}
 												</Button>
 											</Link>
 										</td>
@@ -307,11 +313,56 @@ export default function ProductsPage() {
 							</tbody>
 						</table>
 					</div>
-					{filteredProducts.length > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{filteredProducts.length}</span> produit{filteredProducts.length > 1 ? "s" : ""}
-							</p>
+					{(filteredProducts.length > 0 || totalElements > 0) && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
+							<div className="flex items-center gap-4">
+								<p className="text-sm text-gray-600">
+									{t("product.list.pagination.showing")} <span className="font-semibold">{filteredProducts.length}</span> {t("product.list.pagination.of")} <span className="font-semibold">{totalElements}</span> {totalElements > 1 ? t("product.list.pagination.products") : t("product.list.pagination.product")}
+								</p>
+								<div className="flex items-center gap-2">
+									<label className="text-sm text-gray-600">{t("product.list.pagination.itemsPerPage")}</label>
+									<select
+										className="px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+										value={size}
+										onChange={(e) => {
+											setSize(Number(e.target.value));
+											setPage(0); // Reset to first page when size changes
+										}}
+									>
+										<option value="10">10</option>
+										<option value="20">20</option>
+										<option value="50">50</option>
+										<option value="100">100</option>
+									</select>
+								</div>
+							</div>
+							{totalPages > 1 && (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.max(0, p - 1))}
+										disabled={page === 0}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+										</svg>
+									</Button>
+									<span className="text-sm text-gray-600">
+										{t("product.list.pagination.page")} {page + 1} {t("product.list.pagination.on")} {totalPages}
+									</span>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+										disabled={page >= totalPages - 1}
+									>
+										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+										</svg>
+									</Button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
