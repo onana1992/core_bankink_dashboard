@@ -32,6 +32,10 @@ export default function JournalBatchesPage() {
 	const [filterStatus, setFilterStatus] = useState<JournalBatchStatus | "">("");
 	const [filterStartDate, setFilterStartDate] = useState("");
 	const [filterEndDate, setFilterEndDate] = useState("");
+	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(20);
+	const [totalPages, setTotalPages] = useState(0);
+	const [totalElements, setTotalElements] = useState(0);
 	const [form, setForm] = useState<CreateJournalBatchRequest>({
 		batchNumber: "",
 		batchDate: new Date().toISOString().split("T")[0],
@@ -45,18 +49,22 @@ export default function JournalBatchesPage() {
 		if (!isAuthenticated) return;
 		
 		loadBatches();
-	}, [filterStatus, filterStartDate, filterEndDate, authLoading, isAuthenticated]);
+	}, [filterStatus, filterStartDate, filterEndDate, page, size, authLoading, isAuthenticated]);
 
 	async function loadBatches() {
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await journalBatchesApi.list({
+			const response = await journalBatchesApi.list({
 				status: filterStatus || undefined,
 				startDate: filterStartDate || undefined,
-				endDate: filterEndDate || undefined
+				endDate: filterEndDate || undefined,
+				page,
+				size
 			});
-			setBatches(data);
+			setBatches(response.content);
+			setTotalPages(response.totalPages);
+			setTotalElements(response.totalElements);
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement des lots de journalisation");
 		} finally {
@@ -346,11 +354,68 @@ export default function JournalBatchesPage() {
 							</tbody>
 						</table>
 					</div>
-					{batches.length > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{batches.length}</span> lot{batches.length > 1 ? "s" : ""}
-							</p>
+					{(batches.length > 0 || totalElements > 0) && (
+						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
+							<div className="flex items-center gap-4">
+								<p className="text-sm text-gray-600">
+									Affichage de <span className="font-semibold">{batches.length}</span> sur <span className="font-semibold">{totalElements}</span> lot{totalElements > 1 ? "s" : ""}
+								</p>
+								<div className="flex items-center gap-2">
+									<label className="text-sm text-gray-600">Éléments par page</label>
+									<select
+										className="px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+										value={size}
+										onChange={(e) => {
+											setSize(Number(e.target.value));
+											setPage(0); // Reset to first page when size changes
+										}}
+									>
+										<option value="10">10</option>
+										<option value="20">20</option>
+										<option value="50">50</option>
+										<option value="100">100</option>
+									</select>
+								</div>
+							</div>
+							{totalPages > 1 && (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(0)}
+										disabled={page === 0}
+									>
+										Premier
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(page - 1)}
+										disabled={page === 0}
+									>
+										Précédent
+									</Button>
+									<span className="text-sm text-gray-600 px-3">
+										Page {page + 1} sur {totalPages}
+									</span>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(page + 1)}
+										disabled={page >= totalPages - 1}
+									>
+										Suivant
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setPage(totalPages - 1)}
+										disabled={page >= totalPages - 1}
+									>
+										Dernier
+									</Button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>

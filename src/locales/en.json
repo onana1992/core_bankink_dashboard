@@ -40,6 +40,7 @@
 		"sanctionsWatchlists": "Sanctions & Watchlists",
 		"reconciliationClosure": "Reconciliation & Closure",
 		"reconciliation": "Reconciliation",
+		"closures": "Closures",
 		"dailyClosure": "Daily Closure",
 		"monthlyClosure": "Monthly Closure",
 		"governance": "Governance",
@@ -341,6 +342,7 @@
 				"none": "No accounts found",
 				"noneHint": "This customer does not have any accounts opened yet",
 				"accountNumber": "Account Number",
+				"productCode": "Product Code",
 				"currency": "Currency",
 				"balance": "Balance",
 				"availableBalance": "Available Balance",
@@ -407,6 +409,59 @@
 		}
 	},
 	"product": {
+		"new": {
+			"title": "New Product",
+			"subtitle": "Create a new banking product",
+			"backToList": "Back to product list",
+			"sections": {
+				"basicInfo": "1. Basic Information",
+				"financialSettings": "2. Financial Settings"
+			},
+			"fields": {
+				"code": "Code",
+				"codePlaceholder": "PROD-001",
+				"category": "Category",
+				"name": "Name",
+				"namePlaceholder": "Product name",
+				"description": "Description",
+				"descriptionPlaceholder": "Product description...",
+				"currency": "Currency",
+				"currencyPlaceholder": "USD",
+				"minBalance": "Minimum Balance",
+				"minBalancePlaceholder": "0.00",
+				"maxBalance": "Maximum Balance",
+				"maxBalancePlaceholder": "0.00",
+				"defaultInterestRate": "Default Interest Rate (%)",
+				"defaultInterestRatePlaceholder": "0.0000"
+			},
+			"categories": {
+				"CURRENT_ACCOUNT": "Current Account",
+				"SAVINGS_ACCOUNT": "Savings Account",
+				"TERM_DEPOSIT": "Term Deposit",
+				"LOAN": "Loan",
+				"CARD": "Card"
+			},
+			"categoryDescriptions": {
+				"CURRENT_ACCOUNT": "Standard bank account for daily transactions.",
+				"SAVINGS_ACCOUNT": "Savings account with interest to accumulate funds.",
+				"TERM_DEPOSIT": "Term deposit with fixed period and guaranteed interest rate.",
+				"LOAN": "Loan product with repayment over a determined period.",
+				"CARD": "Bank card linked to an account for payments."
+			},
+			"categoryInfo": {
+				"title": "Selected category: {{category}}"
+			},
+			"buttons": {
+				"create": "Create Product",
+				"creating": "Creating...",
+				"cancel": "Cancel"
+			},
+			"errors": {
+				"codeRequired": "Code is required",
+				"nameRequired": "Name is required",
+				"createError": "Failed to create"
+			}
+		},
 		"list": {
 			"title": "Product Catalog",
 			"subtitle": "Banking product management and configuration",
@@ -513,6 +568,26 @@
 					"periods": "Periods",
 					"penalties": "Penalties",
 					"eligibilityRules": "Eligibility Rules"
+				},
+				"cards": {
+					"identity": "Identity",
+					"identitySubtitle": "Basic information",
+					"productCode": "Product Code",
+					"name": "Name",
+					"category": "Category",
+					"status": "Status",
+					"statusSubtitle": "State and currency",
+					"currentStatus": "Current Status",
+					"currency": "Currency",
+					"balances": "Balances",
+					"balancesSubtitle": "Min/max limits",
+					"minimum": "Minimum",
+					"maximum": "Maximum",
+					"notDefined": "Not defined",
+					"interestRate": "Interest Rate",
+					"interestRateSubtitle": "Default rate",
+					"defaultRate": "Default Rate",
+					"description": "Description"
 				}
 			},
 			"rates": {
@@ -520,6 +595,7 @@
 				"add": "Add Rate",
 				"addButton": "+ Add Rate",
 				"loading": "Loading...",
+				"noRates": "No interest rates configured",
 				"rate": "Rate",
 				"view": "View",
 				"edit": "Edit",
@@ -530,7 +606,68 @@
 				"editing": "Editing...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"form": {
+					"rateType": "Rate Type *",
+					"rateValue": "Rate Value (%) *",
+					"minAmount": "Minimum Amount",
+					"maxAmount": "Maximum Amount",
+					"minPeriodDays": "Minimum Period (days)",
+					"maxPeriodDays": "Maximum Period (days)",
+					"calculationMethod": "Calculation Method *",
+					"compoundingFrequency": "Compounding Frequency",
+					"effectiveFrom": "Effective From *",
+					"effectiveTo": "Effective To",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel"
+				},
+				"rateTypes": {
+					"DEPOSIT": "Deposit",
+					"LENDING": "Lending",
+					"PENALTY": "Penalty"
+				},
+				"calculationMethods": {
+					"SIMPLE": "Simple",
+					"COMPOUND": "Compound",
+					"FLOATING": "Floating"
+				},
+				"compoundingFrequencies": {
+					"DAILY": "Daily",
+					"MONTHLY": "Monthly",
+					"QUARTERLY": "Quarterly",
+					"YEARLY": "Yearly"
+				},
+				"table": {
+					"type": "Type",
+					"value": "Value",
+					"method": "Method",
+					"frequency": "Frequency",
+					"active": "Active",
+					"actions": "Actions"
+				},
+				"modal": {
+					"rateType": "Rate Type",
+					"rateValue": "Rate Value",
+					"minAmount": "Minimum Amount",
+					"maxAmount": "Maximum Amount",
+					"minPeriodDays": "Minimum Period (days)",
+					"maxPeriodDays": "Maximum Period (days)",
+					"calculationMethod": "Calculation Method",
+					"compoundingFrequency": "Compounding Frequency",
+					"effectiveFrom": "Effective From",
+					"effectiveTo": "Effective To",
+					"status": "Status",
+					"active": "Active",
+					"inactive": "Inactive",
+					"close": "Close"
+				},
+				"error": {
+					"invalidRateValue": "Rate value must be a valid number"
+				}
 			},
 			"fees": {
 				"title": "Fees",
@@ -618,7 +755,43 @@
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"form": {
+					"limitType": "Limit Type *",
+					"limitValue": "Limit Value *",
+					"currency": "Currency *",
+					"periodType": "Period Type",
+					"effectiveFrom": "Effective From *",
+					"effectiveTo": "Effective To",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"editTitle": "Edit Limit"
+				},
+				"table": {
+					"type": "Type",
+					"value": "Value",
+					"currency": "Currency",
+					"period": "Period",
+					"active": "Active",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Limit Details",
+					"limitType": "Limit Type",
+					"limitValue": "Limit Value",
+					"currency": "Currency",
+					"periodType": "Period Type",
+					"effectiveFrom": "Effective From",
+					"effectiveTo": "Effective To",
+					"status": "Status",
+					"active": "Active",
+					"inactive": "Inactive",
+					"close": "Close"
+				}
 			},
 			"periods": {
 				"title": "Periods",
@@ -627,7 +800,44 @@
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"form": {
+					"periodName": "Period Name *",
+					"periodDays": "Duration (days) *",
+					"periodMonths": "Duration (months)",
+					"periodYears": "Duration (years)",
+					"interestRate": "Interest Rate (%)",
+					"minAmount": "Minimum Amount",
+					"maxAmount": "Maximum Amount",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"editTitle": "Edit Period"
+				},
+				"table": {
+					"name": "Name",
+					"duration": "Duration",
+					"interestRate": "Interest Rate",
+					"minAmount": "Min Amount",
+					"maxAmount": "Max Amount",
+					"active": "Active",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Period Details",
+					"periodName": "Period Name",
+					"periodDays": "Duration (days)",
+					"interestRate": "Interest Rate",
+					"minAmount": "Minimum Amount",
+					"maxAmount": "Maximum Amount",
+					"status": "Status",
+					"active": "Active",
+					"inactive": "Inactive",
+					"close": "Close"
+				}
 			},
 			"penalties": {
 				"title": "Penalties",
@@ -636,7 +846,49 @@
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"form": {
+					"penaltyType": "Penalty Type *",
+					"penaltyName": "Penalty Name *",
+					"calculationBase": "Calculation Base *",
+					"penaltyAmount": "Fixed Amount",
+					"penaltyPercentage": "Percentage",
+					"minPenalty": "Minimum Penalty",
+					"maxPenalty": "Maximum Penalty",
+					"currency": "Currency *",
+					"gracePeriodDays": "Grace Period (days)",
+					"effectiveFrom": "Effective From *",
+					"effectiveTo": "Effective To",
+					"isActive": "Active",
+					"add": "Add",
+					"adding": "Adding...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"editTitle": "Edit Penalty"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Name",
+					"base": "Base",
+					"amount": "Amount",
+					"active": "Active",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Penalty Details",
+					"penaltyType": "Penalty Type",
+					"penaltyName": "Penalty Name",
+					"calculationBase": "Calculation Base",
+					"penaltyAmount": "Fixed Amount",
+					"penaltyPercentage": "Percentage",
+					"effectiveFrom": "Effective From",
+					"effectiveTo": "Effective To",
+					"status": "Status",
+					"active": "Active",
+					"inactive": "Inactive",
+					"close": "Close"
+				}
 			},
 			"eligibility": {
 				"title": "Eligibility Rules",
@@ -740,7 +992,37 @@
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
-				"updateError": "Error updating"
+				"updateError": "Error updating",
+				"form": {
+					"mappingType": "Mapping Type *",
+					"ledgerAccountId": "GL Account *",
+					"selectLedgerAccount": "Select a GL Account",
+					"add": "Create",
+					"creating": "Creating...",
+					"edit": "Edit",
+					"editing": "Editing...",
+					"cancel": "Cancel",
+					"newTitle": "New GL Mapping",
+					"editTitle": "Edit GL Mapping"
+				},
+				"table": {
+					"type": "Type",
+					"ledgerAccount": "GL Account",
+					"actions": "Actions"
+				},
+				"mappingTypes": {
+					"ASSET_ACCOUNT": "Asset Account",
+					"LIABILITY_ACCOUNT": "Liability Account",
+					"FEE_ACCOUNT": "Fee Account",
+					"INTEREST_ACCOUNT": "Interest Account",
+					"REVENUE_ACCOUNT": "Revenue Account",
+					"EXPENSE_ACCOUNT": "Expense Account"
+				},
+				"loadingAccounts": "Loading GL accounts...",
+				"error": {
+					"loadAccounts": "Error loading GL accounts",
+					"save": "Error during {{action}}"
+				}
 			}
 		}
 	},

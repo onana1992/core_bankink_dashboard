@@ -71,7 +71,13 @@ import type {
 	CancelTransferRequest,
 	Hold,
 	HoldStatus,
-	CreateHoldRequest
+	CreateHoldRequest,
+	Closure,
+	ClosureType,
+	ClosureStatus,
+	CloseDayRequest,
+	CloseMonthRequest,
+	ClosureValidationResponse
 } from "@/types";
 
 // Validate and set API base URL
@@ -1659,17 +1665,33 @@ export const journalBatchesApi = {
 		status?: JournalBatchStatus;
 		startDate?: string;
 		endDate?: string;
-	}): Promise<JournalBatch[]> {
+		page?: number;
+		size?: number;
+	}): Promise<{
+		content: JournalBatch[];
+		totalElements: number;
+		totalPages: number;
+		number: number;
+		size: number;
+	}> {
 		const usp = new URLSearchParams();
 		if (params?.status) usp.set("status", params.status);
 		if (params?.startDate) usp.set("startDate", params.startDate);
 		if (params?.endDate) usp.set("endDate", params.endDate);
+		if (params?.page !== undefined) usp.set("page", params.page.toString());
+		if (params?.size !== undefined) usp.set("size", params.size.toString());
 		const query = usp.toString();
 		const res = await fetch(`${API_BASE}/api/journal-batches${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<JournalBatch[]>(res);
+		return handleJsonResponse<{
+			content: JournalBatch[];
+			totalElements: number;
+			totalPages: number;
+			number: number;
+			size: number;
+		}>(res);
 	},
 
 	async get(id: number | string): Promise<JournalBatch> {
@@ -1719,6 +1741,78 @@ export const journalBatchesApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<void>(res);
+	}
+};
+
+export const closuresApi = {
+	async closeDay(payload: CloseDayRequest): Promise<Closure> {
+		const res = await fetch(`${API_BASE}/api/admin/close-day`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Closure>(res);
+	},
+
+	async closeMonth(payload: CloseMonthRequest): Promise<Closure> {
+		const res = await fetch(`${API_BASE}/api/admin/close-month`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Closure>(res);
+	},
+
+	async getClosure(id: number | string): Promise<Closure> {
+		const res = await fetch(`${API_BASE}/api/admin/closures/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Closure>(res);
+	},
+
+	async getClosures(
+		closureType?: ClosureType,
+		status?: ClosureStatus,
+		date?: string,
+		page: number = 0,
+		size: number = 20
+	): Promise<any> {
+		const params = new URLSearchParams();
+		if (closureType) params.append("closureType", closureType);
+		if (status) params.append("status", status);
+		if (date) params.append("date", date);
+		params.append("page", page.toString());
+		params.append("size", size.toString());
+		const res = await fetch(`${API_BASE}/api/admin/closures?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<any>(res);
+	},
+
+	async getClosuresList(
+		closureType?: ClosureType,
+		status?: ClosureStatus,
+		date?: string
+	): Promise<Closure[]> {
+		const params = new URLSearchParams();
+		if (closureType) params.append("closureType", closureType);
+		if (status) params.append("status", status);
+		if (date) params.append("date", date);
+		const res = await fetch(`${API_BASE}/api/admin/closures/list?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Closure[]>(res);
+	},
+
+	async validateClosure(id: number | string): Promise<ClosureValidationResponse> {
+		const res = await fetch(`${API_BASE}/api/admin/closures/${id}/validation`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ClosureValidationResponse>(res);
 	}
 };
 

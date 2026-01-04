@@ -205,8 +205,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</summary>
 						<div className="mt-1 space-y-1 pl-3">
 							<NavLink href="/reconciliation" label={t("sidebar.reconciliation")} icon={RefreshCcw} collapsed={collapsed} />
-							<NavLink href="/close/day" label={t("sidebar.dailyClosure")} icon={CalendarCheck} collapsed={collapsed} />
-							<NavLink href="/close/month" label={t("sidebar.monthlyClosure")} icon={CalendarCheck} collapsed={collapsed} />
+							<NavLink href="/closures" label={t("sidebar.closures")} icon={CalendarCheck} collapsed={collapsed} />
 						</div>
 					</details>
 

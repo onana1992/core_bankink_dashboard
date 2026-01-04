@@ -2086,6 +2086,9 @@ export default function CustomerDetailPage() {
 											{t("customer.detail.accounts.accountNumber")}
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+											{t("customer.detail.accounts.productCode")}
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
 											{t("common.status")}
 										</th>
 										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -2128,6 +2131,18 @@ export default function CustomerDetailPage() {
 													>
 														{account.accountNumber}
 													</Link>
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap">
+													{account.product?.code ? (
+														<Link
+															href={`/products/${account.productId}`}
+															className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
+														>
+															{account.product.code}
+														</Link>
+													) : (
+														<span className="text-gray-400">-</span>
+													)}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<Badge className={statusColors[account.status]}>

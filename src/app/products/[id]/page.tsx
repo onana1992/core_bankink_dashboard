@@ -339,14 +339,7 @@ export default function ProductDetailPage() {
 	}
 
 	function categoryLabel(category: Product["category"]): string {
-		const labels: Record<Product["category"], string> = {
-			CURRENT_ACCOUNT: "Compte courant",
-			SAVINGS_ACCOUNT: "Compte épargne",
-			TERM_DEPOSIT: "Dépôt à terme",
-			LOAN: "Prêt",
-			CARD: "Carte"
-		};
-		return labels[category] || category;
+		return t(`product.detail.categories.${category}`) || category;
 	}
 
 	const tabs = [
@@ -639,9 +632,9 @@ function ProductOverviewTab({
 							value={form.status}
 							onChange={e => setForm({ ...form, status: e.target.value as ProductStatus })}
 						>
-							<option value="DRAFT">DRAFT</option>
-							<option value="ACTIVE">ACTIVE</option>
-							<option value="INACTIVE">INACTIVE</option>
+							<option value="DRAFT">{t("product.detail.statuses.DRAFT")}</option>
+							<option value="ACTIVE">{t("product.detail.statuses.ACTIVE")}</option>
+							<option value="INACTIVE">{t("product.detail.statuses.INACTIVE")}</option>
 						</select>
 					</div>
 					<div>
@@ -710,14 +703,7 @@ function ProductOverviewTab({
 	}
 
 	function categoryLabel(category: Product["category"]): string {
-		const labels: Record<Product["category"], string> = {
-			CURRENT_ACCOUNT: "Compte courant",
-			SAVINGS_ACCOUNT: "Compte épargne",
-			TERM_DEPOSIT: "Dépôt à terme",
-			LOAN: "Prêt",
-			CARD: "Carte"
-		};
-		return labels[category] || category;
+		return t(`product.detail.categories.${category}`) || category;
 	}
 
 	return (
@@ -740,42 +726,42 @@ function ProductOverviewTab({
 					<div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
 						<div className="flex items-center gap-2 mb-2">
 							<Percent className="h-4 w-4 text-blue-600" />
-							<span className="text-xs font-medium text-blue-700">Taux d'intérêt</span>
+							<span className="text-xs font-medium text-blue-700">{t("product.detail.overview.stats.interestRates")}</span>
 						</div>
 						<div className="text-2xl font-bold text-blue-900">{stats.interestRates}</div>
 					</div>
 					<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
 						<div className="flex items-center gap-2 mb-2">
 							<DollarSign className="h-4 w-4 text-green-600" />
-							<span className="text-xs font-medium text-green-700">Frais</span>
+							<span className="text-xs font-medium text-green-700">{t("product.detail.overview.stats.fees")}</span>
 						</div>
 						<div className="text-2xl font-bold text-green-900">{stats.fees}</div>
 					</div>
 					<div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
 						<div className="flex items-center gap-2 mb-2">
 							<BarChart3 className="h-4 w-4 text-purple-600" />
-							<span className="text-xs font-medium text-purple-700">Limites</span>
+							<span className="text-xs font-medium text-purple-700">{t("product.detail.overview.stats.limits")}</span>
 						</div>
 						<div className="text-2xl font-bold text-purple-900">{stats.limits}</div>
 					</div>
 					<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
 						<div className="flex items-center gap-2 mb-2">
 							<Calendar className="h-4 w-4 text-orange-600" />
-							<span className="text-xs font-medium text-orange-700">Périodes</span>
+							<span className="text-xs font-medium text-orange-700">{t("product.detail.overview.stats.periods")}</span>
 						</div>
 						<div className="text-2xl font-bold text-orange-900">{stats.periods}</div>
 					</div>
 					<div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
 						<div className="flex items-center gap-2 mb-2">
 							<Info className="h-4 w-4 text-red-600" />
-							<span className="text-xs font-medium text-red-700">Pénalités</span>
+							<span className="text-xs font-medium text-red-700">{t("product.detail.overview.stats.penalties")}</span>
 						</div>
 						<div className="text-2xl font-bold text-red-900">{stats.penalties}</div>
 					</div>
 					<div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
 						<div className="flex items-center gap-2 mb-2">
 							<FileText className="h-4 w-4 text-indigo-600" />
-							<span className="text-xs font-medium text-indigo-700">Règles</span>
+							<span className="text-xs font-medium text-indigo-700">{t("product.detail.overview.stats.eligibilityRules")}</span>
 						</div>
 						<div className="text-2xl font-bold text-indigo-900">{stats.eligibilityRules}</div>
 					</div>
@@ -792,8 +778,8 @@ function ProductOverviewTab({
 								<Package className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-lg font-bold text-white">Identité</h3>
-								<p className="text-xs text-purple-100">Informations de base</p>
+								<h3 className="text-lg font-bold text-white">{t("product.detail.overview.cards.identity")}</h3>
+								<p className="text-xs text-purple-100">{t("product.detail.overview.cards.identitySubtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -803,7 +789,7 @@ function ProductOverviewTab({
 								<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
 								</svg>
-								Code produit
+								{t("product.detail.overview.cards.productCode")}
 							</label>
 							<div className="font-mono font-bold text-lg text-gray-900 mt-1">{product.code}</div>
 						</div>
@@ -821,7 +807,7 @@ function ProductOverviewTab({
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 								</svg>
-								Catégorie
+								{t("product.detail.overview.cards.category")}
 							</dt>
 							<dd>
 								<Badge variant="neutral">
@@ -840,8 +826,8 @@ function ProductOverviewTab({
 								<Tag className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-lg font-bold text-white">Statut</h3>
-								<p className="text-xs text-blue-100">État et devise</p>
+								<h3 className="text-lg font-bold text-white">{t("product.detail.overview.cards.status")}</h3>
+								<p className="text-xs text-blue-100">{t("product.detail.overview.cards.statusSubtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -851,21 +837,21 @@ function ProductOverviewTab({
 								<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Statut actuel
+								{t("product.detail.overview.cards.currentStatus")}
 							</dt>
 							<dd>
 								<Badge variant={
 									product.status === "ACTIVE" ? "success" :
 									product.status === "DRAFT" ? "warning" : "danger"
 								}>
-									{product.status}
+									{t(`product.detail.statuses.${product.status}`)}
 								</Badge>
 							</dd>
 						</div>
 						<div className="flex items-center justify-between py-2 border-t border-gray-200">
 							<dt className="text-sm text-gray-600 flex items-center gap-2">
 								<Currency className="h-4 w-4 text-gray-400" />
-								Devise
+								{t("product.detail.overview.cards.currency")}
 							</dt>
 							<dd>
 								<span className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
@@ -884,8 +870,8 @@ function ProductOverviewTab({
 								<Wallet className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-lg font-bold text-white">Soldes</h3>
-								<p className="text-xs text-green-100">Limites min/max</p>
+								<h3 className="text-lg font-bold text-white">{t("product.detail.overview.cards.balances")}</h3>
+								<p className="text-xs text-green-100">{t("product.detail.overview.cards.balancesSubtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -896,13 +882,13 @@ function ProductOverviewTab({
 									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 									</svg>
-									Minimum
+									{t("product.detail.overview.cards.minimum")}
 								</label>
 								<div className="font-bold text-lg text-gray-900">
 									{product.minBalance != null ? (
 										<span>{product.minBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
 									) : (
-										<span className="text-gray-400 text-sm">Non défini</span>
+										<span className="text-gray-400 text-sm">{t("product.detail.overview.cards.notDefined")}</span>
 									)}
 								</div>
 							</div>
@@ -911,13 +897,13 @@ function ProductOverviewTab({
 									<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 									</svg>
-									Maximum
+									{t("product.detail.overview.cards.maximum")}
 								</label>
 								<div className="font-bold text-lg text-gray-900">
 									{product.maxBalance != null ? (
 										<span>{product.maxBalance.toLocaleString()} <span className="text-sm font-normal text-gray-600">{product.currency}</span></span>
 									) : (
-										<span className="text-gray-400 text-sm">Non défini</span>
+										<span className="text-gray-400 text-sm">{t("product.detail.overview.cards.notDefined")}</span>
 									)}
 								</div>
 							</div>
@@ -933,8 +919,8 @@ function ProductOverviewTab({
 								<TrendingUp className="h-6 w-6 text-white" />
 							</div>
 							<div>
-								<h3 className="text-lg font-bold text-white">Taux d'intérêt</h3>
-								<p className="text-xs text-orange-100">Taux par défaut</p>
+								<h3 className="text-lg font-bold text-white">{t("product.detail.overview.cards.interestRate")}</h3>
+								<p className="text-xs text-orange-100">{t("product.detail.overview.cards.interestRateSubtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -944,7 +930,7 @@ function ProductOverviewTab({
 								<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 								</svg>
-								Taux par défaut
+								{t("product.detail.overview.cards.defaultRate")}
 							</label>
 							<div className="text-2xl font-bold text-orange-700 mt-1">
 								{product.defaultInterestRate != null ? (
@@ -966,7 +952,7 @@ function ProductOverviewTab({
 							<div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
 								<FileText className="h-5 w-5 text-gray-600" />
 							</div>
-							<h3 className="text-lg font-bold text-gray-900">Description</h3>
+							<h3 className="text-lg font-bold text-gray-900">{t("product.detail.overview.cards.description")}</h3>
 						</div>
 					</div>
 					<div className="p-6">
@@ -998,6 +984,7 @@ function InterestRatesTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductInterestRateRequest>({
 		rateType: "DEPOSIT",
 		rateValue: 0,
@@ -1005,6 +992,10 @@ function InterestRatesTab({
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
+	// State local pour rateValue en string pour permettre de vider le champ
+	const [rateValueInput, setRateValueInput] = useState<string>("");
+	// State pour le formulaire d'édition
+	const [editRateValueInput, setEditRateValueInput] = useState<string>("");
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [selectedRate, setSelectedRate] = useState<ProductInterestRate | null>(null);
@@ -1014,12 +1005,26 @@ function InterestRatesTab({
 	const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
 	const buttonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
 
+	// Réinitialiser rateValueInput quand le formulaire s'ouvre
+	useEffect(() => {
+		if (showForm) {
+			setRateValueInput("");
+		}
+	}, [showForm]);
+
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setSubmitting(true);
 		setError(null);
 		try {
-			await productsApi.addInterestRate(productId, form);
+			// Convertir rateValueInput en number avant soumission
+			const rateValue = rateValueInput === "" ? 0 : parseFloat(rateValueInput);
+			if (isNaN(rateValue)) {
+				setError(t("product.detail.rates.error.invalidRateValue"));
+				setSubmitting(false);
+				return;
+			}
+			await productsApi.addInterestRate(productId, { ...form, rateValue });
 			onCloseForm();
 			setForm({
 				rateType: "DEPOSIT",
@@ -1028,23 +1033,24 @@ function InterestRatesTab({
 				effectiveFrom: new Date().toISOString().split('T')[0],
 				isActive: true
 			});
+			setRateValueInput("");
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Taux d'intérêt ({rates.length})</h3>
-				{!showForm && !showEditForm && <Button onClick={onAdd}>+ Ajouter un taux</Button>}
+				<h3 className="text-lg font-semibold">{t("product.detail.rates.title")} ({rates.length})</h3>
+				{!showForm && !showEditForm && <Button onClick={onAdd}>{t("product.detail.rates.addButton")}</Button>}
 			</div>
 
 			{showForm && !showEditForm && (
@@ -1069,13 +1075,23 @@ function InterestRatesTab({
 							<Input
 								type="number"
 								step="0.0001"
-								value={form.rateValue}
-								onChange={e => setForm({ ...form, rateValue: parseFloat(e.target.value) || 0 })}
+								min="0"
+								value={rateValueInput}
+								onChange={e => {
+									const value = e.target.value;
+									setRateValueInput(value);
+									// Mettre à jour form.rateValue pour la validation
+									const numValue = value === "" ? 0 : parseFloat(value);
+									if (!isNaN(numValue)) {
+										setForm({ ...form, rateValue: numValue });
+									}
+								}}
+								placeholder="0.0000"
 								required
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1084,7 +1100,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1109,7 +1125,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Méthode de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.calculationMethod")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.calculationMethod}
@@ -1123,7 +1139,7 @@ function InterestRatesTab({
 						</div>
 						{form.calculationMethod === "COMPOUND" && (
 							<div>
-								<label className="block text-sm mb-1">Fréquence de capitalisation</label>
+								<label className="block text-sm mb-1">{t("product.detail.rates.form.compoundingFrequency")}</label>
 								<select
 									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 									value={form.compoundingFrequency ?? ""}
@@ -1138,7 +1154,7 @@ function InterestRatesTab({
 							</div>
 						)}
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -1147,7 +1163,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -1170,7 +1186,7 @@ function InterestRatesTab({
 			)}
 
 			{rates.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucun taux d'intérêt configuré</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.noRates")}</div>
 			) : (
 				<div className="overflow-x-auto overflow-y-visible">
 					<table className="min-w-full text-sm">
@@ -1181,7 +1197,7 @@ function InterestRatesTab({
 								<th className="px-4 py-2 text-left">Montant</th>
 								<th className="px-4 py-2 text-left">Période</th>
 								<th className="px-4 py-2 text-left">Méthode</th>
-								<th className="px-4 py-2 text-left">Actif</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
@@ -1255,7 +1271,7 @@ function InterestRatesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.rates.view")}
 														</button>
 														<button
 															type="button"
@@ -1276,13 +1292,14 @@ function InterestRatesTab({
 																	effectiveTo: rate.effectiveTo ?? undefined,
 																	isActive: rate.isActive
 																});
+																setEditRateValueInput(rate.rateValue.toString());
 																setOpenMenuId(null);
 																setMenuPosition(null);
 															}}
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.rates.edit")}
 														</button>
 														<button
 															type="button"
@@ -1294,7 +1311,7 @@ function InterestRatesTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.rates.delete")}
 														</button>
 													</div>
 												</>
@@ -1320,7 +1337,7 @@ function InterestRatesTab({
 										<TrendingUp className="h-6 w-6 text-white" />
 									</div>
 									<div>
-										<h3 className="text-xl font-bold text-white">Détails du taux d'intérêt</h3>
+										<h3 className="text-xl font-bold text-white">{t("product.detail.rates.modal.title")}</h3>
 										<p className="text-sm text-blue-100 mt-0.5">{selectedRate.rateType}</p>
 									</div>
 								</div>
@@ -1463,7 +1480,7 @@ function InterestRatesTab({
 									</dt>
 									<dd>
 										<Badge variant={selectedRate.isActive ? "success" : "neutral"}>
-											{selectedRate.isActive ? "Actif" : "Inactif"}
+											{selectedRate.isActive ? t("product.detail.rates.modal.active") : t("product.detail.rates.modal.inactive")}
 										</Badge>
 									</dd>
 								</div>
@@ -1490,24 +1507,33 @@ function InterestRatesTab({
 					setSubmitting(true);
 					setError(null);
 					try {
-						await productsApi.updateInterestRate(productId, selectedRate.id, form);
+						// Convertir editRateValueInput en number avant soumission
+						const rateValue = editRateValueInput === "" ? 0 : parseFloat(editRateValueInput);
+						if (isNaN(rateValue)) {
+							setError("La valeur du taux doit être un nombre valide");
+							setSubmitting(false);
+							return;
+						}
+						await productsApi.updateInterestRate(productId, selectedRate.id, { ...form, rateValue });
 						setShowEditForm(false);
 						setSelectedRate(null);
+						setEditRateValueInput("");
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.rates.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier le taux d'intérêt</h4>
+						<h4 className="font-semibold">{t("product.detail.rates.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
 								setShowEditForm(false);
 								setSelectedRate(null);
 								setError(null);
+								setEditRateValueInput("");
 							}}
 							className="text-gray-400 hover:text-gray-600"
 						>
@@ -1534,13 +1560,23 @@ function InterestRatesTab({
 							<Input
 								type="number"
 								step="0.0001"
-								value={form.rateValue}
-								onChange={e => setForm({ ...form, rateValue: parseFloat(e.target.value) || 0 })}
+								min="0"
+								value={editRateValueInput}
+								onChange={e => {
+									const value = e.target.value;
+									setEditRateValueInput(value);
+									// Mettre à jour form.rateValue pour la validation
+									const numValue = value === "" ? 0 : parseFloat(value);
+									if (!isNaN(numValue)) {
+										setForm({ ...form, rateValue: numValue });
+									}
+								}}
+								placeholder="0.0000"
 								required
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1549,7 +1585,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -1574,7 +1610,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Méthode de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.calculationMethod")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.calculationMethod}
@@ -1588,7 +1624,7 @@ function InterestRatesTab({
 						</div>
 						{form.calculationMethod === "COMPOUND" && (
 							<div>
-								<label className="block text-sm mb-1">Fréquence de capitalisation</label>
+								<label className="block text-sm mb-1">{t("product.detail.rates.form.compoundingFrequency")}</label>
 								<select
 									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 									value={form.compoundingFrequency ?? ""}
@@ -1603,7 +1639,7 @@ function InterestRatesTab({
 							</div>
 						)}
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -1612,7 +1648,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -1620,7 +1656,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.isActive ? "true" : "false"}
@@ -1632,12 +1668,12 @@ function InterestRatesTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedRate(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -1712,7 +1748,7 @@ function FeesTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -2095,7 +2131,7 @@ function FeesTab({
 										<DollarSign className="h-6 w-6 text-white" />
 									</div>
 									<div>
-										<h3 className="text-xl font-bold text-white">Détails du frais</h3>
+										<h3 className="text-xl font-bold text-white">{t("product.detail.fees.modal.title")}</h3>
 										<p className="text-sm text-emerald-100 mt-0.5">{selectedFee.feeName}</p>
 									</div>
 								</div>
@@ -2310,7 +2346,7 @@ function FeesTab({
 						setSelectedFee(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.rates.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
@@ -2569,6 +2605,7 @@ function LimitsTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductLimitRequest>({
 		limitType: "DAILY_LIMIT",
 		limitValue: 0,
@@ -2619,21 +2656,21 @@ function LimitsTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<h3 className="text-lg font-semibold">Limites ({limits.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter une limite</Button>}
+				{!showForm && <Button onClick={onAdd}>{t("product.detail.limits.addButton")}</Button>}
 			</div>
 
 			{showForm && (
@@ -2690,7 +2727,7 @@ function LimitsTab({
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -2699,7 +2736,7 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -2724,7 +2761,7 @@ function LimitsTab({
 								<th className="px-4 py-2 text-left">Type</th>
 								<th className="px-4 py-2 text-left">Valeur</th>
 								<th className="px-4 py-2 text-left">Période</th>
-								<th className="px-4 py-2 text-left">Actif</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
@@ -2785,7 +2822,7 @@ function LimitsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.rates.view")}
 														</button>
 														<button
 															type="button"
@@ -2799,7 +2836,7 @@ function LimitsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.rates.edit")}
 														</button>
 														<button
 															type="button"
@@ -2811,7 +2848,7 @@ function LimitsTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.rates.delete")}
 														</button>
 													</div>
 												</>
@@ -2837,7 +2874,7 @@ function LimitsTab({
 										<BarChart3 className="h-6 w-6 text-white" />
 									</div>
 									<div>
-										<h3 className="text-xl font-bold text-white">Détails de la limite</h3>
+										<h3 className="text-xl font-bold text-white">{t("product.detail.limits.modal.title")}</h3>
 										<p className="text-sm text-purple-100 mt-0.5">{selectedLimit.limitType}</p>
 									</div>
 								</div>
@@ -2917,7 +2954,7 @@ function LimitsTab({
 									</dt>
 									<dd>
 										<Badge variant={selectedLimit.isActive ? "success" : "neutral"}>
-											{selectedLimit.isActive ? "Actif" : "Inactif"}
+											{selectedLimit.isActive ? t("product.detail.limits.modal.active") : t("product.detail.limits.modal.inactive")}
 										</Badge>
 									</dd>
 								</div>
@@ -2957,13 +2994,13 @@ function LimitsTab({
 						setSelectedLimit(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.rates.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier la limite</h4>
+						<h4 className="font-semibold">{t("product.detail.limits.form.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
@@ -3036,7 +3073,7 @@ function LimitsTab({
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveFrom}
@@ -3045,7 +3082,7 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveTo ?? ""}
@@ -3053,7 +3090,7 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
@@ -3065,12 +3102,12 @@ function LimitsTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedLimit(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -3098,6 +3135,7 @@ function PeriodsTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductPeriodRequest>({
 		periodName: "",
 		periodDays: 0,
@@ -3150,21 +3188,21 @@ function PeriodsTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<h3 className="text-lg font-semibold">Périodes ({periods.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter une période</Button>}
+				{!showForm && <Button onClick={onAdd}>{t("product.detail.periods.addButton")}</Button>}
 			</div>
 
 			{showForm && (
@@ -3205,7 +3243,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Taux d'intérêt (%)</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.interestRate")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -3214,7 +3252,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3223,7 +3261,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3259,7 +3297,7 @@ function PeriodsTab({
 								<th className="px-4 py-2 text-left">Taux</th>
 								<th className="px-4 py-2 text-left">Montant</th>
 								<th className="px-4 py-2 text-left">Ordre</th>
-								<th className="px-4 py-2 text-left">Actif</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
@@ -3330,7 +3368,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.rates.view")}
 														</button>
 														<button
 															type="button"
@@ -3344,7 +3382,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.rates.edit")}
 														</button>
 														<button
 															type="button"
@@ -3356,7 +3394,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.rates.delete")}
 														</button>
 													</div>
 												</>
@@ -3375,7 +3413,7 @@ function PeriodsTab({
 				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowViewModal(false)}>
 					<div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
 						<div className="flex justify-between items-center mb-4">
-							<h3 className="text-lg font-semibold">Détails de la période</h3>
+							<h3 className="text-lg font-semibold">{t("product.detail.periods.modal.title")}</h3>
 							<button
 								type="button"
 								onClick={() => setShowViewModal(false)}
@@ -3426,7 +3464,7 @@ function PeriodsTab({
 									<label className="text-sm font-medium text-gray-500">Statut</label>
 									<div className="mt-1">
 										<Badge variant={selectedPeriod.isActive ? "success" : "neutral"}>
-											{selectedPeriod.isActive ? "Actif" : "Inactif"}
+											{selectedPeriod.isActive ? t("product.detail.periods.modal.active") : t("product.detail.periods.modal.inactive")}
 										</Badge>
 									</div>
 								</div>
@@ -3461,13 +3499,13 @@ function PeriodsTab({
 						setSelectedPeriod(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.rates.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier la période</h4>
+						<h4 className="font-semibold">{t("product.detail.periods.form.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
@@ -3516,7 +3554,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Taux d'intérêt (%)</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.interestRate")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -3525,7 +3563,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3534,7 +3572,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3551,7 +3589,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
@@ -3563,12 +3601,12 @@ function PeriodsTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPeriod(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -3596,6 +3634,7 @@ function PenaltiesTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<CreateProductPenaltyRequest>({
 		penaltyType: "LATE_PAYMENT",
 		penaltyName: "",
@@ -3654,21 +3693,21 @@ function PenaltiesTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">Chargement...</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
 				<h3 className="text-lg font-semibold">Pénalités ({penalties.length})</h3>
-				{!showForm && <Button onClick={onAdd}>+ Ajouter une pénalité</Button>}
+				{!showForm && <Button onClick={onAdd}>{t("product.detail.penalties.addButton")}</Button>}
 			</div>
 
 			{showForm && (
@@ -3760,7 +3799,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -3769,7 +3808,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -3796,7 +3835,7 @@ function PenaltiesTab({
 								<th className="px-4 py-2 text-left">Montant</th>
 								<th className="px-4 py-2 text-left">Base</th>
 								<th className="px-4 py-2 text-left">Période de grâce</th>
-								<th className="px-4 py-2 text-left">Actif</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
@@ -3862,7 +3901,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															Voir
+															{t("product.detail.rates.view")}
 														</button>
 														<button
 															type="button"
@@ -3876,7 +3915,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															Modifier
+															{t("product.detail.rates.edit")}
 														</button>
 														<button
 															type="button"
@@ -3888,7 +3927,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															Supprimer
+															{t("product.detail.rates.delete")}
 														</button>
 													</div>
 												</>
@@ -3914,7 +3953,7 @@ function PenaltiesTab({
 										<AlertCircle className="h-6 w-6 text-white" />
 									</div>
 									<div>
-										<h3 className="text-xl font-bold text-white">Détails de la pénalité</h3>
+										<h3 className="text-xl font-bold text-white">{t("product.detail.penalties.modal.title")}</h3>
 										<p className="text-sm text-red-100 mt-0.5">{selectedPenalty.penaltyName}</p>
 									</div>
 								</div>
@@ -4067,7 +4106,7 @@ function PenaltiesTab({
 									</dt>
 									<dd>
 										<Badge variant={selectedPenalty.isActive ? "success" : "neutral"}>
-											{selectedPenalty.isActive ? "Actif" : "Inactif"}
+											{selectedPenalty.isActive ? t("product.detail.penalties.modal.active") : t("product.detail.penalties.modal.inactive")}
 										</Badge>
 									</dd>
 								</div>
@@ -4112,13 +4151,13 @@ function PenaltiesTab({
 						setSelectedPenalty(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? "Erreur lors de la modification");
+						setError(e?.message ?? t("product.detail.rates.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
 				}} className="border rounded-md p-4 space-y-4 bg-gray-50 mt-4">
 					<div className="flex justify-between items-center mb-2">
-						<h4 className="font-semibold">Modifier la pénalité</h4>
+						<h4 className="font-semibold">{t("product.detail.penalties.form.editTitle")}</h4>
 						<button
 							type="button"
 							onClick={() => {
@@ -4226,7 +4265,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date d'effet *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveFrom}
@@ -4235,7 +4274,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Date de fin</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveTo ?? ""}
@@ -4243,7 +4282,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Actif</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
@@ -4255,12 +4294,12 @@ function PenaltiesTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Modification..." : "Modifier"}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPenalty(null);
 							setError(null);
-						}}>Annuler</Button>
+						}}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -4354,7 +4393,7 @@ function EligibilityRulesTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de l'ajout");
+			setError(e?.message ?? t("product.detail.rates.addError"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -4970,6 +5009,7 @@ function ProductGLMappingsTab({
 	showForm: boolean;
 	onCloseForm: () => void;
 }) {
+	const { t } = useTranslation();
 	const [form, setForm] = useState<import("@/types").CreateProductGLMappingRequest>({
 		mappingType: "ASSET_ACCOUNT",
 		ledgerAccountId: 0
@@ -5128,7 +5168,7 @@ function ProductGLMappingsTab({
 		return (
 			<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 				<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-				<p className="mt-4 text-gray-600">Chargement des mappings GL...</p>
+				<p className="mt-4 text-gray-600">{t("product.detail.glMappings.loadingAccounts")}</p>
 			</div>
 		);
 	}
@@ -5161,7 +5201,7 @@ function ProductGLMappingsTab({
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 						</svg>
-						Ajouter un mapping
+						{t("product.detail.glMappings.addButton")}
 					</Button>
 				)}
 			</div>
@@ -5179,7 +5219,7 @@ function ProductGLMappingsTab({
 				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 					<div className="flex justify-between items-center mb-4">
 						<h4 className="text-lg font-semibold text-gray-900">
-							{editingMapping ? "Modifier le mapping GL" : "Nouveau mapping GL"}
+							{editingMapping ? t("product.detail.glMappings.form.editTitle") : t("product.detail.glMappings.form.newTitle")}
 						</h4>
 						<Button
 							type="button"
@@ -5290,10 +5330,10 @@ function ProductGLMappingsTab({
 									setValidationErrors({});
 								}}
 							>
-								Annuler
+								{t("product.detail.glMappings.form.cancel")}
 							</Button>
 							<Button type="submit" disabled={submitting}>
-								{submitting ? (editingMapping ? "Modification..." : "Création...") : (editingMapping ? "Modifier" : "Créer")}
+								{submitting ? (editingMapping ? t("product.detail.glMappings.form.editing") : t("product.detail.glMappings.form.creating")) : (editingMapping ? t("product.detail.glMappings.form.edit") : t("product.detail.glMappings.form.add"))}
 							</Button>
 						</div>
 					</form>

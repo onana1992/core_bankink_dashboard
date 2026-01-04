@@ -40,6 +40,7 @@
 		"sanctionsWatchlists": "Sanctions & Listes de surveillance",
 		"reconciliationClosure": "Réconciliation & Clôture",
 		"reconciliation": "Réconciliation",
+		"closures": "Clôtures",
 		"dailyClosure": "Clôture quotidienne",
 		"monthlyClosure": "Clôture mensuelle",
 		"governance": "Gouvernance",
@@ -341,6 +342,7 @@
 				"none": "Aucun compte trouvé",
 				"noneHint": "Ce client n'a pas encore de compte ouvert",
 				"accountNumber": "Numéro de compte",
+				"productCode": "Code produit",
 				"currency": "Devise",
 				"balance": "Solde",
 				"availableBalance": "Solde disponible",
@@ -407,6 +409,59 @@
 		}
 	},
 	"product": {
+		"new": {
+			"title": "Nouveau Produit",
+			"subtitle": "Créer un nouveau produit bancaire",
+			"backToList": "Retour à la liste des produits",
+			"sections": {
+				"basicInfo": "1. Informations de base",
+				"financialSettings": "2. Paramètres financiers"
+			},
+			"fields": {
+				"code": "Code",
+				"codePlaceholder": "PROD-001",
+				"category": "Catégorie",
+				"name": "Nom",
+				"namePlaceholder": "Nom du produit",
+				"description": "Description",
+				"descriptionPlaceholder": "Description du produit...",
+				"currency": "Devise",
+				"currencyPlaceholder": "USD",
+				"minBalance": "Solde minimum",
+				"minBalancePlaceholder": "0.00",
+				"maxBalance": "Solde maximum",
+				"maxBalancePlaceholder": "0.00",
+				"defaultInterestRate": "Taux d'intérêt par défaut (%)",
+				"defaultInterestRatePlaceholder": "0.0000"
+			},
+			"categories": {
+				"CURRENT_ACCOUNT": "Compte courant",
+				"SAVINGS_ACCOUNT": "Compte épargne",
+				"TERM_DEPOSIT": "Dépôt à terme",
+				"LOAN": "Prêt",
+				"CARD": "Carte"
+			},
+			"categoryDescriptions": {
+				"CURRENT_ACCOUNT": "Compte bancaire standard pour les transactions quotidiennes.",
+				"SAVINGS_ACCOUNT": "Compte d'épargne avec intérêts pour accumuler des fonds.",
+				"TERM_DEPOSIT": "Dépôt à terme avec période fixe et taux d'intérêt garanti.",
+				"LOAN": "Produit de prêt avec remboursement sur une période déterminée.",
+				"CARD": "Carte bancaire liée à un compte pour les paiements."
+			},
+			"categoryInfo": {
+				"title": "Catégorie sélectionnée : {{category}}"
+			},
+			"buttons": {
+				"create": "Créer le produit",
+				"creating": "Création...",
+				"cancel": "Annuler"
+			},
+			"errors": {
+				"codeRequired": "Le code est requis",
+				"nameRequired": "Le nom est requis",
+				"createError": "Échec de création"
+			}
+		},
 		"list": {
 			"title": "Catalogue de Produits",
 			"subtitle": "Gestion et configuration des produits bancaires",
@@ -513,6 +568,26 @@
 					"periods": "Périodes",
 					"penalties": "Pénalités",
 					"eligibilityRules": "Règles d'éligibilité"
+				},
+				"cards": {
+					"identity": "Identité",
+					"identitySubtitle": "Informations de base",
+					"productCode": "Code produit",
+					"name": "Nom",
+					"category": "Catégorie",
+					"status": "Statut",
+					"statusSubtitle": "État et devise",
+					"currentStatus": "Statut actuel",
+					"currency": "Devise",
+					"balances": "Soldes",
+					"balancesSubtitle": "Limites min/max",
+					"minimum": "Minimum",
+					"maximum": "Maximum",
+					"notDefined": "Non défini",
+					"interestRate": "Taux d'intérêt",
+					"interestRateSubtitle": "Taux par défaut",
+					"defaultRate": "Taux par défaut",
+					"description": "Description"
 				}
 			},
 			"rates": {
@@ -530,7 +605,69 @@
 				"editing": "Modification...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"form": {
+					"rateType": "Type de taux *",
+					"rateValue": "Valeur du taux (%) *",
+					"minAmount": "Montant minimum",
+					"maxAmount": "Montant maximum",
+					"minPeriodDays": "Période minimum (jours)",
+					"maxPeriodDays": "Période maximum (jours)",
+					"calculationMethod": "Méthode de calcul *",
+					"compoundingFrequency": "Fréquence de capitalisation",
+					"effectiveFrom": "Date d'effet *",
+					"effectiveTo": "Date de fin",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler"
+				},
+				"rateTypes": {
+					"DEPOSIT": "Dépôt",
+					"LENDING": "Prêt",
+					"PENALTY": "Pénalité"
+				},
+				"calculationMethods": {
+					"SIMPLE": "Simple",
+					"COMPOUND": "Composé",
+					"FLOATING": "Variable"
+				},
+				"compoundingFrequencies": {
+					"DAILY": "Quotidien",
+					"MONTHLY": "Mensuel",
+					"QUARTERLY": "Trimestriel",
+					"YEARLY": "Annuel"
+				},
+				"table": {
+					"type": "Type",
+					"value": "Valeur",
+					"method": "Méthode",
+					"frequency": "Fréquence",
+					"active": "Actif",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Détails du taux d'intérêt",
+					"rateType": "Type de taux",
+					"rateValue": "Valeur du taux",
+					"minAmount": "Montant minimum",
+					"maxAmount": "Montant maximum",
+					"minPeriodDays": "Période minimum (jours)",
+					"maxPeriodDays": "Période maximum (jours)",
+					"calculationMethod": "Méthode de calcul",
+					"compoundingFrequency": "Fréquence de capitalisation",
+					"effectiveFrom": "Date d'effet",
+					"effectiveTo": "Date de fin",
+					"status": "Statut",
+					"active": "Actif",
+					"inactive": "Inactif",
+					"close": "Fermer"
+				},
+				"error": {
+					"invalidRateValue": "La valeur du taux doit être un nombre valide"
+				}
 			},
 			"fees": {
 				"title": "Frais",
@@ -609,7 +746,10 @@
 					"edit": "Modifier",
 					"delete": "Supprimer"
 				},
-				"deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce frais ?"
+				"deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce frais ?",
+				"modal": {
+					"title": "Détails du frais"
+				}
 			},
 			"limits": {
 				"title": "Limites",
@@ -618,7 +758,43 @@
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"form": {
+					"limitType": "Type de limite *",
+					"limitValue": "Valeur de la limite *",
+					"currency": "Devise *",
+					"periodType": "Type de période",
+					"effectiveFrom": "Date d'effet *",
+					"effectiveTo": "Date de fin",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"editTitle": "Modifier la limite"
+				},
+				"table": {
+					"type": "Type",
+					"value": "Valeur",
+					"currency": "Devise",
+					"period": "Période",
+					"active": "Actif",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Détails de la limite",
+					"limitType": "Type de limite",
+					"limitValue": "Valeur de la limite",
+					"currency": "Devise",
+					"periodType": "Type de période",
+					"effectiveFrom": "Date d'effet",
+					"effectiveTo": "Date de fin",
+					"status": "Statut",
+					"active": "Actif",
+					"inactive": "Inactif",
+					"close": "Fermer"
+				}
 			},
 			"periods": {
 				"title": "Périodes",
@@ -627,7 +803,44 @@
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"form": {
+					"periodName": "Nom de la période *",
+					"periodDays": "Durée (jours) *",
+					"periodMonths": "Durée (mois)",
+					"periodYears": "Durée (années)",
+					"interestRate": "Taux d'intérêt (%)",
+					"minAmount": "Montant minimum",
+					"maxAmount": "Montant maximum",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"editTitle": "Modifier la période"
+				},
+				"table": {
+					"name": "Nom",
+					"duration": "Durée",
+					"interestRate": "Taux d'intérêt",
+					"minAmount": "Montant min",
+					"maxAmount": "Montant max",
+					"active": "Actif",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Détails de la période",
+					"periodName": "Nom de la période",
+					"periodDays": "Durée (jours)",
+					"interestRate": "Taux d'intérêt",
+					"minAmount": "Montant minimum",
+					"maxAmount": "Montant maximum",
+					"status": "Statut",
+					"active": "Actif",
+					"inactive": "Inactif",
+					"close": "Fermer"
+				}
 			},
 			"penalties": {
 				"title": "Pénalités",
@@ -636,7 +849,49 @@
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"form": {
+					"penaltyType": "Type de pénalité *",
+					"penaltyName": "Nom de la pénalité *",
+					"calculationBase": "Base de calcul *",
+					"penaltyAmount": "Montant fixe",
+					"penaltyPercentage": "Pourcentage",
+					"minPenalty": "Pénalité minimum",
+					"maxPenalty": "Pénalité maximum",
+					"currency": "Devise *",
+					"gracePeriodDays": "Période de grâce (jours)",
+					"effectiveFrom": "Date d'effet *",
+					"effectiveTo": "Date de fin",
+					"isActive": "Actif",
+					"add": "Ajouter",
+					"adding": "Ajout...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"editTitle": "Modifier la pénalité"
+				},
+				"table": {
+					"type": "Type",
+					"name": "Nom",
+					"base": "Base",
+					"amount": "Montant",
+					"active": "Actif",
+					"actions": "Actions"
+				},
+				"modal": {
+					"title": "Détails de la pénalité",
+					"penaltyType": "Type de pénalité",
+					"penaltyName": "Nom de la pénalité",
+					"calculationBase": "Base de calcul",
+					"penaltyAmount": "Montant fixe",
+					"penaltyPercentage": "Pourcentage",
+					"effectiveFrom": "Date d'effet",
+					"effectiveTo": "Date de fin",
+					"status": "Statut",
+					"active": "Actif",
+					"inactive": "Inactif",
+					"close": "Fermer"
+				}
 			},
 			"eligibility": {
 				"title": "Règles d'éligibilité",
@@ -740,7 +995,37 @@
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
-				"updateError": "Erreur lors de la modification"
+				"updateError": "Erreur lors de la modification",
+				"form": {
+					"mappingType": "Type de mapping *",
+					"ledgerAccountId": "Compte GL *",
+					"selectLedgerAccount": "Sélectionner un compte GL",
+					"add": "Créer",
+					"creating": "Création...",
+					"edit": "Modifier",
+					"editing": "Modification...",
+					"cancel": "Annuler",
+					"newTitle": "Nouveau mapping GL",
+					"editTitle": "Modifier le mapping GL"
+				},
+				"table": {
+					"type": "Type",
+					"ledgerAccount": "Compte GL",
+					"actions": "Actions"
+				},
+				"mappingTypes": {
+					"ASSET_ACCOUNT": "Compte d'actif",
+					"LIABILITY_ACCOUNT": "Compte de passif",
+					"FEE_ACCOUNT": "Compte de frais",
+					"INTEREST_ACCOUNT": "Compte d'intérêts",
+					"REVENUE_ACCOUNT": "Compte de revenus",
+					"EXPENSE_ACCOUNT": "Compte de charges"
+				},
+				"loadingAccounts": "Chargement des comptes GL...",
+				"error": {
+					"loadAccounts": "Erreur lors du chargement des comptes GL",
+					"save": "Erreur lors de la {{action}}"
+				}
 			}
 		}
 	},
