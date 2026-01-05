@@ -97,6 +97,97 @@ const getApiBase = (): string => {
 
 const API_BASE = getApiBase();
 
+// Variable pour éviter les boucles infinies de refresh
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+// Fonction pour rafraîchir le token automatiquement
+async function refreshAccessToken(): Promise<string | null> {
+	// Si un refresh est déjà en cours, attendre qu'il se termine
+	if (isRefreshing && refreshPromise) {
+		return refreshPromise;
+	}
+
+	isRefreshing = true;
+	refreshPromise = (async () => {
+		try {
+			const refreshToken = typeof window !== 'undefined' 
+				? localStorage.getItem('refreshToken') 
+				: null;
+			
+			if (!refreshToken) {
+				return null;
+			}
+
+			const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+				method: "POST",
+				headers: { 
+					"Content-Type": "application/json",
+					...getLanguageHeader()
+				},
+				body: JSON.stringify({ refreshToken })
+			});
+
+			if (res.ok) {
+				const response = await res.json() as LoginResponse;
+				if (response.accessToken && typeof window !== 'undefined') {
+					localStorage.setItem('accessToken', response.accessToken);
+					if (response.refreshToken) {
+						localStorage.setItem('refreshToken', response.refreshToken);
+					}
+					return response.accessToken;
+				}
+			}
+			return null;
+		} catch (error) {
+			console.error("Erreur lors du refresh du token:", error);
+			return null;
+		} finally {
+			isRefreshing = false;
+			refreshPromise = null;
+		}
+	})();
+
+	return refreshPromise;
+}
+
+// Wrapper pour fetch qui gère automatiquement le refresh du token
+async function fetchWithAutoRefresh(
+	url: string | URL | Request,
+	options: RequestInit = {}
+): Promise<Response> {
+	// Faire la requête initiale
+	let response = await fetch(url, options);
+
+	// Si on reçoit une erreur 401, essayer de rafraîchir le token
+	if (response.status === 401 && !url.toString().includes('/api/auth/')) {
+		const newToken = await refreshAccessToken();
+		
+		if (newToken) {
+			// Réessayer la requête avec le nouveau token
+			const newHeaders = new Headers(options.headers);
+			newHeaders.set('Authorization', `Bearer ${newToken}`);
+			options.headers = newHeaders;
+			response = await fetch(url, options);
+		} else {
+			// Si le refresh a échoué, supprimer les tokens et rediriger
+			if (typeof window !== 'undefined') {
+				localStorage.removeItem('accessToken');
+				localStorage.removeItem('refreshToken');
+				const event = new CustomEvent("show-toast", {
+					detail: { message: "Session expirée. Veuillez vous reconnecter.", type: "error" }
+				});
+				window.dispatchEvent(event);
+				if (window.location.pathname !== '/login') {
+					window.location.href = '/login?error=session_expired';
+				}
+			}
+		}
+	}
+
+	return response;
+}
+
 async function handleJsonResponse<T>(res: Response, silent: boolean = false): Promise<T> {
 	// Gérer les réponses vides (204 No Content, etc.) avant de vérifier res.ok
 	if (res.status === 204 || (res.status >= 200 && res.status < 300 && !res.headers.get('content-type')?.includes('application/json'))) {
@@ -113,21 +204,11 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 
 	if (!res.ok) {
 		// Gérer les erreurs d'authentification (401 Unauthorized)
+		// Note: Le refresh automatique est géré par fetchWithAutoRefresh
+		// Si on arrive ici avec un 401, c'est que le refresh a échoué
 		if (res.status === 401) {
-			// Supprimer les tokens invalides
-			if (typeof window !== 'undefined') {
-				localStorage.removeItem('accessToken');
-				localStorage.removeItem('refreshToken');
-				// Afficher un toast avant la redirection
-				const event = new CustomEvent("show-toast", {
-					detail: { message: "Authentification requise. Veuillez vous connecter.", type: "error" }
-				});
-				window.dispatchEvent(event);
-				// Rediriger vers la page de login si on n'y est pas déjà
-				if (window.location.pathname !== '/login') {
-					window.location.href = '/login?error=session_expired';
-				}
-			}
+			// Le refresh automatique a déjà été tenté et a échoué
+			// Les tokens ont déjà été supprimés et la redirection faite
 			throw new Error("Authentification requise. Veuillez vous connecter.");
 		}
 
@@ -224,7 +305,7 @@ export const customersApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/customers${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -232,7 +313,7 @@ export const customersApi = {
 	},
 
 	async create(payload: CreateCustomerRequest): Promise<Customer> {
-		const res = await fetch(`${API_BASE}/api/customers`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -241,7 +322,7 @@ export const customersApi = {
 	},
 
 	async get(id: number | string): Promise<Customer> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -249,7 +330,7 @@ export const customersApi = {
 	},
 
 	async update(id: number | string, payload: Partial<CreateCustomerRequest>): Promise<Customer> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -258,7 +339,7 @@ export const customersApi = {
 	},
 
 	async getAddresses(id: number | string): Promise<Address[]> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/addresses`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -266,7 +347,7 @@ export const customersApi = {
 	},
 
 	async addAddress(id: number | string, payload: AddAddressRequest): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/addresses`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -275,7 +356,7 @@ export const customersApi = {
 	},
 
 	async updateAddress(id: number | string, addressId: number | string, payload: AddAddressRequest): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/addresses/${addressId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/addresses/${addressId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -284,7 +365,7 @@ export const customersApi = {
 	},
 
 	async getDocuments(id: number | string): Promise<Document[]> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/documents`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -296,12 +377,13 @@ export const customersApi = {
 		form.append("file", file);
 		const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 		const headers: HeadersInit = {
+			"X-Channel": "OPS", // Canal Back-Office pour core-dashboard
 			...getLanguageHeader()
 		};
 		if (token) {
 			headers["Authorization"] = `Bearer ${token}`;
 		}
-		const res = await fetch(`${API_BASE}/api/customers/${id}/documents?type=${encodeURIComponent(type)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents?type=${encodeURIComponent(type)}`, {
 			method: "POST",
 			headers: headers,
 			body: form
@@ -310,7 +392,7 @@ export const customersApi = {
 	},
 
 	getDocumentUrl(id: number | string, documentId: number | string): string {
-		return `${API_BASE}/api/customers/${id}/documents/${documentId}/download`;
+		return `${API_BASE}/api/ops/customers/${id}/documents/${documentId}/download`;
 	},
 
 	async reviewDocument(
@@ -324,7 +406,7 @@ export const customersApi = {
 		if (reviewerNote) {
 			usp.set("reviewerNote", reviewerNote);
 		}
-		const res = await fetch(`${API_BASE}/api/customers/${id}/documents/${documentId}/review?${usp.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents/${documentId}/review?${usp.toString()}`, {
 			method: "PUT",
 			headers: getAuthHeaders()
 		});
@@ -332,7 +414,7 @@ export const customersApi = {
 	},
 
 	async submitKyc(id: number | string): Promise<Customer> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/kyc/submit`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/submit`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -346,7 +428,7 @@ export const customersApi = {
 		const usp = new URLSearchParams();
 		if (typeof params.riskScore === "number") usp.set("riskScore", String(params.riskScore));
 		if (typeof params.pep === "boolean") usp.set("pep", String(params.pep));
-		const res = await fetch(`${API_BASE}/api/customers/${id}/kyc/verify?${usp.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/verify?${usp.toString()}`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -358,7 +440,7 @@ export const customersApi = {
 		if (rejectionReason) {
 			usp.set("rejectionReason", rejectionReason);
 		}
-		const res = await fetch(`${API_BASE}/api/customers/${id}/kyc/reject?${usp.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/reject?${usp.toString()}`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -366,7 +448,7 @@ export const customersApi = {
 	},
 
 	async getRelatedPersons(id: number | string): Promise<RelatedPerson[]> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/related-persons`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -374,7 +456,7 @@ export const customersApi = {
 	},
 
 	async addRelatedPerson(id: number | string, payload: AddRelatedPersonRequest): Promise<RelatedPerson> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/related-persons`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -387,7 +469,7 @@ export const customersApi = {
 		relatedPersonId: number | string,
 		payload: AddRelatedPersonRequest
 	): Promise<RelatedPerson> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons/${relatedPersonId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/related-persons/${relatedPersonId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -396,7 +478,7 @@ export const customersApi = {
 	},
 
 	async deleteRelatedPerson(id: number | string, relatedPersonId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/customers/${id}/related-persons/${relatedPersonId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/related-persons/${relatedPersonId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -417,7 +499,7 @@ export const productsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/products${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -425,7 +507,7 @@ export const productsApi = {
 	},
 
 	async create(payload: CreateProductRequest): Promise<Product> {
-		const res = await fetch(`${API_BASE}/api/products`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -434,7 +516,7 @@ export const productsApi = {
 	},
 
 	async get(id: number | string): Promise<Product> {
-		const res = await fetch(`${API_BASE}/api/products/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -442,7 +524,7 @@ export const productsApi = {
 	},
 
 	async update(id: number | string, payload: UpdateProductRequest): Promise<Product> {
-		const res = await fetch(`${API_BASE}/api/products/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -451,7 +533,7 @@ export const productsApi = {
 	},
 
 	async delete(id: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -459,7 +541,7 @@ export const productsApi = {
 	},
 
 	async activate(id: number | string): Promise<Product> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/activate`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/activate`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -467,7 +549,7 @@ export const productsApi = {
 	},
 
 	async deactivate(id: number | string): Promise<Product> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/deactivate`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/deactivate`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -476,7 +558,7 @@ export const productsApi = {
 
 	// Interest Rates
 	async getInterestRates(id: number | string): Promise<ProductInterestRate[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/interest-rates`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -484,7 +566,7 @@ export const productsApi = {
 	},
 
 	async addInterestRate(id: number | string, payload: CreateProductInterestRateRequest): Promise<ProductInterestRate> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/interest-rates`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -493,7 +575,7 @@ export const productsApi = {
 	},
 
 	async updateInterestRate(id: number | string, rateId: number | string, payload: CreateProductInterestRateRequest): Promise<ProductInterestRate> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates/${rateId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/interest-rates/${rateId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -502,7 +584,7 @@ export const productsApi = {
 	},
 
 	async deleteInterestRate(id: number | string, rateId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/interest-rates/${rateId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/interest-rates/${rateId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -511,7 +593,7 @@ export const productsApi = {
 
 	// Fees
 	async getFees(id: number | string): Promise<ProductFee[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/fees`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/fees`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -519,7 +601,7 @@ export const productsApi = {
 	},
 
 	async addFee(id: number | string, payload: CreateProductFeeRequest): Promise<ProductFee> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/fees`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/fees`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -528,7 +610,7 @@ export const productsApi = {
 	},
 
 	async updateFee(id: number | string, feeId: number | string, payload: CreateProductFeeRequest): Promise<ProductFee> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/fees/${feeId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/fees/${feeId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -537,7 +619,7 @@ export const productsApi = {
 	},
 
 	async deleteFee(id: number | string, feeId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/fees/${feeId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/fees/${feeId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -546,7 +628,7 @@ export const productsApi = {
 
 	// Limits
 	async getLimits(id: number | string): Promise<ProductLimit[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/limits`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/limits`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -554,7 +636,7 @@ export const productsApi = {
 	},
 
 	async addLimit(id: number | string, payload: CreateProductLimitRequest): Promise<ProductLimit> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/limits`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/limits`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -563,7 +645,7 @@ export const productsApi = {
 	},
 
 	async updateLimit(id: number | string, limitId: number | string, payload: CreateProductLimitRequest): Promise<ProductLimit> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/limits/${limitId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/limits/${limitId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -572,7 +654,7 @@ export const productsApi = {
 	},
 
 	async deleteLimit(id: number | string, limitId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/limits/${limitId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/limits/${limitId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -581,7 +663,7 @@ export const productsApi = {
 
 	// Periods
 	async getPeriods(id: number | string): Promise<ProductPeriod[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/periods`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/periods`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -589,7 +671,7 @@ export const productsApi = {
 	},
 
 	async addPeriod(id: number | string, payload: CreateProductPeriodRequest): Promise<ProductPeriod> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/periods`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/periods`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -598,7 +680,7 @@ export const productsApi = {
 	},
 
 	async updatePeriod(id: number | string, periodId: number | string, payload: CreateProductPeriodRequest): Promise<ProductPeriod> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/periods/${periodId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/periods/${periodId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -607,7 +689,7 @@ export const productsApi = {
 	},
 
 	async deletePeriod(id: number | string, periodId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/periods/${periodId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/periods/${periodId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -616,7 +698,7 @@ export const productsApi = {
 
 	// Penalties
 	async getPenalties(id: number | string): Promise<ProductPenalty[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/penalties`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/penalties`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -624,7 +706,7 @@ export const productsApi = {
 	},
 
 	async addPenalty(id: number | string, payload: CreateProductPenaltyRequest): Promise<ProductPenalty> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/penalties`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/penalties`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -633,7 +715,7 @@ export const productsApi = {
 	},
 
 	async updatePenalty(id: number | string, penaltyId: number | string, payload: CreateProductPenaltyRequest): Promise<ProductPenalty> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/penalties/${penaltyId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/penalties/${penaltyId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -642,7 +724,7 @@ export const productsApi = {
 	},
 
 	async deletePenalty(id: number | string, penaltyId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/penalties/${penaltyId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/penalties/${penaltyId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -651,7 +733,7 @@ export const productsApi = {
 
 	// Eligibility Rules
 	async getEligibilityRules(id: number | string): Promise<ProductEligibilityRule[]> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/eligibility-rules`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -659,7 +741,7 @@ export const productsApi = {
 	},
 
 	async addEligibilityRule(id: number | string, payload: CreateProductEligibilityRuleRequest): Promise<ProductEligibilityRule> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/eligibility-rules`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -668,7 +750,7 @@ export const productsApi = {
 	},
 
 	async updateEligibilityRule(id: number | string, ruleId: number | string, payload: CreateProductEligibilityRuleRequest): Promise<ProductEligibilityRule> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules/${ruleId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/eligibility-rules/${ruleId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -677,7 +759,7 @@ export const productsApi = {
 	},
 
 	async deleteEligibilityRule(id: number | string, ruleId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${id}/eligibility-rules/${ruleId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/eligibility-rules/${ruleId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -687,7 +769,7 @@ export const productsApi = {
 
 export const productGLMappingsApi = {
 	async list(productId: number | string): Promise<ProductGLMapping[]> {
-		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${productId}/gl-mappings`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -695,7 +777,7 @@ export const productGLMappingsApi = {
 	},
 
 	async get(productId: number | string, mappingId: number | string): Promise<ProductGLMapping> {
-		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${productId}/gl-mappings/${mappingId}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -703,7 +785,7 @@ export const productGLMappingsApi = {
 	},
 
 	async create(productId: number | string, payload: CreateProductGLMappingRequest): Promise<ProductGLMapping> {
-		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${productId}/gl-mappings`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -712,7 +794,7 @@ export const productGLMappingsApi = {
 	},
 
 	async update(productId: number | string, mappingId: number | string, payload: UpdateProductGLMappingRequest): Promise<ProductGLMapping> {
-		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${productId}/gl-mappings/${mappingId}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -721,7 +803,7 @@ export const productGLMappingsApi = {
 	},
 
 	async delete(productId: number | string, mappingId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/products/${productId}/gl-mappings/${mappingId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${productId}/gl-mappings/${mappingId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -740,8 +822,8 @@ export const accountsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const url = `${API_BASE}/api/accounts${query ? `?${query}` : ""}`;
-		const res = await fetch(url, {
+		const url = `${API_BASE}/api/ops/accounts${query ? `?${query}` : ""}`;
+		const res = await fetchWithAutoRefresh(url, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -749,7 +831,7 @@ export const accountsApi = {
 	},
 
 	async get(id: number | string): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -757,7 +839,7 @@ export const accountsApi = {
 	},
 
 	async getByAccountNumber(accountNumber: string): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/by-number/${encodeURIComponent(accountNumber)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/by-number/${encodeURIComponent(accountNumber)}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -765,7 +847,7 @@ export const accountsApi = {
 	},
 
 	async getClientAccounts(clientId: number | string): Promise<Account[]> {
-		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/accounts`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/clients/${clientId}/accounts`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -773,7 +855,7 @@ export const accountsApi = {
 	},
 
 	async countClientAccounts(clientId: number | string): Promise<number> {
-		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/count`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/clients/${clientId}/count`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -781,7 +863,7 @@ export const accountsApi = {
 	},
 
 	async openProduct(clientId: number | string, payload: OpenProductRequest): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/clients/${clientId}/open-product`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/clients/${clientId}/open-product`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -790,7 +872,7 @@ export const accountsApi = {
 	},
 
 	async close(id: number | string, payload: CloseAccountRequest): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}/close`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}/close`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -799,7 +881,7 @@ export const accountsApi = {
 	},
 
 	async freeze(id: number | string, payload?: FreezeAccountRequest): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}/freeze`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}/freeze`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: payload ? JSON.stringify(payload) : undefined
@@ -808,7 +890,7 @@ export const accountsApi = {
 	},
 
 	async unfreeze(id: number | string): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}/unfreeze`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}/unfreeze`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -816,7 +898,7 @@ export const accountsApi = {
 	},
 
 	async suspend(id: number | string, payload?: SuspendAccountRequest): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}/suspend`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}/suspend`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: payload ? JSON.stringify(payload) : undefined
@@ -825,7 +907,7 @@ export const accountsApi = {
 	},
 
 	async unsuspend(id: number | string): Promise<Account> {
-		const res = await fetch(`${API_BASE}/api/accounts/${id}/unsuspend`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${id}/unsuspend`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -850,6 +932,7 @@ function getAuthHeaders(): HeadersInit {
 	const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 	const headers: HeadersInit = { 
 		"Content-Type": "application/json",
+		"X-Channel": "OPS", // Canal Back-Office pour core-dashboard
 		...getLanguageHeader()
 	};
 	
@@ -936,7 +1019,7 @@ export const usersApi = {
 		const usp = new URLSearchParams();
 		if (params?.status) usp.set("status", params.status);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/users${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -944,7 +1027,7 @@ export const usersApi = {
 	},
 
 	async get(id: number | string): Promise<User> {
-		const res = await fetch(`${API_BASE}/api/users/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -952,7 +1035,7 @@ export const usersApi = {
 	},
 
 	async create(payload: CreateUserRequest): Promise<User> {
-		const res = await fetch(`${API_BASE}/api/users`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -961,7 +1044,7 @@ export const usersApi = {
 	},
 
 	async update(id: number | string, payload: UpdateUserRequest): Promise<User> {
-		const res = await fetch(`${API_BASE}/api/users/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -970,7 +1053,7 @@ export const usersApi = {
 	},
 
 	async delete(id: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/users/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users/${id}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -978,7 +1061,7 @@ export const usersApi = {
 	},
 
 	async assignRole(userId: number | string, payload: AssignRoleRequest): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/users/${userId}/roles`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users/${userId}/roles`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -987,7 +1070,7 @@ export const usersApi = {
 	},
 
 	async revokeRole(userId: number | string, roleId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/users/${userId}/roles/${roleId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users/${userId}/roles/${roleId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -997,7 +1080,7 @@ export const usersApi = {
 
 export const rolesApi = {
 	async list(): Promise<Role[]> {
-		const res = await fetch(`${API_BASE}/api/roles`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1005,7 +1088,7 @@ export const rolesApi = {
 	},
 
 	async get(id: number | string): Promise<Role> {
-		const res = await fetch(`${API_BASE}/api/roles/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1013,7 +1096,7 @@ export const rolesApi = {
 	},
 
 	async create(payload: CreateRoleRequest): Promise<Role> {
-		const res = await fetch(`${API_BASE}/api/roles`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1022,7 +1105,7 @@ export const rolesApi = {
 	},
 
 	async update(id: number | string, payload: UpdateRoleRequest): Promise<Role> {
-		const res = await fetch(`${API_BASE}/api/roles/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1031,7 +1114,7 @@ export const rolesApi = {
 	},
 
 	async assignPermissions(roleId: number | string, payload: AssignPermissionsRequest): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/roles/${roleId}/permissions`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles/${roleId}/permissions`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1040,7 +1123,7 @@ export const rolesApi = {
 	},
 
 	async revokePermission(roleId: number | string, permissionId: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/roles/${roleId}/permissions/${permissionId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles/${roleId}/permissions/${permissionId}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -1053,7 +1136,7 @@ export const permissionsApi = {
 		const usp = new URLSearchParams();
 		if (params?.resource) usp.set("resource", params.resource);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/permissions${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1061,7 +1144,7 @@ export const permissionsApi = {
 	},
 
 	async create(payload: CreatePermissionRequest): Promise<Permission> {
-		const res = await fetch(`${API_BASE}/api/permissions`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1089,7 +1172,7 @@ export const auditApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/audit/events${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/events${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1097,7 +1180,7 @@ export const auditApi = {
 	},
 
 	async getEvent(id: number): Promise<AuditEvent> {
-		const res = await fetch(`${API_BASE}/api/audit/events/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/events/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1105,7 +1188,7 @@ export const auditApi = {
 	},
 
 	async getStatistics(): Promise<import("@/types").AuditStatisticsResponse> {
-		const res = await fetch(`${API_BASE}/api/audit/statistics`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/statistics`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1120,7 +1203,7 @@ export const auditApi = {
 		if (params?.fromDate) usp.set("fromDate", params.fromDate);
 		if (params?.toDate) usp.set("toDate", params.toDate);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/audit/users/${userId}/activity${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/users/${userId}/activity${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1128,7 +1211,7 @@ export const auditApi = {
 	},
 
 	async getResourceTrace(resourceType: string, resourceId: number): Promise<import("@/types").AuditResourceTraceResponse> {
-		const res = await fetch(`${API_BASE}/api/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1136,7 +1219,7 @@ export const auditApi = {
 	},
 
 	async getResourceAccesses(resourceType: string, resourceId: number): Promise<AuditEvent[]> {
-		const res = await fetch(`${API_BASE}/api/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}/accesses`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/resources/${encodeURIComponent(resourceType)}/${resourceId}/accesses`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1157,7 +1240,7 @@ export const auditApi = {
 		if (params?.fromDate) usp.set("fromDate", params.fromDate);
 		if (params?.toDate) usp.set("toDate", params.toDate);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/audit/export${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/export${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1174,7 +1257,7 @@ export const chartOfAccountsApi = {
 		if (params?.accountType) usp.set("accountType", params.accountType);
 		if (params?.isActive !== undefined) usp.set("isActive", String(params.isActive));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1182,7 +1265,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async getRootAccounts(): Promise<ChartOfAccount[]> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/root`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/root`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1190,7 +1273,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async get(id: number | string): Promise<ChartOfAccount> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1198,7 +1281,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async getByCode(code: string): Promise<ChartOfAccount> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/by-code/${encodeURIComponent(code)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/by-code/${encodeURIComponent(code)}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1206,7 +1289,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async getChildren(parentCode: string): Promise<ChartOfAccount[]> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/parent/${encodeURIComponent(parentCode)}/children`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/parent/${encodeURIComponent(parentCode)}/children`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1214,7 +1297,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async create(payload: CreateChartOfAccountRequest): Promise<ChartOfAccount> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1223,7 +1306,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async update(id: number | string, payload: UpdateChartOfAccountRequest): Promise<ChartOfAccount> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1232,7 +1315,7 @@ export const chartOfAccountsApi = {
 	},
 
 	async delete(id: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/chart-of-accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/chart-of-accounts/${id}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -1247,7 +1330,7 @@ export const ledgerAccountsApi = {
 		if (params?.currency) usp.set("currency", params.currency);
 		if (params?.status) usp.set("status", params.status);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/ledger-accounts${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1255,7 +1338,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async get(id: number | string): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1263,7 +1346,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async getByCode(code: string): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/by-code/${encodeURIComponent(code)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/by-code/${encodeURIComponent(code)}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1271,7 +1354,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async create(payload: CreateLedgerAccountRequest): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1280,7 +1363,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async update(id: number | string, payload: UpdateLedgerAccountRequest): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1289,7 +1372,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async activate(id: number | string): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/activate`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}/activate`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1297,7 +1380,7 @@ export const ledgerAccountsApi = {
 	},
 
 	async deactivate(id: number | string): Promise<LedgerAccount> {
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/deactivate`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}/deactivate`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1309,7 +1392,7 @@ export const ledgerAccountsApi = {
 		if (params?.startDate) usp.set("startDate", params.startDate);
 		if (params?.endDate) usp.set("endDate", params.endDate);
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/ledger-accounts/${id}/entries${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}/entries${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1336,7 +1419,7 @@ export const transactionsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/transactions${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1344,7 +1427,7 @@ export const transactionsApi = {
 	},
 
 	async get(id: number | string): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/transactions/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1352,7 +1435,7 @@ export const transactionsApi = {
 	},
 
 	async getByNumber(transactionNumber: string): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/transactions/by-number/${encodeURIComponent(transactionNumber)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/by-number/${encodeURIComponent(transactionNumber)}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1364,7 +1447,7 @@ export const transactionsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1372,7 +1455,7 @@ export const transactionsApi = {
 	},
 
 	async getEntries(id: number | string): Promise<TransactionEntry[]> {
-		const res = await fetch(`${API_BASE}/api/transactions/${id}/entries`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/${id}/entries`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1384,7 +1467,7 @@ export const transactionsApi = {
 		if (idempotencyKey) {
 			(headers as Record<string, string>)["Idempotency-Key"] = idempotencyKey;
 		}
-		const res = await fetch(`${API_BASE}/api/transactions`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions`, {
 			method: "POST",
 			headers: headers,
 			body: JSON.stringify(payload)
@@ -1393,7 +1476,7 @@ export const transactionsApi = {
 	},
 
 	async reverse(id: number | string, payload: ReverseTransactionRequest): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/transactions/${id}/reverse`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/${id}/reverse`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1421,7 +1504,7 @@ export const transfersApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/transfers${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1429,7 +1512,7 @@ export const transfersApi = {
 	},
 
 	async get(id: number | string): Promise<Transfer> {
-		const res = await fetch(`${API_BASE}/api/transfers/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1437,7 +1520,7 @@ export const transfersApi = {
 	},
 
 	async getByNumber(transferNumber: string): Promise<Transfer> {
-		const res = await fetch(`${API_BASE}/api/transfers/by-number/${encodeURIComponent(transferNumber)}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers/by-number/${encodeURIComponent(transferNumber)}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1445,7 +1528,7 @@ export const transfersApi = {
 	},
 
 	async getAccountTransfers(accountId: number | string): Promise<Transfer[]> {
-		const res = await fetch(`${API_BASE}/api/transfers/accounts/${accountId}/transfers`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers/accounts/${accountId}/transfers`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1457,7 +1540,7 @@ export const transfersApi = {
 		if (idempotencyKey) {
 			(headers as Record<string, string>)["Idempotency-Key"] = idempotencyKey;
 		}
-		const res = await fetch(`${API_BASE}/api/transfers`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers`, {
 			method: "POST",
 			headers: headers,
 			body: JSON.stringify(payload)
@@ -1466,7 +1549,7 @@ export const transfersApi = {
 	},
 
 	async cancel(id: number | string, payload: CancelTransferRequest): Promise<Transfer> {
-		const res = await fetch(`${API_BASE}/api/transfers/${id}/cancel`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers/${id}/cancel`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1477,7 +1560,7 @@ export const transfersApi = {
 
 export const holdsApi = {
 	async get(id: number | string): Promise<Hold> {
-		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/holds/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1485,7 +1568,7 @@ export const holdsApi = {
 	},
 
 	async getAccountHolds(accountId: number | string): Promise<Hold[]> {
-		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/holds`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/accounts/${accountId}/holds`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1493,7 +1576,7 @@ export const holdsApi = {
 	},
 
 	async create(accountId: number | string, payload: CreateHoldRequest): Promise<Hold> {
-		const res = await fetch(`${API_BASE}/api/transactions/accounts/${accountId}/holds`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/accounts/${accountId}/holds`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1502,7 +1585,7 @@ export const holdsApi = {
 	},
 
 	async release(id: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/holds/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/holds/${id}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -1510,7 +1593,7 @@ export const holdsApi = {
 	},
 
 	async apply(holdId: number | string, transactionId: number | string): Promise<Hold> {
-		const res = await fetch(`${API_BASE}/api/transactions/holds/${holdId}/apply?transactionId=${transactionId}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/holds/${holdId}/apply?transactionId=${transactionId}`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1520,7 +1603,7 @@ export const holdsApi = {
 
 export const interestsApi = {
 	async calculateInterest(accountId: number | string, periodDays: number = 30): Promise<any> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/calculation?periodDays=${periodDays}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/interest/calculation?periodDays=${periodDays}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1529,7 +1612,7 @@ export const interestsApi = {
 	},
 
 	async applyInterest(accountId: number | string, payload: { periodDays: number; description?: string; valueDate?: string }): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/apply`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/interest/apply`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1543,7 +1626,7 @@ export const interestsApi = {
 		if (toDate) params.append("toDate", toDate);
 		params.append("page", page.toString());
 		params.append("size", size.toString());
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/history?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/interest/history?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1554,7 +1637,7 @@ export const interestsApi = {
 		const params = new URLSearchParams();
 		if (fromDate) params.append("fromDate", fromDate);
 		if (toDate) params.append("toDate", toDate);
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/interest/history/list?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/interest/history/list?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1564,7 +1647,7 @@ export const interestsApi = {
 
 export const feesApi = {
 	async getApplicableFees(accountId: number | string): Promise<ProductFee[]> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/applicable`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/applicable`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1573,7 +1656,7 @@ export const feesApi = {
 	},
 
 	async calculateFee(accountId: number | string, feeType: string): Promise<any> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/calculation?feeType=${feeType}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/calculation?feeType=${feeType}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1581,7 +1664,7 @@ export const feesApi = {
 	},
 
 	async applyFee(accountId: number | string, payload: { feeType: string; description?: string; waiveFee?: boolean; waiverReason?: string; valueDate?: string }): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/apply`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/apply`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1590,7 +1673,7 @@ export const feesApi = {
 	},
 
 	async waiveFee(accountId: number | string, payload: { feeType: string; description?: string; waiverReason: string; valueDate?: string }): Promise<Transaction> {
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/waive`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/waive`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1604,7 +1687,7 @@ export const feesApi = {
 		if (toDate) params.append("toDate", toDate);
 		params.append("page", page.toString());
 		params.append("size", size.toString());
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/history?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/history?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1615,7 +1698,7 @@ export const feesApi = {
 		const params = new URLSearchParams();
 		if (fromDate) params.append("fromDate", fromDate);
 		if (toDate) params.append("toDate", toDate);
-		const res = await fetch(`${API_BASE}/api/accounts/${accountId}/fees/history/list?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/accounts/${accountId}/fees/history/list?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1625,7 +1708,7 @@ export const feesApi = {
 
 export const dashboardApi = {
 	async getStats(): Promise<any> {
-		const res = await fetch(`${API_BASE}/api/dashboard/stats`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/dashboard/stats`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1633,7 +1716,7 @@ export const dashboardApi = {
 	},
 
 	async getRecentTransactions(limit: number = 10): Promise<Transaction[]> {
-		const res = await fetch(`${API_BASE}/api/dashboard/recent-transactions?limit=${limit}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/dashboard/recent-transactions?limit=${limit}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1641,7 +1724,7 @@ export const dashboardApi = {
 	},
 
 	async getRecentAccounts(limit: number = 10): Promise<Account[]> {
-		const res = await fetch(`${API_BASE}/api/dashboard/recent-accounts?limit=${limit}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/dashboard/recent-accounts?limit=${limit}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1652,7 +1735,7 @@ export const dashboardApi = {
 		const params = new URLSearchParams();
 		if (fromDate) params.append("fromDate", fromDate);
 		if (toDate) params.append("toDate", toDate);
-		const res = await fetch(`${API_BASE}/api/dashboard/transaction-stats-by-type?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/dashboard/transaction-stats-by-type?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1681,7 +1764,7 @@ export const journalBatchesApi = {
 		if (params?.page !== undefined) usp.set("page", params.page.toString());
 		if (params?.size !== undefined) usp.set("size", params.size.toString());
 		const query = usp.toString();
-		const res = await fetch(`${API_BASE}/api/journal-batches${query ? `?${query}` : ""}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1695,7 +1778,7 @@ export const journalBatchesApi = {
 	},
 
 	async get(id: number | string): Promise<JournalBatch> {
-		const res = await fetch(`${API_BASE}/api/journal-batches/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1703,7 +1786,7 @@ export const journalBatchesApi = {
 	},
 
 	async create(payload: CreateJournalBatchRequest): Promise<JournalBatch> {
-		const res = await fetch(`${API_BASE}/api/journal-batches`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1712,7 +1795,7 @@ export const journalBatchesApi = {
 	},
 
 	async post(id: number | string): Promise<JournalBatch> {
-		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/post`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/post`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1720,7 +1803,7 @@ export const journalBatchesApi = {
 	},
 
 	async close(id: number | string): Promise<JournalBatch> {
-		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/close`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/close`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1728,7 +1811,7 @@ export const journalBatchesApi = {
 	},
 
 	async getEntries(id: number | string): Promise<LedgerEntry[]> {
-		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/entries`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/entries`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1736,7 +1819,7 @@ export const journalBatchesApi = {
 	},
 
 	async recalculateTotals(id: number | string): Promise<void> {
-		const res = await fetch(`${API_BASE}/api/journal-batches/${id}/recalculate-totals`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/recalculate-totals`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
@@ -1746,7 +1829,7 @@ export const journalBatchesApi = {
 
 export const closuresApi = {
 	async closeDay(payload: CloseDayRequest): Promise<Closure> {
-		const res = await fetch(`${API_BASE}/api/admin/close-day`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-day`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1755,7 +1838,7 @@ export const closuresApi = {
 	},
 
 	async closeMonth(payload: CloseMonthRequest): Promise<Closure> {
-		const res = await fetch(`${API_BASE}/api/admin/close-month`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-month`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
@@ -1764,7 +1847,7 @@ export const closuresApi = {
 	},
 
 	async getClosure(id: number | string): Promise<Closure> {
-		const res = await fetch(`${API_BASE}/api/admin/closures/${id}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures/${id}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1784,7 +1867,7 @@ export const closuresApi = {
 		if (date) params.append("date", date);
 		params.append("page", page.toString());
 		params.append("size", size.toString());
-		const res = await fetch(`${API_BASE}/api/admin/closures?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1800,7 +1883,7 @@ export const closuresApi = {
 		if (closureType) params.append("closureType", closureType);
 		if (status) params.append("status", status);
 		if (date) params.append("date", date);
-		const res = await fetch(`${API_BASE}/api/admin/closures/list?${params.toString()}`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures/list?${params.toString()}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
@@ -1808,7 +1891,7 @@ export const closuresApi = {
 	},
 
 	async validateClosure(id: number | string): Promise<ClosureValidationResponse> {
-		const res = await fetch(`${API_BASE}/api/admin/closures/${id}/validation`, {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures/${id}/validation`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
