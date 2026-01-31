@@ -47,6 +47,7 @@ import type {
 	CreateRoleRequest,
 	UpdateRoleRequest,
 	CreatePermissionRequest,
+	UpdatePermissionRequest,
 	AssignRoleRequest,
 	AssignPermissionsRequest,
 	UserStatus,
@@ -241,7 +242,7 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 			throw error;
 		}
 
-		// Gérer les autres erreurs
+		// Gérer les autres erreurs (400 Bad Request, etc.)
 		let errorMessage = `HTTP ${res.status}`;
 		if (text) {
 			// Essayer de parser comme JSON pour les erreurs de validation
@@ -254,15 +255,28 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 					errorMessage = json.error;
 				} else if (json.errors) {
 					// Si c'est un objet d'erreurs de validation
-					const errors = typeof json.errors === 'string' 
-						? json.errors 
-						: Object.values(json.errors).join(', ');
-					errorMessage = errors || text;
+					if (typeof json.errors === 'string') {
+						// Si errors est une string, essayer de la parser comme JSON
+						try {
+							const parsedErrors = JSON.parse(json.errors);
+							if (typeof parsedErrors === 'object') {
+								errorMessage = Object.values(parsedErrors).join(', ');
+							} else {
+								errorMessage = json.errors;
+							}
+						} catch {
+							errorMessage = json.errors;
+						}
+					} else if (typeof json.errors === 'object') {
+						errorMessage = Object.values(json.errors).join(', ');
+					} else {
+						errorMessage = String(json.errors);
+					}
 				} else {
 					errorMessage = text;
 				}
 			} catch {
-				errorMessage = text;
+				errorMessage = text || `HTTP ${res.status}`;
 			}
 		}
 		
@@ -274,7 +288,7 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 			window.dispatchEvent(event);
 		}
 		
-		throw new Error(errorMessage);
+		return undefined as T;
 	}
 
 	// Si la réponse est OK, parser le JSON
@@ -949,15 +963,33 @@ function getAuthHeaders(): HeadersInit {
 
 export const authApi = {
 	async login(payload: LoginRequest): Promise<LoginResponse> {
+		// Validation côté client
+		if (!payload.username || !payload.username.trim()) {
+			throw new Error("Le nom d'utilisateur est requis");
+		}
+		if (!payload.password || !payload.password.trim()) {
+			throw new Error("Le mot de passe est requis");
+		}
+
+		const requestBody = JSON.stringify(payload);
+		
+		// Log en développement pour déboguer
+		if (process.env.NODE_ENV === 'development') {
+			console.log('Login request:', { url: `${API_BASE}/api/auth/login`, payload: { username: payload.username, password: '***' } });
+		}
+
 		const res = await fetch(`${API_BASE}/api/auth/login`, {
 			method: "POST",
 			headers: { 
 				"Content-Type": "application/json",
 				...getLanguageHeader()
 			},
-			body: JSON.stringify(payload)
+			body: requestBody
 		});
 		const response = await handleJsonResponse<LoginResponse>(res);
+		if (!response) {
+			throw new Error("Erreur lors de la connexion");
+		}
 		// Stocker les tokens
 		if (typeof window !== 'undefined' && response && response.accessToken) {
 			localStorage.setItem('accessToken', response.accessToken);
@@ -1014,16 +1046,28 @@ export const authApi = {
 	}
 };
 
+export type UserPageResponse = {
+	content: User[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+	first: boolean;
+	last: boolean;
+};
+
 export const usersApi = {
-	async list(params?: { status?: UserStatus }): Promise<User[]> {
+	async list(params?: { status?: UserStatus; page?: number; size?: number }): Promise<UserPageResponse> {
 		const usp = new URLSearchParams();
 		if (params?.status) usp.set("status", params.status);
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
 		const query = usp.toString();
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<User[]>(res);
+		return handleJsonResponse<UserPageResponse>(res);
 	},
 
 	async get(id: number | string): Promise<User> {
@@ -1128,19 +1172,57 @@ export const rolesApi = {
 			headers: getAuthHeaders()
 		});
 		await handleJsonResponse(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/roles/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		if (!res.ok) {
+			const data = await res.json().catch(() => ({}));
+			const message = (data as { message?: string }).message ?? res.statusText;
+			throw new Error(message);
+		}
 	}
 };
 
+export type PermissionPageResponse = {
+	content: Permission[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+	first: boolean;
+	last: boolean;
+};
+
 export const permissionsApi = {
-	async list(params?: { resource?: string }): Promise<Permission[]> {
+	async list(params?: {
+		resource?: string;
+		page?: number;
+		size?: number;
+		sortBy?: string;
+		sortDir?: string;
+	}): Promise<PermissionPageResponse> {
 		const usp = new URLSearchParams();
 		if (params?.resource) usp.set("resource", params.resource);
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
+		if (params?.sortBy) usp.set("sortBy", params.sortBy);
+		if (params?.sortDir) usp.set("sortDir", params.sortDir);
 		const query = usp.toString();
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions${query ? `?${query}` : ""}`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<Permission[]>(res);
+		return handleJsonResponse<PermissionPageResponse>(res);
+	},
+
+	/** Returns first 500 permissions (for role assignment dropdowns). */
+	async listAll(params?: { resource?: string }): Promise<Permission[]> {
+		const data = await permissionsApi.list({ ...params, page: 0, size: 500 });
+		return data.content;
 	},
 
 	async create(payload: CreatePermissionRequest): Promise<Permission> {
@@ -1150,6 +1232,23 @@ export const permissionsApi = {
 			body: JSON.stringify(payload)
 		});
 		return handleJsonResponse<Permission>(res);
+	},
+
+	async update(id: number | string, payload: UpdatePermissionRequest): Promise<Permission> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Permission>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
 	}
 };
 

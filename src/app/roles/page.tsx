@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import { KeyRound, ShieldCheck, RefreshCw, Plus, AlertCircle, Loader2, ChevronRight } from "lucide-react";
 import { rolesApi } from "@/lib/api";
 import type { Role } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 
 export default function RolesPage() {
+	const { t } = useTranslation();
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [roles, setRoles] = useState<Role[]>([]);
@@ -23,62 +26,155 @@ export default function RolesPage() {
 			const data = await rolesApi.list();
 			setRoles(data);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement des rôles");
+			setError(e?.message ?? t("role.errors.loadError"));
 		} finally {
 			setLoading(false);
 		}
 	}
 
+	const roleList = Array.isArray(roles) ? roles : [];
+
+	const stats = useMemo(() => {
+		const totalPermissions = roleList.reduce((acc, role) => acc + (role.permissions?.length || 0), 0);
+		return {
+			total: roleList.length,
+			totalPermissions
+		};
+	}, [roles]);
+
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
+			{/* En-tête */}
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Rôles</h1>
-					<p className="text-gray-600 mt-1">Gestion des rôles et permissions</p>
+					<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+						{t("sidebar.roles")}
+					</h1>
+					<p className="text-gray-500 mt-1">{t("role.description")}</p>
 				</div>
-				<Link href="/roles/new">
-					<Button className="flex items-center gap-2">
-						<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-						</svg>
-						Nouveau rôle
+				<div className="flex gap-3">
+					<Button onClick={load} variant="outline" className="gap-2" disabled={loading}>
+						<RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+						{t("common.refresh")}
 					</Button>
-				</Link>
+					<Link href="/roles/new">
+						<Button className="gap-2">
+							<Plus className="w-5 h-5" />
+							{t("role.new.title")}
+						</Button>
+					</Link>
+				</div>
 			</div>
 
+			{/* Statistiques */}
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 overflow-hidden">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium text-gray-500">{t("role.stats.total")}</p>
+							<p className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</p>
+						</div>
+						<div className="w-14 h-14 rounded-xl bg-indigo-100 flex items-center justify-center">
+							<KeyRound className="w-7 h-7 text-indigo-600" />
+						</div>
+					</div>
+				</div>
+				<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 overflow-hidden">
+					<div className="flex items-center justify-between">
+						<div>
+							<p className="text-sm font-medium text-gray-500">{t("role.stats.totalPermissions")}</p>
+							<p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalPermissions}</p>
+						</div>
+						<div className="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center">
+							<ShieldCheck className="w-7 h-7 text-teal-600" />
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Erreur */}
 			{error && (
-				<div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded">
-					{error}
+				<div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+					<AlertCircle className="w-5 h-5 shrink-0 text-red-500" />
+					<span className="font-medium">{error}</span>
 				</div>
 			)}
 
+			{/* Liste */}
 			{loading ? (
-				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
-					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement des rôles...</p>
+				<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
+					<Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto" />
+					<p className="mt-4 text-gray-600 font-medium">{t("common.loading")}</p>
 				</div>
-			) : roles.length === 0 ? (
-				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
-					<p className="text-gray-500 text-lg font-medium">Aucun rôle trouvé</p>
+			) : roleList.length === 0 ? (
+				<div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center max-w-md mx-auto">
+					<div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+						<KeyRound className="w-8 h-8 text-gray-400" />
+					</div>
+					<p className="text-gray-700 text-lg font-semibold">{t("role.table.noRoles")}</p>
+					<p className="text-gray-500 text-sm mt-1">{t("role.table.noRolesHint")}</p>
+					<Link href="/roles/new" className="mt-6 inline-flex">
+						<Button className="gap-2">
+							<Plus className="w-4 h-4" />
+							{t("role.new.title")}
+						</Button>
+					</Link>
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{roles.map(role => (
-						<Link key={role.id} href={`/roles/${role.id}`}>
-							<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
-								<h3 className="text-xl font-semibold text-gray-900 mb-2">{role.name}</h3>
-								{role.description && (
-									<p className="text-gray-600 text-sm mb-4">{role.description}</p>
-								)}
-								<div className="flex flex-wrap gap-2">
-									{role.permissions && role.permissions.length > 0 ? (
-										role.permissions.map(permission => (
-											<Badge key={permission.id} className="bg-green-100 text-green-800 text-xs">
-												{permission.name}
-											</Badge>
-										))
+					{roleList.map((role) => (
+						<Link key={role.id} href={`/roles/${role.id}`} className="group block h-full">
+							<div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden h-full flex flex-col hover:shadow-md hover:border-indigo-200/60 transition-all duration-200">
+								{/* En-tête de la carte */}
+								<div className="bg-gradient-to-r from-indigo-50/80 to-transparent px-5 pt-5 pb-3">
+									<div className="flex items-start gap-3">
+										<div className="w-11 h-11 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0 group-hover:bg-indigo-200/80 transition-colors">
+											<KeyRound className="w-5 h-5 text-indigo-600" />
+										</div>
+										<div className="min-w-0 flex-1">
+											<h3 className="text-lg font-semibold text-gray-900 truncate">
+												{role.name}
+											</h3>
+											{role.permissions && role.permissions.length > 0 && (
+												<Badge variant="info" className="mt-1.5 text-xs">
+													{role.permissions.length} {t("role.table.permissions").toLowerCase()}
+												</Badge>
+											)}
+										</div>
+										<ChevronRight className="w-5 h-5 text-gray-400 shrink-0 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+									</div>
+								</div>
+								{/* Corps */}
+								<div className="p-5 pt-2 flex flex-col flex-1">
+									{role.description ? (
+										<p className="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3 flex-1">
+											{role.description}
+										</p>
 									) : (
-										<span className="text-gray-400 text-sm">Aucune permission</span>
+										<p className="text-gray-400 text-sm italic mb-4 flex-1">
+											{t("role.detail.noDescription")}
+										</p>
+									)}
+									<div className="flex flex-wrap gap-1.5">
+										{role.permissions && role.permissions.length > 0 ? (
+											role.permissions.slice(0, 4).map((permission) => (
+												<Badge
+													key={permission.id}
+													variant="success"
+													className="text-xs font-medium"
+												>
+													{permission.name}
+												</Badge>
+											))
+										) : null}
+										{role.permissions && role.permissions.length > 4 && (
+											<Badge variant="neutral" className="text-xs">
+												+{role.permissions.length - 4}
+											</Badge>
+										)}
+									</div>
+									{role.permissions && role.permissions.length === 0 && (
+										<span className="text-gray-400 text-sm">{t("role.table.noPermissions")}</span>
 									)}
 								</div>
 							</div>
@@ -89,25 +185,3 @@ export default function RolesPage() {
 		</div>
 	);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

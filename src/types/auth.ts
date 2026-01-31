@@ -108,6 +108,13 @@ export interface CreatePermissionRequest {
 	description?: string | null;
 }
 
+export interface UpdatePermissionRequest {
+	name?: string;
+	resource?: string;
+	action?: string;
+	description?: string | null;
+}
+
 export interface AssignRoleRequest {
 	roleId: number;
 }

@@ -33,9 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 	const login = async (username: string, password: string) => {
 		const response = await authApi.login({ username, password });
-		setUser(response.user);
-		// Mettre à jour l'état d'authentification après la connexion
-		setIsAuthenticated(true);
+		if (response && response.user) {
+			setUser(response.user);
+			// Mettre à jour l'état d'authentification après la connexion
+			setIsAuthenticated(true);
+		}
 	};
 
 	const logout = async () => {

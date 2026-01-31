@@ -46,7 +46,7 @@
 		"governance": "Gouvernance",
 		"roles": "Rôles",
 		"approvals": "Approbations",
-		"auditCompliance": "Audit & Conformité",
+		"auditCompliance": "Audit",
 		"auditEvents": "Événements d'audit",
 		"accessLogs": "Journaux d'accès",
 		"notifications": "Notifications",
@@ -122,6 +122,10 @@
 		"updatedAt": "Modifié le",
 		"yes": "Oui",
 		"no": "Non",
+		"actions": "Actions",
+		"edit": "Modifier",
+		"update": "Mettre à jour",
+		"delete": "Supprimer",
 		"accountStatuses": {
 			"ACTIVE": "Actif",
 			"CLOSED": "Fermé",
@@ -1453,5 +1457,264 @@
 		"updatedAt": "Modifié le",
 		"yes": "Oui",
 		"no": "Non"
+	},
+	"user": {
+		"new": "Nouvel utilisateur",
+		"description": "Gestion des utilisateurs du système",
+		"errors": {
+			"unknown": "Une erreur inconnue s'est produite",
+			"loadError": "Erreur lors du chargement des utilisateurs"
+		},
+		"stats": {
+			"total": "Total",
+			"active": "Actifs",
+			"inactive": "Inactifs",
+			"locked": "Verrouillés",
+			"expired": "Expirés"
+		},
+		"filters": {
+			"title": "Filtres",
+			"search": "Rechercher",
+			"searchPlaceholder": "Nom, email, username...",
+			"status": "Statut"
+		},
+		"statuses": {
+			"ACTIVE": "Actif",
+			"INACTIVE": "Inactif",
+			"LOCKED": "Verrouillé",
+			"EXPIRED": "Expiré"
+		},
+		"table": {
+			"username": "Username",
+			"roles": "Rôles",
+			"actions": "Actions",
+			"view": "Voir",
+			"noUsers": "Aucun utilisateur trouvé",
+			"noUsersHint": "Essayez de modifier vos critères de recherche",
+			"pagination": {
+				"showing": "Affichage de",
+				"user": "utilisateur",
+				"users": "utilisateurs",
+				"range": "{{from}} – {{to}} sur {{total}}",
+				"itemsPerPage": "Par page",
+				"page": "Page {{current}} sur {{total}}",
+				"previous": "Précédent",
+				"next": "Suivant"
+			}
+		},
+		"new": {
+			"title": "Nouvel utilisateur",
+			"description": "Créer un nouveau compte utilisateur",
+			"backToList": "Retour à la liste",
+			"form": {
+				"username": "Username",
+				"usernameRequired": "*",
+				"usernamePlaceholder": "username",
+				"email": "Email",
+				"emailRequired": "*",
+				"emailPlaceholder": "email@example.com",
+				"password": "Mot de passe",
+				"passwordRequired": "*",
+				"passwordPlaceholder": "Minimum 8 caractères",
+				"firstName": "Prénom",
+				"firstNamePlaceholder": "Prénom",
+				"lastName": "Nom",
+				"lastNamePlaceholder": "Nom",
+				"status": "Statut",
+				"roles": "Rôles",
+				"selected": "sélectionné",
+				"selectedPlural": "sélectionnés",
+				"create": "Créer l'utilisateur",
+				"creating": "Création...",
+				"cancel": "Annuler"
+			},
+			"errors": {
+				"createError": "Erreur lors de la création de l'utilisateur",
+				"loadRolesError": "Erreur lors du chargement des rôles"
+			}
+		},
+		"detail": {
+			"title": "Détails de l'utilisateur",
+			"backToList": "Retour à la liste",
+			"information": "Informations",
+			"id": "ID",
+			"username": "Username",
+			"email": "Email",
+			"firstName": "Prénom",
+			"lastName": "Nom",
+			"status": "Statut",
+			"roles": "Rôles",
+			"assignedRoles": "Rôles assignés",
+			"assignRole": "Assigner un rôle",
+			"selectRole": "Sélectionner un rôle…",
+			"revoke": "Retirer",
+			"noRolesAssigned": "Aucun rôle assigné",
+			"allRolesAssigned": "Tous les rôles sont déjà assignés",
+			"edit": "Modifier",
+			"save": "Enregistrer",
+			"cancel": "Annuler",
+			"notFound": "Utilisateur non trouvé",
+			"notFoundHint": "Cet utilisateur n'existe pas ou a été supprimé.",
+			"lastLogin": "Dernière connexion",
+			"never": "Jamais",
+			"createdAt": "Créé le",
+			"errors": {
+				"loadError": "Erreur lors du chargement de l'utilisateur",
+				"updateError": "Erreur lors de la mise à jour",
+				"assignError": "Erreur lors de l'assignation du rôle",
+				"revokeError": "Erreur lors de la révocation du rôle"
+			}
+		}
+	},
+	"permission": {
+		"new": "Nouvelle permission",
+		"edit": "Modifier la permission",
+		"description": "Gestion des permissions du système",
+		"errors": {
+			"unknown": "Une erreur inconnue s'est produite",
+			"loadError": "Erreur lors du chargement des permissions",
+			"createError": "Erreur lors de la création de la permission",
+			"updateError": "Erreur lors de la mise à jour de la permission",
+			"deleteError": "Erreur lors de la suppression de la permission"
+		},
+		"delete": {
+			"title": "Supprimer la permission",
+			"confirm": "Êtes-vous sûr de vouloir supprimer la permission"
+		},
+		"stats": {
+			"total": "Total",
+			"resources": "Ressources"
+		},
+		"filters": {
+			"title": "Filtres",
+			"resource": "Filtrer par ressource",
+			"allResources": "Toutes les ressources"
+		},
+		"form": {
+			"name": "Nom (RESOURCE:ACTION)",
+			"namePlaceholder": "USERS:CREATE",
+			"resource": "Ressource",
+			"resourcePlaceholder": "USERS",
+			"action": "Action",
+			"actionPlaceholder": "CREATE",
+			"description": "Description",
+			"create": "Créer",
+			"cancel": "Annuler"
+		},
+		"table": {
+			"id": "ID",
+			"name": "Nom",
+			"resource": "Ressource",
+			"action": "Action",
+			"description": "Description",
+			"noPermissions": "Aucune permission trouvée",
+			"noPermissionsHint": "Essayez de modifier vos critères de recherche",
+			"pagination": {
+				"showing": "Affichage de",
+				"of": "sur",
+				"permission": "permission",
+				"permissions": "permissions",
+				"itemsPerPage": "Par page",
+				"page": "Page",
+				"on": "sur",
+				"previous": "Précédent",
+				"next": "Suivant"
+			}
+		}
+	},
+	"role": {
+		"new": "Nouveau rôle",
+		"description": "Gestion des rôles et permissions",
+		"errors": {
+			"unknown": "Une erreur inconnue s'est produite",
+			"loadError": "Erreur lors du chargement des rôles",
+			"createError": "Erreur lors de la création du rôle",
+			"updateError": "Erreur lors de la mise à jour",
+			"loadDetailError": "Erreur lors du chargement du rôle"
+		},
+		"stats": {
+			"total": "Total",
+			"totalPermissions": "Permissions totales"
+		},
+		"table": {
+			"name": "Nom",
+			"description": "Description",
+			"permissions": "Permissions",
+			"noPermissions": "Aucune permission",
+			"noRoles": "Aucun rôle trouvé",
+			"noRolesHint": "Créez votre premier rôle pour commencer"
+		},
+		"new": {
+			"title": "Nouveau rôle",
+			"description": "Créer un nouveau rôle",
+			"backToList": "Retour à la liste",
+			"form": {
+				"name": "Nom",
+				"nameRequired": "*",
+				"namePlaceholder": "ADMIN, OPERATOR, etc.",
+				"description": "Description",
+				"descriptionPlaceholder": "Description du rôle",
+				"permissions": "Permissions",
+				"selected": "sélectionnée",
+				"selectedPlural": "sélectionnées",
+				"create": "Créer le rôle",
+				"creating": "Création...",
+				"cancel": "Annuler"
+			},
+			"errors": {
+				"createError": "Erreur lors de la création du rôle",
+				"loadPermissionsError": "Erreur lors du chargement des permissions"
+			}
+		},
+		"detail": {
+			"title": "Détails du rôle",
+			"backToList": "Retour à la liste",
+			"information": "Informations",
+			"id": "ID",
+			"name": "Nom",
+			"description": "Description",
+			"descriptionPlaceholder": "Description du rôle",
+			"noDescription": "Aucune description",
+			"permissions": "Permissions",
+			"assignedPermissions": "Permissions assignées",
+			"assignPermissions": "Assigner des permissions",
+			"searchPermissions": "Rechercher une permission...",
+			"revoke": "Retirer",
+			"noPermissionsAssigned": "Aucune permission assignée",
+			"addBelow": "Ajoutez-en ci-dessous",
+			"allPermissionsAssigned": "Toutes les permissions sont assignées",
+			"noPermissionsAvailable": "Aucune permission disponible",
+			"edit": "Modifier",
+			"delete": "Supprimer",
+			"deleteConfirm": "Supprimer ce rôle ? Cette action est irréversible. Le rôle ne peut être supprimé que s'il n'est assigné à aucun utilisateur.",
+			"save": "Enregistrer",
+			"cancel": "Annuler",
+			"notFound": "Rôle non trouvé",
+			"notFoundHint": "Ce rôle n'existe pas ou a été supprimé.",
+			"errors": {
+				"loadError": "Erreur lors du chargement du rôle",
+				"updateError": "Erreur lors de la mise à jour",
+				"assignError": "Erreur lors de l'assignation des permissions",
+				"revokeError": "Erreur lors de la révocation de la permission",
+				"deleteError": "Erreur lors de la suppression du rôle"
+			}
+		}
+	},
+	"login": {
+		"title": "Core Banking",
+		"subtitle": "Connectez-vous à votre compte",
+		"username": "Nom d'utilisateur",
+		"usernamePlaceholder": "Entrez votre nom d'utilisateur",
+		"password": "Mot de passe",
+		"passwordPlaceholder": "Entrez votre mot de passe",
+		"submit": "Se connecter",
+		"submitting": "Connexion...",
+		"errors": {
+			"usernameRequired": "Le nom d'utilisateur est requis",
+			"passwordRequired": "Le mot de passe est requis",
+			"loginError": "Erreur lors de la connexion",
+			"sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+			"notAuthenticated": "Vous devez être connecté pour accéder à cette page."
+		}
 	}
 }

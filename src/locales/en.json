@@ -46,7 +46,7 @@
 		"governance": "Governance",
 		"roles": "Roles",
 		"approvals": "Approvals",
-		"auditCompliance": "Audit & Compliance",
+		"auditCompliance": "Audit",
 		"auditEvents": "Audit Events",
 		"accessLogs": "Access Logs",
 		"notifications": "Notifications",
@@ -122,6 +122,10 @@
 		"updatedAt": "Updated on",
 		"yes": "Yes",
 		"no": "No",
+		"actions": "Actions",
+		"edit": "Edit",
+		"update": "Update",
+		"delete": "Delete",
 		"accountStatuses": {
 			"ACTIVE": "Active",
 			"CLOSED": "Closed",
@@ -1427,6 +1431,265 @@
 				"loadAccounts": "Error loading accounts",
 				"loadTransactions": "Error loading {{type}}"
 			}
+		}
+	},
+	"user": {
+		"new": "New User",
+		"description": "System user management",
+		"errors": {
+			"unknown": "An unknown error occurred",
+			"loadError": "Error loading users"
+		},
+		"stats": {
+			"total": "Total",
+			"active": "Active",
+			"inactive": "Inactive",
+			"locked": "Locked",
+			"expired": "Expired"
+		},
+		"filters": {
+			"title": "Filters",
+			"search": "Search",
+			"searchPlaceholder": "Name, email, username...",
+			"status": "Status"
+		},
+		"statuses": {
+			"ACTIVE": "Active",
+			"INACTIVE": "Inactive",
+			"LOCKED": "Locked",
+			"EXPIRED": "Expired"
+		},
+		"table": {
+			"username": "Username",
+			"roles": "Roles",
+			"actions": "Actions",
+			"view": "View",
+			"noUsers": "No users found",
+			"noUsersHint": "Try modifying your search criteria",
+			"pagination": {
+				"showing": "Showing",
+				"user": "user",
+				"users": "users",
+				"range": "{{from}} – {{to}} of {{total}}",
+				"itemsPerPage": "Per page",
+				"page": "Page {{current}} of {{total}}",
+				"previous": "Previous",
+				"next": "Next"
+			}
+		},
+		"new": {
+			"title": "New User",
+			"description": "Create a new user account",
+			"backToList": "Back to list",
+			"form": {
+				"username": "Username",
+				"usernameRequired": "*",
+				"usernamePlaceholder": "username",
+				"email": "Email",
+				"emailRequired": "*",
+				"emailPlaceholder": "email@example.com",
+				"password": "Password",
+				"passwordRequired": "*",
+				"passwordPlaceholder": "Minimum 8 characters",
+				"firstName": "First Name",
+				"firstNamePlaceholder": "First Name",
+				"lastName": "Last Name",
+				"lastNamePlaceholder": "Last Name",
+				"status": "Status",
+				"roles": "Roles",
+				"selected": "selected",
+				"selectedPlural": "selected",
+				"create": "Create User",
+				"creating": "Creating...",
+				"cancel": "Cancel"
+			},
+			"errors": {
+				"createError": "Error creating user",
+				"loadRolesError": "Error loading roles"
+			}
+		},
+		"detail": {
+			"title": "User details",
+			"backToList": "Back to list",
+			"information": "Information",
+			"id": "ID",
+			"username": "Username",
+			"email": "Email",
+			"firstName": "First Name",
+			"lastName": "Last Name",
+			"status": "Status",
+			"roles": "Roles",
+			"assignedRoles": "Assigned roles",
+			"assignRole": "Assign role",
+			"selectRole": "Select a role…",
+			"revoke": "Revoke",
+			"noRolesAssigned": "No roles assigned",
+			"allRolesAssigned": "All roles are already assigned",
+			"edit": "Edit",
+			"save": "Save",
+			"cancel": "Cancel",
+			"notFound": "User not found",
+			"notFoundHint": "This user does not exist or has been deleted.",
+			"lastLogin": "Last login",
+			"never": "Never",
+			"createdAt": "Created at",
+			"errors": {
+				"loadError": "Error loading user",
+				"updateError": "Error updating",
+				"assignError": "Error assigning role",
+				"revokeError": "Error revoking role"
+			}
+		}
+	},
+	"permission": {
+		"new": "New Permission",
+		"edit": "Edit Permission",
+		"description": "System permissions management",
+		"errors": {
+			"unknown": "An unknown error occurred",
+			"loadError": "Error loading permissions",
+			"createError": "Error creating permission",
+			"updateError": "Error updating permission",
+			"deleteError": "Error deleting permission"
+		},
+		"delete": {
+			"title": "Delete Permission",
+			"confirm": "Are you sure you want to delete the permission"
+		},
+		"stats": {
+			"total": "Total",
+			"resources": "Resources"
+		},
+		"filters": {
+			"title": "Filters",
+			"resource": "Filter by resource",
+			"allResources": "All resources"
+		},
+		"form": {
+			"name": "Name (RESOURCE:ACTION)",
+			"namePlaceholder": "USERS:CREATE",
+			"resource": "Resource",
+			"resourcePlaceholder": "USERS",
+			"action": "Action",
+			"actionPlaceholder": "CREATE",
+			"description": "Description",
+			"create": "Create",
+			"cancel": "Cancel"
+		},
+		"table": {
+			"id": "ID",
+			"name": "Name",
+			"resource": "Resource",
+			"action": "Action",
+			"description": "Description",
+			"noPermissions": "No permissions found",
+			"noPermissionsHint": "Try modifying your search criteria",
+			"pagination": {
+				"showing": "Showing",
+				"of": "of",
+				"permission": "permission",
+				"permissions": "permissions",
+				"itemsPerPage": "Per page",
+				"page": "Page",
+				"on": "of",
+				"previous": "Previous",
+				"next": "Next"
+			}
+		}
+	},
+	"role": {
+		"new": "New Role",
+		"description": "Roles and permissions management",
+		"errors": {
+			"unknown": "An unknown error occurred",
+			"loadError": "Error loading roles",
+			"createError": "Error creating role",
+			"updateError": "Error updating",
+			"loadDetailError": "Error loading role"
+		},
+		"stats": {
+			"total": "Total",
+			"totalPermissions": "Total Permissions"
+		},
+		"table": {
+			"name": "Name",
+			"description": "Description",
+			"permissions": "Permissions",
+			"noPermissions": "No permissions",
+			"noRoles": "No roles found",
+			"noRolesHint": "Create your first role to get started"
+		},
+		"new": {
+			"title": "New Role",
+			"description": "Create a new role",
+			"backToList": "Back to list",
+			"form": {
+				"name": "Name",
+				"nameRequired": "*",
+				"namePlaceholder": "ADMIN, OPERATOR, etc.",
+				"description": "Description",
+				"descriptionPlaceholder": "Role description",
+				"permissions": "Permissions",
+				"selected": "selected",
+				"selectedPlural": "selected",
+				"create": "Create Role",
+				"creating": "Creating...",
+				"cancel": "Cancel"
+			},
+			"errors": {
+				"createError": "Error creating role",
+				"loadPermissionsError": "Error loading permissions"
+			}
+		},
+		"detail": {
+			"title": "Role details",
+			"backToList": "Back to list",
+			"information": "Information",
+			"id": "ID",
+			"name": "Name",
+			"description": "Description",
+			"descriptionPlaceholder": "Role description",
+			"noDescription": "No description",
+			"permissions": "Permissions",
+			"assignedPermissions": "Assigned permissions",
+			"assignPermissions": "Assign permissions",
+			"searchPermissions": "Search permissions...",
+			"revoke": "Revoke",
+			"noPermissionsAssigned": "No permissions assigned",
+			"addBelow": "Add some below",
+			"allPermissionsAssigned": "All permissions are assigned",
+			"noPermissionsAvailable": "No permissions available",
+			"edit": "Edit",
+			"delete": "Delete",
+			"deleteConfirm": "Delete this role? This action cannot be undone. The role can only be deleted if it is not assigned to any user.",
+			"save": "Save",
+			"cancel": "Cancel",
+			"notFound": "Role not found",
+			"notFoundHint": "This role does not exist or has been deleted.",
+			"errors": {
+				"loadError": "Error loading role",
+				"updateError": "Error updating",
+				"assignError": "Error assigning permissions",
+				"revokeError": "Error revoking permission",
+				"deleteError": "Error deleting role"
+			}
+		}
+	},
+	"login": {
+		"title": "Core Banking",
+		"subtitle": "Sign in to your account",
+		"username": "Username",
+		"usernamePlaceholder": "Enter your username",
+		"password": "Password",
+		"passwordPlaceholder": "Enter your password",
+		"submit": "Sign in",
+		"submitting": "Logging in...",
+		"errors": {
+			"usernameRequired": "Username is required",
+			"passwordRequired": "Password is required",
+			"loginError": "Error during login",
+			"sessionExpired": "Your session has expired. Please log in again.",
+			"notAuthenticated": "You must be logged in to access this page."
 		}
 	}
 }

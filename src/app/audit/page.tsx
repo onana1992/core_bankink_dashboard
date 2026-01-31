@@ -14,6 +14,8 @@ export default function AuditPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [events, setEvents] = useState<AuditEvent[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
+	const userList = Array.isArray(users) ? users : [];
+	const eventList = Array.isArray(events) ? events : [];
 	const [statistics, setStatistics] = useState<AuditStatisticsResponse | null>(null);
 	const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -43,8 +45,8 @@ export default function AuditPage() {
 
 	async function loadUsers() {
 		try {
-			const data = await usersApi.list();
-			setUsers(data);
+			const data = await usersApi.list({ page: 0, size: 500 });
+			setUsers(data.content ?? []);
 		} catch (e: any) {
 			console.error("Erreur lors du chargement des utilisateurs:", e);
 		}
@@ -63,9 +65,9 @@ export default function AuditPage() {
 				page: currentPage,
 				size: pageSize
 			});
-			setEvents(data.content);
-			setTotalPages(data.totalPages);
-			setTotalElements(data.totalElements);
+			setEvents(data.content ?? []);
+			setTotalPages(data.totalPages ?? 0);
+			setTotalElements(data.totalElements ?? 0);
 		} catch (e: any) {
 			const errorMessage = e?.message || "Erreur lors du chargement des événements";
 			if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
@@ -196,7 +198,7 @@ export default function AuditPage() {
 						<div className="flex items-center justify-between">
 							<div>
 								<h3 className="text-sm font-medium text-blue-700">Total d'événements</h3>
-								<p className="text-3xl font-bold text-blue-900 mt-2">{statistics.totalEvents.toLocaleString()}</p>
+								<p className="text-3xl font-bold text-blue-900 mt-2">{(statistics.totalEvents ?? 0).toLocaleString()}</p>
 							</div>
 							<div className="bg-blue-200 rounded-full p-3">
 								<svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -258,7 +260,7 @@ export default function AuditPage() {
 							Événements par action
 						</h3>
 						<div className="space-y-3">
-							{Object.entries(statistics.eventsByAction)
+							{Object.entries(statistics.eventsByAction ?? {})
 								.sort(([, a], [, b]) => b - a)
 								.map(([action, count]) => (
 									<div key={action} className="flex items-center justify-between">
@@ -267,7 +269,7 @@ export default function AuditPage() {
 											<div className="flex-1 bg-gray-200 rounded-full h-2.5">
 												<div 
 													className="bg-blue-600 h-2.5 rounded-full transition-all"
-													style={{ width: `${(count / statistics.totalEvents) * 100}%` }}
+													style={{ width: `${((statistics.totalEvents ?? 0) > 0 ? (count / (statistics.totalEvents ?? 1)) : 0) * 100}%` }}
 												></div>
 											</div>
 										</div>
@@ -519,7 +521,7 @@ export default function AuditPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-2">Utilisateur</label>
-								{users.length > 0 ? (
+								{userList.length > 0 ? (
 									<select
 										className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 										value={filters.userId}
@@ -529,7 +531,7 @@ export default function AuditPage() {
 										}}
 									>
 										<option value="">Tous les utilisateurs</option>
-										{users.map(user => (
+										{userList.map(user => (
 											<option key={user.id} value={user.id}>{user.username}</option>
 										))}
 									</select>
@@ -631,7 +633,7 @@ export default function AuditPage() {
 						<div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
 							<div className="flex justify-between items-center">
 								<h2 className="text-lg font-semibold text-gray-900">
-									Événements d'audit ({totalElements.toLocaleString()})
+									Événements d'audit ({(totalElements ?? 0).toLocaleString()})
 								</h2>
 								<div className="flex items-center gap-2">
 									<label className="text-sm text-gray-700">Taille de page:</label>
@@ -657,7 +659,7 @@ export default function AuditPage() {
 								<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
 								<p className="mt-4 text-gray-600">Chargement des événements...</p>
 							</div>
-						) : events.length === 0 ? (
+						) : eventList.length === 0 ? (
 							<div className="p-12 text-center">
 								<p className="text-gray-500 text-lg font-medium">Aucun événement trouvé</p>
 							</div>
@@ -677,7 +679,7 @@ export default function AuditPage() {
 											</tr>
 										</thead>
 										<tbody className="bg-white divide-y divide-gray-200">
-											{events.map(event => (
+											{eventList.map(event => (
 												<tr key={event.id} className="hover:bg-gray-50 transition-colors">
 													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 														{formatDate(event.createdAt)}
@@ -731,8 +733,8 @@ export default function AuditPage() {
 										<div className="flex items-center justify-between">
 											<div className="text-sm text-gray-700">
 												Affichage de <span className="font-medium">{(currentPage * pageSize) + 1}</span> à{" "}
-												<span className="font-medium">{Math.min((currentPage + 1) * pageSize, totalElements)}</span> sur{" "}
-												<span className="font-medium">{totalElements}</span> résultats
+												<span className="font-medium">{Math.min((currentPage + 1) * pageSize, totalElements ?? 0)}</span> sur{" "}
+												<span className="font-medium">{totalElements ?? 0}</span> résultats
 											</div>
 											<div className="flex items-center gap-2">
 												<Button

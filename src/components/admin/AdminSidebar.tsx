@@ -221,11 +221,9 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							<NavLink href="/users" label={t("sidebar.users")} icon={Users} collapsed={collapsed} />
 							<NavLink href="/roles" label={t("sidebar.roles")} icon={KeyRound} collapsed={collapsed} />
 							<NavLink href="/permissions" label={t("sidebar.permissions")} icon={ShieldCheck} collapsed={collapsed} />
-							<NavLink href="/approvals" label={t("sidebar.approvals")} icon={CheckCircle} collapsed={collapsed} />
+							<NavLink href="/audit" label={t("sidebar.auditCompliance")} icon={ScrollText} collapsed={collapsed} />
 						</div>
 					</details>
-
-					<NavLink href="/audit" label={t("sidebar.auditCompliance")} icon={ScrollText} collapsed={collapsed} />
 
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
