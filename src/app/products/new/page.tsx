@@ -18,7 +18,7 @@ export default function NewProductPage() {
 		name: "",
 		description: "",
 		category: "CURRENT_ACCOUNT",
-		currency: "USD",
+		currency: "XAF",
 		minBalance: undefined,
 		maxBalance: undefined,
 		defaultInterestRate: undefined

@@ -6,6 +6,7 @@ import type { AuditEvent, User, AuditStatisticsResponse } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import TablePagination from "@/components/ui/TablePagination";
 
 type ViewMode = "list" | "details";
 
@@ -175,7 +176,7 @@ export default function AuditPage() {
 			{/* Header */}
 			<div className="flex justify-between items-center">
 				<div>
-					<h1 className="text-3xl font-bold text-gray-900">Audit et Conformité</h1>
+					<h1 className="text-3xl font-bold text-gray-900">Audit d'accès</h1>
 					<p className="text-gray-600 mt-1">Consultation et analyse des événements d'audit</p>
 				</div>
 				<Button
@@ -631,27 +632,9 @@ export default function AuditPage() {
 					{/* Tableau des événements */}
 					<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 						<div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-							<div className="flex justify-between items-center">
-								<h2 className="text-lg font-semibold text-gray-900">
-									Événements d'audit ({(totalElements ?? 0).toLocaleString()})
-								</h2>
-								<div className="flex items-center gap-2">
-									<label className="text-sm text-gray-700">Taille de page:</label>
-									<select
-										className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-										value={pageSize}
-										onChange={(e) => {
-											setPageSize(Number(e.target.value));
-											setCurrentPage(0);
-										}}
-									>
-										<option value="10">10</option>
-										<option value="20">20</option>
-										<option value="50">50</option>
-										<option value="100">100</option>
-									</select>
-								</div>
-							</div>
+							<h2 className="text-lg font-semibold text-gray-900">
+								Événements d'audit ({(totalElements ?? 0).toLocaleString()})
+							</h2>
 						</div>
 
 						{loading ? (
@@ -727,55 +710,21 @@ export default function AuditPage() {
 									</table>
 								</div>
 
-								{/* Pagination */}
-								{totalPages > 1 && (
-									<div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-										<div className="flex items-center justify-between">
-											<div className="text-sm text-gray-700">
-												Affichage de <span className="font-medium">{(currentPage * pageSize) + 1}</span> à{" "}
-												<span className="font-medium">{Math.min((currentPage + 1) * pageSize, totalElements ?? 0)}</span> sur{" "}
-												<span className="font-medium">{totalElements ?? 0}</span> résultats
-											</div>
-											<div className="flex items-center gap-2">
-												<Button
-													variant="secondary"
-													onClick={() => handlePageChange(0)}
-													disabled={currentPage === 0}
-													className="px-3 py-1 text-sm"
-												>
-													Premier
-												</Button>
-												<Button
-													variant="secondary"
-													onClick={() => handlePageChange(currentPage - 1)}
-													disabled={currentPage === 0}
-													className="px-3 py-1 text-sm"
-												>
-													Précédent
-												</Button>
-												<span className="px-4 py-1 text-sm text-gray-700">
-													Page {currentPage + 1} sur {totalPages}
-												</span>
-												<Button
-													variant="secondary"
-													onClick={() => handlePageChange(currentPage + 1)}
-													disabled={currentPage >= totalPages - 1}
-													className="px-3 py-1 text-sm"
-												>
-													Suivant
-												</Button>
-												<Button
-													variant="secondary"
-													onClick={() => handlePageChange(totalPages - 1)}
-													disabled={currentPage >= totalPages - 1}
-													className="px-3 py-1 text-sm"
-												>
-													Dernier
-												</Button>
-											</div>
-										</div>
-									</div>
-								)}
+								<TablePagination
+									page={currentPage}
+									totalPages={totalPages}
+									totalElements={totalElements ?? 0}
+									pageSize={pageSize}
+									onPageChange={handlePageChange}
+									resultsLabel="événements"
+									showFirstLast
+									sizeOptions={[10, 20, 50, 100]}
+									size={pageSize}
+									onSizeChange={(s) => {
+										setPageSize(s);
+										setCurrentPage(0);
+									}}
+								/>
 							</>
 						)}
 					</div>

@@ -1709,7 +1709,7 @@ function FeesTab({
 		transactionType: null,
 		feeName: "",
 		feeCalculationBase: "FIXED",
-		currency: productCurrency ?? "USD",
+		currency: productCurrency ?? "XAF",
 		effectiveFrom: new Date().toISOString().split('T')[0],
 		isActive: true
 	});
@@ -1742,7 +1742,7 @@ function FeesTab({
 				transactionType: null,
 				feeName: "",
 				feeCalculationBase: "FIXED",
-				currency: productCurrency ?? "USD",
+				currency: productCurrency ?? "XAF",
 				effectiveFrom: new Date().toISOString().split('T')[0],
 				isActive: true
 			});
@@ -1799,9 +1799,6 @@ function FeesTab({
 								<option value="MONTHLY">{t("product.detail.fees.feeTypes.MONTHLY")}</option>
 								<option value="ANNUAL">{t("product.detail.fees.feeTypes.ANNUAL")}</option>
 								<option value="TRANSACTION">{t("product.detail.fees.feeTypes.TRANSACTION")}</option>
-								<option value="OVERDRAFT">{t("product.detail.fees.feeTypes.OVERDRAFT")}</option>
-								<option value="LATE_PAYMENT">{t("product.detail.fees.feeTypes.LATE_PAYMENT")}</option>
-								<option value="EARLY_WITHDRAWAL">{t("product.detail.fees.feeTypes.EARLY_WITHDRAWAL")}</option>
 								<option value="CARD_ISSUANCE">{t("product.detail.fees.feeTypes.CARD_ISSUANCE")}</option>
 								<option value="CARD_RENEWAL">{t("product.detail.fees.feeTypes.CARD_RENEWAL")}</option>
 								<option value="OTHER">{t("product.detail.fees.feeTypes.OTHER")}</option>
@@ -1952,10 +1949,10 @@ function FeesTab({
 						<div>
 							<label className="block text-sm mb-1">{t("product.detail.fees.form.currency")}</label>
 							<Input
-								value={form.currency ?? productCurrency ?? "USD"}
+								value={form.currency ?? productCurrency ?? "XAF"}
 								onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
 								maxLength={3}
-								placeholder="USD"
+								placeholder="XAF"
 								required
 							/>
 							<p className="text-xs text-gray-500 mt-1">
@@ -2156,12 +2153,12 @@ function FeesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Type de frais
+										{t("product.detail.fees.modal.feeTypeLabel")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
-										{selectedFee.feeType}
+										{t(`product.detail.fees.feeTypes.${selectedFee.feeType}`)}
 										{selectedFee.feeType === "TRANSACTION" && selectedFee.transactionType && (
-											<span className="text-xs text-gray-500 ml-2">({selectedFee.transactionType})</span>
+											<span className="text-xs text-gray-500 ml-2">({t(`product.detail.fees.transactionTypes.${selectedFee.transactionType}`)})</span>
 										)}
 									</div>
 								</div>
@@ -2171,10 +2168,10 @@ function FeesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
 											</svg>
-											Type de transaction
+											{t("product.detail.fees.modal.transactionTypeLabel")}
 										</label>
 										<div className="mt-1 font-semibold text-gray-900">
-											{selectedFee.transactionType || "Tous les types"}
+											{selectedFee.transactionType ? t(`product.detail.fees.transactionTypes.${selectedFee.transactionType}`) : t("product.detail.fees.modal.transactionTypeAll")}
 										</div>
 									</div>
 								)}
@@ -2183,7 +2180,7 @@ function FeesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Nom
+										{t("product.detail.fees.modal.nameLabel")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeName}</div>
 								</div>
@@ -2192,7 +2189,7 @@ function FeesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Montant fixe
+										{t("product.detail.fees.modal.fixedAmountLabel")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedFee.feeAmount != null ? (
@@ -2207,7 +2204,7 @@ function FeesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 										</svg>
-										Pourcentage
+										{t("product.detail.fees.modal.percentageLabel")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedFee.feePercentage != null ? (
@@ -2222,20 +2219,20 @@ function FeesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
 										</svg>
-										Base de calcul
+										{t("product.detail.fees.modal.calculationBaseLabel")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedFee.feeCalculationBase}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.fees.calculationBases.${selectedFee.feeCalculationBase}`)}</div>
 								</div>
 								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
 									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
 										</svg>
-										Dispensable
+										{t("product.detail.fees.modal.waivableLabel")}
 									</label>
 									<div className="mt-1">
 										<Badge variant={selectedFee.isWaivable ? "warning" : "neutral"}>
-											{selectedFee.isWaivable ? "Oui" : "Non"}
+											{selectedFee.isWaivable ? t("product.detail.fees.modal.yes") : t("product.detail.fees.modal.no")}
 										</Badge>
 									</div>
 								</div>
@@ -2249,7 +2246,7 @@ function FeesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
 											</svg>
-											Frais minimum
+											{t("product.detail.fees.modal.minFeeLabel")}
 										</label>
 										<div className="mt-1 font-semibold text-gray-900">
 											{selectedFee.minFee != null ? (
@@ -2264,7 +2261,7 @@ function FeesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 											</svg>
-											Frais maximum
+											{t("product.detail.fees.modal.maxFeeLabel")}
 										</label>
 										<div className="mt-1 font-semibold text-gray-900">
 											{selectedFee.maxFee != null ? (
@@ -2284,7 +2281,7 @@ function FeesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date d'effet
+										{t("product.detail.fees.modal.effectiveFromLabel")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedFee.effectiveFrom}</dd>
 								</div>
@@ -2293,7 +2290,7 @@ function FeesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date de fin
+										{t("product.detail.fees.modal.effectiveToLabel")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedFee.effectiveTo ?? "-"}</dd>
 								</div>
@@ -2302,11 +2299,11 @@ function FeesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Statut
+										{t("product.detail.fees.modal.statusLabel")}
 									</dt>
 									<dd>
 										<Badge variant={selectedFee.isActive ? "success" : "neutral"}>
-											{selectedFee.isActive ? "Actif" : "Inactif"}
+											{selectedFee.isActive ? t("product.detail.fees.modal.active") : t("product.detail.fees.modal.inactive")}
 										</Badge>
 									</dd>
 								</div>
@@ -2319,7 +2316,7 @@ function FeesTab({
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								Fermer
+								{t("product.detail.fees.modal.close")}
 							</Button>
 						</div>
 					</div>
@@ -2387,9 +2384,6 @@ function FeesTab({
 								<option value="MONTHLY">{t("product.detail.fees.feeTypes.MONTHLY")}</option>
 								<option value="ANNUAL">{t("product.detail.fees.feeTypes.ANNUAL")}</option>
 								<option value="TRANSACTION">{t("product.detail.fees.feeTypes.TRANSACTION")}</option>
-								<option value="OVERDRAFT">{t("product.detail.fees.feeTypes.OVERDRAFT")}</option>
-								<option value="LATE_PAYMENT">{t("product.detail.fees.feeTypes.LATE_PAYMENT")}</option>
-								<option value="EARLY_WITHDRAWAL">{t("product.detail.fees.feeTypes.EARLY_WITHDRAWAL")}</option>
 								<option value="CARD_ISSUANCE">{t("product.detail.fees.feeTypes.CARD_ISSUANCE")}</option>
 								<option value="CARD_RENEWAL">{t("product.detail.fees.feeTypes.CARD_RENEWAL")}</option>
 								<option value="OTHER">{t("product.detail.fees.feeTypes.OTHER")}</option>
@@ -2540,10 +2534,10 @@ function FeesTab({
 						<div>
 							<label className="block text-sm mb-1">{t("product.detail.fees.form.currency")}</label>
 							<Input
-								value={form.currency ?? productCurrency ?? "USD"}
+								value={form.currency ?? productCurrency ?? "XAF"}
 								onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })}
 								maxLength={3}
-								placeholder="USD"
+								placeholder="XAF"
 								required
 							/>
 							<p className="text-xs text-gray-500 mt-1">
@@ -2606,16 +2600,19 @@ function LimitsTab({
 	onCloseForm: () => void;
 }) {
 	const { t } = useTranslation();
-	const [form, setForm] = useState<CreateProductLimitRequest>({
+	type LimitFormState = Omit<CreateProductLimitRequest, "limitValue"> & { limitValue?: number };
+	const [form, setForm] = useState<LimitFormState>({
 		limitType: "DAILY_LIMIT",
+		transactionType: undefined,
 		limitValue: 0,
-		effectiveFrom: new Date().toISOString().split('T')[0],
+		effectiveFrom: new Date().toISOString().split("T")[0],
 		isActive: true
 	});
-	const [editForm, setEditForm] = useState<CreateProductLimitRequest>({
+	const [editForm, setEditForm] = useState<LimitFormState>({
 		limitType: "DAILY_LIMIT",
+		transactionType: undefined,
 		limitValue: 0,
-		effectiveFrom: new Date().toISOString().split('T')[0],
+		effectiveFrom: new Date().toISOString().split("T")[0],
 		isActive: true
 	});
 	const [submitting, setSubmitting] = useState(false);
@@ -2631,11 +2628,12 @@ function LimitsTab({
 		if (selectedLimit && showEditForm) {
 			setEditForm({
 				limitType: selectedLimit.limitType,
+				transactionType: selectedLimit.transactionType ?? undefined,
 				limitValue: selectedLimit.limitValue,
 				currency: selectedLimit.currency,
-				periodType: selectedLimit.periodType,
+				periodType: selectedLimit.periodType ?? undefined,
 				effectiveFrom: selectedLimit.effectiveFrom,
-				effectiveTo: selectedLimit.effectiveTo,
+				effectiveTo: selectedLimit.effectiveTo ?? undefined,
 				isActive: selectedLimit.isActive ?? true
 			});
 		}
@@ -2643,33 +2641,39 @@ function LimitsTab({
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		const limitValue = form.limitValue;
+		if (limitValue == null || Number.isNaN(limitValue)) {
+			setError(t("product.detail.limits.valueRequired"));
+			return;
+		}
 		setSubmitting(true);
 		setError(null);
 		try {
-			await productsApi.addLimit(productId, form);
+			await productsApi.addLimit(productId, { ...form, limitValue });
 			onCloseForm();
 			setForm({
 				limitType: "DAILY_LIMIT",
+				transactionType: undefined,
 				limitValue: 0,
-				effectiveFrom: new Date().toISOString().split('T')[0],
+				effectiveFrom: new Date().toISOString().split("T")[0],
 				isActive: true
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? t("product.detail.rates.addError"));
+			setError(e?.message ?? t("product.detail.limits.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.limits.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Limites ({limits.length})</h3>
+				<h3 className="text-lg font-semibold">{t("product.detail.limits.titleWithCount", { count: limits.length })}</h3>
 				{!showForm && <Button onClick={onAdd}>{t("product.detail.limits.addButton")}</Button>}
 			</div>
 
@@ -2678,56 +2682,69 @@ function LimitsTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de limite *</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.limitType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.limitType}
 								onChange={e => setForm({ ...form, limitType: e.target.value as LimitType })}
 								required
 							>
-								<option value="MIN_BALANCE">Solde minimum</option>
-								<option value="MAX_BALANCE">Solde maximum</option>
-								<option value="MIN_TRANSACTION">Transaction minimum</option>
-								<option value="MAX_TRANSACTION">Transaction maximum</option>
-								<option value="DAILY_LIMIT">Limite quotidienne</option>
-								<option value="MONTHLY_LIMIT">Limite mensuelle</option>
-								<option value="ANNUAL_LIMIT">Limite annuelle</option>
-								<option value="MIN_LOAN_AMOUNT">Prêt minimum</option>
-								<option value="MAX_LOAN_AMOUNT">Prêt maximum</option>
-								<option value="MIN_DEPOSIT_AMOUNT">Dépôt minimum</option>
-								<option value="MAX_DEPOSIT_AMOUNT">Dépôt maximum</option>
-								<option value="CARD_LIMIT">Limite de carte</option>
-								<option value="WITHDRAWAL_LIMIT">Limite de retrait</option>
+								<option value="MIN_BALANCE">{t("product.detail.limits.limitTypes.MIN_BALANCE")}</option>
+								<option value="MAX_BALANCE">{t("product.detail.limits.limitTypes.MAX_BALANCE")}</option>
+								<option value="MIN_TRANSACTION">{t("product.detail.limits.limitTypes.MIN_TRANSACTION")}</option>
+								<option value="MAX_TRANSACTION">{t("product.detail.limits.limitTypes.MAX_TRANSACTION")}</option>
+								<option value="DAILY_LIMIT">{t("product.detail.limits.limitTypes.DAILY_LIMIT")}</option>
+								<option value="MONTHLY_LIMIT">{t("product.detail.limits.limitTypes.MONTHLY_LIMIT")}</option>
+								<option value="ANNUAL_LIMIT">{t("product.detail.limits.limitTypes.ANNUAL_LIMIT")}</option>
+								<option value="CARD_LIMIT">{t("product.detail.limits.limitTypes.CARD_LIMIT")}</option>
+								<option value="WEEKLY_LIMIT">{t("product.detail.limits.limitTypes.WEEKLY_LIMIT")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.transactionType")}</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={form.transactionType ?? ""}
+								onChange={e => setForm({ ...form, transactionType: e.target.value ? e.target.value as TransactionType : undefined })}
+							>
+								<option value="">{t("product.detail.limits.transactionTypeAll")}</option>
+								<option value="DEPOSIT">{t("product.detail.limits.transactionTypes.DEPOSIT")}</option>
+								<option value="WITHDRAWAL">{t("product.detail.limits.transactionTypes.WITHDRAWAL")}</option>
+								<option value="TRANSFER">{t("product.detail.limits.transactionTypes.TRANSFER")}</option>
+								<option value="FEE">{t("product.detail.limits.transactionTypes.FEE")}</option>
+								<option value="INTEREST">{t("product.detail.limits.transactionTypes.INTEREST")}</option>
+								<option value="ADJUSTMENT">{t("product.detail.limits.transactionTypes.ADJUSTMENT")}</option>
+								<option value="REVERSAL">{t("product.detail.limits.transactionTypes.REVERSAL")}</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.limitValue")}</label>
 							<Input
 								type="number"
 								step="0.01"
-								value={form.limitValue}
-								onChange={e => setForm({ ...form, limitValue: parseFloat(e.target.value) || 0 })}
+								value={form.limitValue ?? ""}
+								onChange={e => setForm({ ...form, limitValue: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
 								required
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.periodType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.periodType ?? ""}
 								onChange={e => setForm({ ...form, periodType: e.target.value ? e.target.value as PeriodType : undefined })}
 							>
-								<option value="">Aucune</option>
-								<option value="TRANSACTION">Par transaction</option>
-								<option value="DAILY">Quotidien</option>
-								<option value="WEEKLY">Hebdomadaire</option>
-								<option value="MONTHLY">Mensuel</option>
-								<option value="ANNUAL">Annuel</option>
-								<option value="LIFETIME">À vie</option>
+								<option value="">{t("product.detail.limits.periodTypes.none")}</option>
+								<option value="TRANSACTION">{t("product.detail.limits.periodTypes.TRANSACTION")}</option>
+								<option value="DAILY">{t("product.detail.limits.periodTypes.DAILY")}</option>
+								<option value="WEEKLY">{t("product.detail.limits.periodTypes.WEEKLY")}</option>
+								<option value="MONTHLY">{t("product.detail.limits.periodTypes.MONTHLY")}</option>
+								<option value="ANNUAL">{t("product.detail.limits.periodTypes.ANNUAL")}</option>
+								<option value="LIFETIME">{t("product.detail.limits.periodTypes.LIFETIME")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -2736,7 +2753,7 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -2745,35 +2762,37 @@ function LimitsTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.limits.form.adding") : t("product.detail.limits.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.limits.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
 
 			{limits.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucune limite configurée</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.limits.noLimits")}</div>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Type</th>
-								<th className="px-4 py-2 text-left">Valeur</th>
-								<th className="px-4 py-2 text-left">Période</th>
-								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.limits.table.type")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.limits.table.transactionType")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.limits.table.value")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.limits.table.period")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.limits.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
 						<tbody>
 							{limits.map(limit => (
 								<tr key={limit.id} className="border-t">
-									<td className="px-4 py-2">{limit.limitType}</td>
+									<td className="px-4 py-2">{t(`product.detail.limits.limitTypes.${limit.limitType}` as const) || limit.limitType}</td>
+									<td className="px-4 py-2">{limit.transactionType ? t(`product.detail.limits.transactionTypes.${limit.transactionType}` as const) : t("product.detail.limits.transactionTypeAll")}</td>
 									<td className="px-4 py-2">{limit.limitValue} {limit.currency}</td>
-									<td className="px-4 py-2">{limit.periodType ?? "-"}</td>
+									<td className="px-4 py-2">{limit.periodType ? (t(`product.detail.limits.periodTypes.${limit.periodType}` as const) || limit.periodType) : "-"}</td>
 									<td className="px-4 py-2">
 										<Badge variant={limit.isActive ? "success" : "neutral"}>
-											{limit.isActive ? "Oui" : "Non"}
+											{limit.isActive ? t("product.detail.limits.yes") : t("product.detail.limits.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -2875,7 +2894,7 @@ function LimitsTab({
 									</div>
 									<div>
 										<h3 className="text-xl font-bold text-white">{t("product.detail.limits.modal.title")}</h3>
-										<p className="text-sm text-purple-100 mt-0.5">{selectedLimit.limitType}</p>
+										<p className="text-sm text-purple-100 mt-0.5">{t(`product.detail.limits.limitTypes.${selectedLimit.limitType}` as const) || selectedLimit.limitType}</p>
 									</div>
 								</div>
 								<button
@@ -2899,16 +2918,16 @@ function LimitsTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Type de limite
+										{t("product.detail.limits.modal.limitType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.limitType}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.limits.limitTypes.${selectedLimit.limitType}` as const) || selectedLimit.limitType}</div>
 								</div>
 								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
 									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Valeur
+										{t("product.detail.limits.modal.limitValue")}
 									</label>
 									<div className="mt-1 font-bold text-xl text-gray-900">
 										{selectedLimit.limitValue} <span className="text-sm font-normal text-gray-600">{selectedLimit.currency}</span>
@@ -2919,9 +2938,15 @@ function LimitsTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Période
+										{t("product.detail.limits.modal.periodType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.periodType ?? "-"}</div>
+									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.periodType ? (t(`product.detail.limits.periodTypes.${selectedLimit.periodType}` as const) || selectedLimit.periodType) : "-"}</div>
+								</div>
+								<div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
+									<label className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1">
+										{t("product.detail.limits.modal.transactionType")}
+									</label>
+									<div className="mt-1 font-semibold text-gray-900">{selectedLimit.transactionType ? (t(`product.detail.limits.transactionTypes.${selectedLimit.transactionType}` as const) || selectedLimit.transactionType) : t("product.detail.limits.transactionTypeAll")}</div>
 								</div>
 							</div>
 
@@ -2932,7 +2957,7 @@ function LimitsTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date d'effet
+										{t("product.detail.limits.modal.effectiveFrom")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedLimit.effectiveFrom}</dd>
 								</div>
@@ -2941,7 +2966,7 @@ function LimitsTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date de fin
+										{t("product.detail.limits.modal.effectiveTo")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedLimit.effectiveTo ?? "-"}</dd>
 								</div>
@@ -2950,7 +2975,7 @@ function LimitsTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Statut
+										{t("product.detail.limits.modal.status")}
 									</dt>
 									<dd>
 										<Badge variant={selectedLimit.isActive ? "success" : "neutral"}>
@@ -2967,7 +2992,7 @@ function LimitsTab({
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								Fermer
+								{t("product.detail.limits.modal.close")}
 							</Button>
 						</div>
 					</div>
@@ -2978,12 +3003,18 @@ function LimitsTab({
 			{showEditForm && selectedLimit && (
 				<form onSubmit={async (e) => {
 					e.preventDefault();
+					const limitValue = editForm.limitValue;
+					if (limitValue == null || Number.isNaN(limitValue)) {
+						setError(t("product.detail.limits.valueRequired"));
+						return;
+					}
 					setSubmitting(true);
 					setError(null);
 					try {
 						await productsApi.updateLimit(productId, selectedLimit.id!, {
 							limitType: editForm.limitType,
-							limitValue: editForm.limitValue,
+							transactionType: editForm.transactionType ?? undefined,
+							limitValue,
 							currency: editForm.currency,
 							periodType: editForm.periodType,
 							effectiveFrom: editForm.effectiveFrom,
@@ -2994,7 +3025,7 @@ function LimitsTab({
 						setSelectedLimit(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? t("product.detail.rates.updateError"));
+						setError(e?.message ?? t("product.detail.limits.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
@@ -3016,64 +3047,77 @@ function LimitsTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de limite *</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.limitType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.limitType}
 								onChange={e => setEditForm({ ...editForm, limitType: e.target.value as LimitType })}
 								required
 							>
-								<option value="MIN_BALANCE">Solde minimum</option>
-								<option value="MAX_BALANCE">Solde maximum</option>
-								<option value="MIN_TRANSACTION">Transaction minimum</option>
-								<option value="MAX_TRANSACTION">Transaction maximum</option>
-								<option value="DAILY_LIMIT">Limite quotidienne</option>
-								<option value="MONTHLY_LIMIT">Limite mensuelle</option>
-								<option value="ANNUAL_LIMIT">Limite annuelle</option>
-								<option value="MIN_LOAN_AMOUNT">Prêt minimum</option>
-								<option value="MAX_LOAN_AMOUNT">Prêt maximum</option>
-								<option value="MIN_DEPOSIT_AMOUNT">Dépôt minimum</option>
-								<option value="MAX_DEPOSIT_AMOUNT">Dépôt maximum</option>
-								<option value="CARD_LIMIT">Limite de carte</option>
-								<option value="WITHDRAWAL_LIMIT">Limite de retrait</option>
+								<option value="MIN_BALANCE">{t("product.detail.limits.limitTypes.MIN_BALANCE")}</option>
+								<option value="MAX_BALANCE">{t("product.detail.limits.limitTypes.MAX_BALANCE")}</option>
+								<option value="MIN_TRANSACTION">{t("product.detail.limits.limitTypes.MIN_TRANSACTION")}</option>
+								<option value="MAX_TRANSACTION">{t("product.detail.limits.limitTypes.MAX_TRANSACTION")}</option>
+								<option value="DAILY_LIMIT">{t("product.detail.limits.limitTypes.DAILY_LIMIT")}</option>
+								<option value="MONTHLY_LIMIT">{t("product.detail.limits.limitTypes.MONTHLY_LIMIT")}</option>
+								<option value="ANNUAL_LIMIT">{t("product.detail.limits.limitTypes.ANNUAL_LIMIT")}</option>
+								<option value="CARD_LIMIT">{t("product.detail.limits.limitTypes.CARD_LIMIT")}</option>
+								<option value="WEEKLY_LIMIT">{t("product.detail.limits.limitTypes.WEEKLY_LIMIT")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur *</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.transactionType")}</label>
+							<select
+								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+								value={editForm.transactionType ?? ""}
+								onChange={e => setEditForm({ ...editForm, transactionType: e.target.value ? e.target.value as TransactionType : undefined })}
+							>
+								<option value="">{t("product.detail.limits.transactionTypeAll")}</option>
+								<option value="DEPOSIT">{t("product.detail.limits.transactionTypes.DEPOSIT")}</option>
+								<option value="WITHDRAWAL">{t("product.detail.limits.transactionTypes.WITHDRAWAL")}</option>
+								<option value="TRANSFER">{t("product.detail.limits.transactionTypes.TRANSFER")}</option>
+								<option value="FEE">{t("product.detail.limits.transactionTypes.FEE")}</option>
+								<option value="INTEREST">{t("product.detail.limits.transactionTypes.INTEREST")}</option>
+								<option value="ADJUSTMENT">{t("product.detail.limits.transactionTypes.ADJUSTMENT")}</option>
+								<option value="REVERSAL">{t("product.detail.limits.transactionTypes.REVERSAL")}</option>
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.limitValue")}</label>
 							<Input
 								type="number"
 								step="0.01"
-								value={editForm.limitValue}
-								onChange={e => setEditForm({ ...editForm, limitValue: parseFloat(e.target.value) || 0 })}
+								value={editForm.limitValue ?? ""}
+								onChange={e => setEditForm({ ...editForm, limitValue: e.target.value === "" ? undefined : parseFloat(e.target.value) })}
 								required
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Devise</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.currency")}</label>
 							<Input
-								value={editForm.currency ?? "USD"}
+								value={editForm.currency ?? "XAF"}
 								onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
 								maxLength={3}
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.periodType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.periodType ?? ""}
 								onChange={e => setEditForm({ ...editForm, periodType: e.target.value ? e.target.value as PeriodType : undefined })}
 							>
-								<option value="">Aucune</option>
-								<option value="TRANSACTION">Par transaction</option>
-								<option value="DAILY">Quotidien</option>
-								<option value="WEEKLY">Hebdomadaire</option>
-								<option value="MONTHLY">Mensuel</option>
-								<option value="ANNUAL">Annuel</option>
-								<option value="LIFETIME">À vie</option>
+								<option value="">{t("product.detail.limits.periodTypes.none")}</option>
+								<option value="TRANSACTION">{t("product.detail.limits.periodTypes.TRANSACTION")}</option>
+								<option value="DAILY">{t("product.detail.limits.periodTypes.DAILY")}</option>
+								<option value="WEEKLY">{t("product.detail.limits.periodTypes.WEEKLY")}</option>
+								<option value="MONTHLY">{t("product.detail.limits.periodTypes.MONTHLY")}</option>
+								<option value="ANNUAL">{t("product.detail.limits.periodTypes.ANNUAL")}</option>
+								<option value="LIFETIME">{t("product.detail.limits.periodTypes.LIFETIME")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveFrom}
@@ -3082,7 +3126,7 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveTo ?? ""}
@@ -3090,24 +3134,24 @@ function LimitsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.limits.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
 								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("product.detail.limits.yes")}</option>
+								<option value="false">{t("product.detail.limits.no")}</option>
 							</select>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.limits.form.editing") : t("product.detail.limits.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedLimit(null);
 							setError(null);
-						}}>{t("product.detail.rates.form.cancel")}</Button>
+						}}>{t("product.detail.limits.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -3136,13 +3180,14 @@ function PeriodsTab({
 	onCloseForm: () => void;
 }) {
 	const { t } = useTranslation();
-	const [form, setForm] = useState<CreateProductPeriodRequest>({
+	type PeriodFormState = Omit<CreateProductPeriodRequest, "periodDays" | "displayOrder"> & { periodDays?: number; displayOrder?: number };
+	const [form, setForm] = useState<PeriodFormState>({
 		periodName: "",
 		periodDays: 0,
 		displayOrder: 0,
 		isActive: true
 	});
-	const [editForm, setEditForm] = useState<CreateProductPeriodRequest>({
+	const [editForm, setEditForm] = useState<PeriodFormState>({
 		periodName: "",
 		periodDays: 0,
 		displayOrder: 0,
@@ -3175,10 +3220,15 @@ function PeriodsTab({
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		const periodDays = form.periodDays;
+		if (periodDays == null || Number.isNaN(periodDays)) {
+			setError(t("product.detail.periods.daysRequired") ?? "Durée en jours requise");
+			return;
+		}
 		setSubmitting(true);
 		setError(null);
 		try {
-			await productsApi.addPeriod(productId, form);
+			await productsApi.addPeriod(productId, { ...form, periodDays, displayOrder: form.displayOrder ?? 0 });
 			onCloseForm();
 			setForm({
 				periodName: "",
@@ -3221,8 +3271,8 @@ function PeriodsTab({
 							<label className="block text-sm mb-1">Durée en jours *</label>
 							<Input
 								type="number"
-								value={form.periodDays}
-								onChange={e => setForm({ ...form, periodDays: parseInt(e.target.value) || 0 })}
+								value={form.periodDays ?? ""}
+								onChange={e => setForm({ ...form, periodDays: e.target.value === "" ? undefined : parseInt(e.target.value, 10) })}
 								required
 							/>
 						</div>
@@ -3273,8 +3323,8 @@ function PeriodsTab({
 							<label className="block text-sm mb-1">Ordre d'affichage</label>
 							<Input
 								type="number"
-								value={form.displayOrder ?? 0}
-								onChange={e => setForm({ ...form, displayOrder: parseInt(e.target.value) || 0 })}
+								value={form.displayOrder ?? ""}
+								onChange={e => setForm({ ...form, displayOrder: e.target.value === "" ? undefined : parseInt(e.target.value, 10) })}
 							/>
 						</div>
 					</div>
@@ -3481,19 +3531,24 @@ function PeriodsTab({
 			{showEditForm && selectedPeriod && (
 				<form onSubmit={async (e) => {
 					e.preventDefault();
+					const periodDays = editForm.periodDays;
+					if (periodDays == null || Number.isNaN(periodDays)) {
+						setError(t("product.detail.periods.daysRequired") ?? "Durée en jours requise");
+						return;
+					}
 					setSubmitting(true);
 					setError(null);
 					try {
 						await productsApi.updatePeriod(productId, selectedPeriod.id, {
 							periodName: editForm.periodName,
-							periodDays: editForm.periodDays,
+							periodDays,
 							periodMonths: editForm.periodMonths,
 							periodYears: editForm.periodYears,
 							interestRate: editForm.interestRate,
 							minAmount: editForm.minAmount,
 							maxAmount: editForm.maxAmount,
 							isActive: editForm.isActive,
-							displayOrder: editForm.displayOrder
+							displayOrder: editForm.displayOrder ?? 0
 						});
 						setShowEditForm(false);
 						setSelectedPeriod(null);
@@ -3532,8 +3587,8 @@ function PeriodsTab({
 							<label className="block text-sm mb-1">Durée en jours *</label>
 							<Input
 								type="number"
-								value={editForm.periodDays}
-								onChange={e => setEditForm({ ...editForm, periodDays: parseInt(e.target.value) || 0 })}
+								value={editForm.periodDays ?? ""}
+								onChange={e => setEditForm({ ...editForm, periodDays: e.target.value === "" ? undefined : parseInt(e.target.value, 10) })}
 								required
 							/>
 						</div>
@@ -3584,8 +3639,8 @@ function PeriodsTab({
 							<label className="block text-sm mb-1">Ordre d'affichage</label>
 							<Input
 								type="number"
-								value={editForm.displayOrder ?? 0}
-								onChange={e => setEditForm({ ...editForm, displayOrder: parseInt(e.target.value) || 0 })}
+								value={editForm.displayOrder ?? ""}
+								onChange={e => setEditForm({ ...editForm, displayOrder: e.target.value === "" ? undefined : parseInt(e.target.value, 10) })}
 							/>
 						</div>
 						<div>
@@ -4251,7 +4306,7 @@ function PenaltiesTab({
 						<div>
 							<label className="block text-sm mb-1">Devise</label>
 							<Input
-								value={editForm.currency ?? "USD"}
+								value={editForm.currency ?? "XAF"}
 								onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
 								maxLength={3}
 							/>
@@ -4380,7 +4435,7 @@ function EligibilityRulesTab({
 		setError(null);
 		try {
 			await productsApi.addEligibilityRule(productId, form);
-			onCloseForm();
+			onCloseForm(); // Fermer la carte du formulaire après ajout
 			setForm({
 				ruleType: "MIN_AGE",
 				ruleName: "",
@@ -4827,9 +4882,10 @@ function EligibilityRulesTab({
 							effectiveTo: editForm.effectiveTo,
 							isActive: editForm.isActive
 						});
+						onRefresh();
 						setShowEditForm(false);
 						setSelectedRule(null);
-						onRefresh();
+						onCloseForm(); // Fermer la carte du formulaire après modification
 					} catch (e: any) {
 						setError(e?.message ?? t("product.detail.eligibility.updateError"));
 					} finally {

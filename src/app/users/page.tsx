@@ -9,6 +9,7 @@ import type { User, UserStatus } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import TablePagination from "@/components/ui/TablePagination";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -323,52 +324,21 @@ export default function UsersPage() {
 						</table>
 					</div>
 					{(totalElements > 0 || filtered.length > 0) && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-							<p className="text-sm text-gray-600">
-								{totalElements === 0
-									? t("user.table.pagination.showing") + " 0 " + t("user.table.pagination.users")
-									: t("user.table.pagination.range", {
-											from: currentPage * pageSize + 1,
-											to: Math.min((currentPage + 1) * pageSize, totalElements),
-											total: totalElements
-										})}
-							</p>
-							<div className="flex items-center gap-2">
-								<label className="text-sm text-gray-600">{t("user.table.pagination.itemsPerPage")}</label>
-								<select
-									className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-									value={pageSize}
-									onChange={(e) => setPageSize(Number(e.target.value))}
-								>
-									{[10, 20, 50, 100].map((n) => (
-										<option key={n} value={n}>{n}</option>
-									))}
-								</select>
-							</div>
-							{totalPages > 1 && (
-								<div className="flex items-center gap-1">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => goToPage(currentPage - 1)}
-										disabled={currentPage === 0}
-									>
-										{t("user.table.pagination.previous")}
-									</Button>
-									<span className="px-3 text-sm text-gray-600">
-										{t("user.table.pagination.page", { current: currentPage + 1, total: totalPages })}
-									</span>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => goToPage(currentPage + 1)}
-										disabled={currentPage >= totalPages - 1}
-									>
-										{t("user.table.pagination.next")}
-									</Button>
-								</div>
-							)}
-						</div>
+						<TablePagination
+							page={currentPage}
+							totalPages={totalPages}
+							totalElements={totalElements}
+							pageSize={pageSize}
+							onPageChange={(p) => goToPage(p)}
+							resultsLabel={t("user.table.pagination.users")}
+							showFirstLast
+							sizeOptions={[10, 20, 50, 100]}
+							size={pageSize}
+							onSizeChange={(s) => {
+								setPageSize(s);
+								load(0);
+							}}
+						/>
 					)}
 				</div>
 			)}

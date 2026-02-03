@@ -31,7 +31,7 @@ export default function LedgerAccountsPage() {
 		name: "",
 		chartOfAccountCode: "",
 		accountType: "ASSET",
-		currency: "USD",
+		currency: "XAF",
 		status: "ACTIVE"
 	});
 	const [submitting, setSubmitting] = useState(false);
@@ -152,7 +152,7 @@ export default function LedgerAccountsPage() {
 				name: "",
 				chartOfAccountCode: "",
 				accountType: "ASSET",
-				currency: "USD",
+				currency: "XAF",
 				status: "ACTIVE"
 			});
 			loadAccounts();
@@ -401,7 +401,7 @@ export default function LedgerAccountsPage() {
 									name: "",
 									chartOfAccountCode: "",
 									accountType: "ASSET",
-									currency: "USD",
+									currency: "XAF",
 									status: "ACTIVE"
 								});
 								setValidationErrors({});

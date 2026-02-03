@@ -525,9 +525,9 @@ export default function NewAccountPage() {
 							{t("account.new.currency")}
 						</label>
 						<Input
-							value={form.currency ?? selectedProduct?.currency ?? "USD"}
+							value={form.currency ?? selectedProduct?.currency ?? "XAF"}
 							onChange={(e) => update("currency", e.target.value || undefined)}
-							placeholder="USD"
+							placeholder="XAF"
 							maxLength={3}
 							disabled
 							className="w-full bg-gray-50 cursor-not-allowed"

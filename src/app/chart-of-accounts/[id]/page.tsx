@@ -332,65 +332,75 @@ export default function ChartOfAccountDetailPage() {
 
 			{/* Informations principales */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-						<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
-						Informations générales
-					</h3>
-					<dl className="space-y-4">
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Description</dt>
-							<dd className="mt-1 text-sm text-gray-900">{account.description || "-"}</dd>
+				{/* Card Informations générales */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					<div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+						<h3 className="text-base font-semibold text-gray-800 flex items-center gap-2.5">
+							<span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-600">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</span>
+							Informations générales
+						</h3>
+					</div>
+					<dl className="divide-y divide-gray-100">
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Description</dt>
+							<dd className="text-sm text-gray-900">{account.description || "-"}</dd>
 						</div>
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Catégorie</dt>
-							<dd className="mt-1 text-sm text-gray-900">{account.category || "-"}</dd>
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Catégorie</dt>
+							<dd className="text-sm text-gray-900">{account.category || "-"}</dd>
 						</div>
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Niveau</dt>
-							<dd className="mt-1 text-sm text-gray-900">{account.level}</dd>
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Niveau</dt>
+							<dd className="text-sm text-gray-900 font-medium">{account.level}</dd>
 						</div>
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Compte parent</dt>
-							<dd className="mt-1 text-sm text-gray-900">
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Compte parent</dt>
+							<dd className="text-sm text-gray-900">
 								{account.parentCode ? (
 									<Link href={`/chart-of-accounts/by-code/${account.parentCode}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono">
 										{account.parentCode}
 									</Link>
 								) : (
-									<span className="text-gray-400">Aucun (compte racine)</span>
+									<span className="text-gray-400 italic">Aucun (compte racine)</span>
 								)}
 							</dd>
 						</div>
 					</dl>
 				</div>
 
-				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-						<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
-						Dates et historique
-					</h3>
-					<dl className="space-y-4">
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Créé le</dt>
-							<dd className="mt-1 text-sm text-gray-900">
-								{account.createdAt ? new Date(account.createdAt).toLocaleString("fr-FR") : "-"}
+				{/* Card Dates et historique */}
+				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+					<div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
+						<h3 className="text-base font-semibold text-gray-800 flex items-center gap-2.5">
+							<span className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 text-amber-600">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</span>
+							Dates et historique
+						</h3>
+					</div>
+					<dl className="divide-y divide-gray-100">
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Créé le</dt>
+							<dd className="text-sm text-gray-900">
+								{account.createdAt ? new Date(account.createdAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "-"}
 							</dd>
 						</div>
-						<div>
-							<dt className="text-sm font-medium text-gray-500">Modifié le</dt>
-							<dd className="mt-1 text-sm text-gray-900">
-								{account.updatedAt ? new Date(account.updatedAt).toLocaleString("fr-FR") : "-"}
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Modifié le</dt>
+							<dd className="text-sm text-gray-900">
+								{account.updatedAt ? new Date(account.updatedAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "-"}
 							</dd>
 						</div>
 						{account.createdBy && (
-							<div>
-								<dt className="text-sm font-medium text-gray-500">Créé par</dt>
-								<dd className="mt-1 text-sm text-gray-900">Utilisateur #{account.createdBy}</dd>
+							<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+								<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Créé par</dt>
+								<dd className="text-sm text-gray-900">Utilisateur #{account.createdBy}</dd>
 							</div>
 						)}
 					</dl>

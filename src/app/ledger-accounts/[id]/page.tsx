@@ -28,7 +28,7 @@ export default function LedgerAccountDetailPage() {
 	const [showEditForm, setShowEditForm] = useState(false);
 	const [editForm, setEditForm] = useState<UpdateLedgerAccountRequest>({
 		name: "",
-		currency: "USD",
+		currency: "XAF",
 		status: "ACTIVE"
 	});
 	const [submitting, setSubmitting] = useState(false);

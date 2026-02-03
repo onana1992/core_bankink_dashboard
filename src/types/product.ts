@@ -78,7 +78,7 @@ export interface CreateProductInterestRateRequest {
 }
 
 // Fees
-export type FeeType = "OPENING" | "MONTHLY" | "ANNUAL" | "TRANSACTION" | "WITHDRAWAL" | "OVERDRAFT" | "LATE_PAYMENT" | "EARLY_WITHDRAWAL" | "CARD_ISSUANCE" | "CARD_RENEWAL" | "OTHER";
+export type FeeType = "OPENING" | "MONTHLY" | "ANNUAL" | "TRANSACTION" | "WITHDRAWAL" | "CARD_ISSUANCE" | "CARD_RENEWAL" | "OTHER";
 export type FeeCalculationBase = "FIXED" | "BALANCE" | "TRANSACTION_AMOUNT" | "OUTSTANDING_BALANCE";
 
 export interface ProductFee {
@@ -118,13 +118,14 @@ export interface CreateProductFeeRequest {
 }
 
 // Limits
-export type LimitType = "MIN_BALANCE" | "MAX_BALANCE" | "MIN_TRANSACTION" | "MAX_TRANSACTION" | "DAILY_LIMIT" | "MONTHLY_LIMIT" | "ANNUAL_LIMIT" | "MIN_LOAN_AMOUNT" | "MAX_LOAN_AMOUNT" | "MIN_DEPOSIT_AMOUNT" | "MAX_DEPOSIT_AMOUNT" | "CARD_LIMIT" | "WITHDRAWAL_LIMIT";
+export type LimitType = "MIN_BALANCE" | "MAX_BALANCE" | "MIN_TRANSACTION" | "MAX_TRANSACTION" | "DAILY_LIMIT" | "WEEKLY_LIMIT" | "MONTHLY_LIMIT" | "ANNUAL_LIMIT" | "CARD_LIMIT";
 export type PeriodType = "TRANSACTION" | "DAILY" | "WEEKLY" | "MONTHLY" | "ANNUAL" | "LIFETIME";
 
 export interface ProductLimit {
 	id: number;
 	productId: number;
 	limitType: LimitType;
+	transactionType?: TransactionType | null;
 	limitValue: number;
 	currency: string;
 	periodType?: PeriodType | null;
@@ -137,6 +138,7 @@ export interface ProductLimit {
 
 export interface CreateProductLimitRequest {
 	limitType: LimitType;
+	transactionType?: TransactionType | null;
 	limitValue: number;
 	currency?: string;
 	periodType?: PeriodType;

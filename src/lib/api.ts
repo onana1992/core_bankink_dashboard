@@ -1261,7 +1261,7 @@ export const auditApi = {
 		toDate?: string;
 		page?: number;
 		size?: number;
-	}): Promise<{ content: AuditEvent[]; totalElements: number; totalPages: number; number: number; size: number }> {
+	}): Promise<import("@/types").PagedResponse<AuditEvent>> {
 		const usp = new URLSearchParams();
 		if (params?.userId) usp.set("userId", String(params.userId));
 		if (params?.action) usp.set("action", params.action);
@@ -1275,7 +1275,7 @@ export const auditApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<{ content: AuditEvent[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return handleJsonResponse<import("@/types").PagedResponse<AuditEvent>>(res);
 	},
 
 	async getEvent(id: number): Promise<AuditEvent> {

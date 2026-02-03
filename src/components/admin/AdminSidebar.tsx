@@ -86,7 +86,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 				<nav className="mt-4 space-y-2">
 					<NavLink href="/" label={t("sidebar.dashboard")} icon={LayoutDashboard} collapsed={collapsed} />
 
-					<details className="group rounded-md" open>
+					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
 							<span className="flex items-center gap-2">
 								<Users className="h-4 w-4 text-gray-700" />
@@ -117,7 +117,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						</div>
 					</details>
 
-					<details className="group rounded-md" open>
+					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
 							<span className="flex items-center gap-2">
 								<Repeat className="h-4 w-4 text-gray-700" />

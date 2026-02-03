@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import TablePagination from "@/components/ui/TablePagination";
 import { customersApi } from "@/lib/api";
 import type { Customer } from "@/types";
 
@@ -345,38 +346,15 @@ export default function CustomersPage() {
 						</table>
 					</div>
 					{(filteredCustomers.length > 0 || totalElements > 0) && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-							<p className="text-sm text-gray-600">
-								{t("customer.table.pagination.showing")} <span className="font-semibold">{filteredCustomers.length}</span> {t("customer.table.pagination.of")} <span className="font-semibold">{totalElements}</span> {totalElements > 1 ? t("customer.table.pagination.customersPlural") : t("customer.table.pagination.customers")}
-							</p>
-							{totalPages > 1 && (
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(p => Math.max(0, p - 1))}
-										disabled={page === 0}
-									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-										</svg>
-									</Button>
-									<span className="text-sm text-gray-600">
-										{t("customer.table.pagination.page")} {page + 1} {t("customer.table.pagination.on")} {totalPages}
-									</span>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-										disabled={page >= totalPages - 1}
-									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-										</svg>
-									</Button>
-								</div>
-							)}
-						</div>
+						<TablePagination
+							page={page}
+							totalPages={totalPages}
+							totalElements={totalElements}
+							pageSize={size}
+							onPageChange={setPage}
+							resultsLabel={totalElements > 1 ? t("customer.table.pagination.customersPlural") : t("customer.table.pagination.customers")}
+							showFirstLast
+						/>
 					)}
 				</div>
 			)}

@@ -152,7 +152,7 @@ export default function JournalBatchDetailPage() {
 		});
 	}
 
-	const currency = entries.length > 0 ? entries[0].currency : "USD";
+	const currency = entries.length > 0 ? entries[0].currency : "XAF";
 	const isBalanced = batch ? Math.abs(batch.totalDebit - batch.totalCredit) < 0.01 : false;
 	const difference = batch ? Math.abs(batch.totalDebit - batch.totalCredit) : 0;
 
@@ -302,7 +302,7 @@ export default function JournalBatchDetailPage() {
 						<label className="block text-sm font-medium text-gray-500 mb-1">Devise</label>
 						<p className="text-lg text-gray-900">
 							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-								{entries.length > 0 ? entries[0].currency : "USD"}
+								{entries.length > 0 ? entries[0].currency : "XAF"}
 							</span>
 						</p>
 					</div>
