@@ -30,3 +30,4 @@ export function getToastEventListener() {
 		const customEvent = event as CustomEvent<ToastEvent>;
 		// Cet événement sera écouté par le ToastProvider
 	};
+}

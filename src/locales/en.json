@@ -388,12 +388,20 @@
 			"errors": {
 				"clientRequired": "Client is required",
 				"productRequired": "Product is required",
+				"clientNotFound": "Client not found",
+				"productNotFound": "Product not found",
+				"productMustBeActive": "Product must be active",
 				"sourceAccountRequired": "Source account is required because the product has opening fees configured",
+				"openingFeeZeroAmount": "The calculated opening fee amount is zero.",
 				"sourceAccountDifferentClient": "The selected source account does not belong to the same client",
 				"loadError": "Error loading data",
 				"periodsLoadError": "Error loading periods",
 				"accountsLoadError": "Error loading client accounts",
-				"openError": "Failed to open account"
+				"openError": "Failed to open account",
+				"openingAmountBelowMinimum": "Opening amount ({{amount}} {{currency}}) is below the required minimum ({{minimum}} {{currency}}).",
+				"openingAmountExceedsMaximum": "Opening amount ({{amount}} {{currency}}) exceeds the maximum allowed ({{maximum}} {{currency}}).",
+				"openingAmountBelowPeriodMinimum": "Opening amount ({{amount}} {{currency}}) is below the required minimum for this period ({{minimum}} {{currency}}).",
+				"openingAmountExceedsPeriodMaximum": "Opening amount ({{amount}} {{currency}}) exceeds the maximum allowed for this period ({{maximum}} {{currency}})."
 			}
 		},
 		"detail": {
@@ -1047,16 +1055,19 @@
 			},
 			"glMappings": {
 				"title": "GL Mappings",
+				"subtitle": "Association of GL accounts with banking products",
 				"add": "Add Mapping",
-				"addButton": "+ Add Mapping",
+				"addButton": "Add Mapping",
 				"loading": "Loading...",
 				"deleteError": "Error deleting",
 				"addError": "Error adding",
 				"updateError": "Error updating",
+				"missingMappings": "Missing mappings",
 				"form": {
 					"mappingType": "Mapping Type *",
 					"ledgerAccountId": "GL Account *",
 					"selectLedgerAccount": "Select a GL Account",
+					"requiredAccountsLabel": "Required GL accounts",
 					"add": "Create",
 					"creating": "Creating...",
 					"edit": "Edit",
@@ -1065,11 +1076,30 @@
 					"newTitle": "New GL Mapping",
 					"editTitle": "Edit GL Mapping"
 				},
-				"table": {
-					"type": "Type",
-					"ledgerAccount": "GL Account",
-					"actions": "Actions"
+				"validation": {
+					"selectAccount": "A GL account must be selected",
+					"accountNotFound": "The selected GL account does not exist",
+					"accountMustBeActive": "The GL account must be active",
+					"accountTypeMismatch": "The GL account must be of type {{types}} for a {{mappingType}} mapping",
+					"mappingTypeAlreadyExists": "A mapping of this type already exists for this product"
 				},
+				"table": {
+					"type": "Mapping type",
+					"ledgerAccount": "GL Account",
+					"currency": "Currency",
+					"accountType": "Account type",
+					"actions": "Actions",
+					"edit": "Edit",
+					"delete": "Delete"
+				},
+				"empty": {
+					"title": "No GL mapping configured",
+					"description": "Add a mapping to associate this product with a GL account"
+				},
+				"noAccountsForType": "No active GL account available for this mapping type",
+				"confirmDelete": "Are you sure you want to delete this mapping?",
+				"footerDisplay": "Showing {{count}} mapping",
+				"footerDisplayPlural": "Showing {{count}} mappings",
 				"mappingTypes": {
 					"ASSET_ACCOUNT": "Asset Account",
 					"LIABILITY_ACCOUNT": "Liability Account",
@@ -1078,10 +1108,26 @@
 					"REVENUE_ACCOUNT": "Revenue Account",
 					"EXPENSE_ACCOUNT": "Expense Account"
 				},
+				"accountTypes": {
+					"ASSET": "Asset",
+					"LIABILITY": "Liability",
+					"EQUITY": "Equity",
+					"REVENUE": "Revenue",
+					"EXPENSE": "Expense"
+				},
+				"requiredTypes": {
+					"ASSET": "ASSET",
+					"LIABILITY": "LIABILITY",
+					"EXPENSE_OR_REVENUE": "EXPENSE or REVENUE",
+					"REVENUE": "REVENUE",
+					"EXPENSE": "EXPENSE"
+				},
 				"loadingAccounts": "Loading GL accounts...",
 				"error": {
 					"loadAccounts": "Error loading GL accounts",
-					"save": "Error during {{action}}"
+					"save": "Error during {{action}}",
+					"create": "Error during creation",
+					"update": "Error during update"
 				}
 			}
 		}

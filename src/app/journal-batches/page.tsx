@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { journalBatchesApi } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import type { JournalBatch, JournalBatchStatus, CreateJournalBatchRequest } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -100,7 +101,7 @@ export default function JournalBatchesPage() {
 			await journalBatchesApi.post(id);
 			loadBatches();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors du posting du lot");
+			showToast(e?.message ?? "Erreur lors du posting du lot", "error");
 		}
 	}
 
@@ -112,7 +113,7 @@ export default function JournalBatchesPage() {
 			await journalBatchesApi.close(id);
 			loadBatches();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la clôture du lot");
+			showToast(e?.message ?? "Erreur lors de la clôture du lot", "error");
 		}
 	}
 

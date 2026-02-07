@@ -18,7 +18,8 @@ export default function CustomersPage() {
 	const [page, setPage] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalElements, setTotalElements] = useState(0);
-	const size = 20;
+	const [size, setSize] = useState(20);
+	const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -50,23 +51,23 @@ export default function CustomersPage() {
 
 	useEffect(() => {
 		load();
-	}, [page, filterStatus, filterType, q]);
+	}, [page, size, filterStatus, filterType, q]);
 
+	// Stats: total = totalElements (global), les autres sont sur la page courante
 	const stats = useMemo(() => {
-		const total = customers.length;
 		const by: Record<string, number> = {};
 		for (const c of customers) {
 			by[c.status] = (by[c.status] ?? 0) + 1;
 		}
 		return {
-			total,
+			total: totalElements,
 			draft: by["DRAFT"] ?? 0,
 			pending: by["PENDING_REVIEW"] ?? 0,
 			verified: by["VERIFIED"] ?? 0,
 			rejected: by["REJECTED"] ?? 0,
 			blocked: by["BLOCKED"] ?? 0
 		};
-	}, [customers]);
+	}, [customers, totalElements]);
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -351,9 +352,12 @@ export default function CustomersPage() {
 							totalPages={totalPages}
 							totalElements={totalElements}
 							pageSize={size}
-							onPageChange={setPage}
+							onPageChange={(p) => setPage(p)}
 							resultsLabel={totalElements > 1 ? t("customer.table.pagination.customersPlural") : t("customer.table.pagination.customers")}
 							showFirstLast
+							sizeOptions={PAGE_SIZE_OPTIONS}
+							size={size}
+							onSizeChange={(s) => { setSize(s); setPage(0); }}
 						/>
 					)}
 				</div>

@@ -8,14 +8,15 @@ import "@/lib/i18n";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { accountsApi, customersApi, productsApi } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import type { Customer, Product, ProductPeriod, OpenProductRequest, Account, ProductFee } from "@/types";
 
 export default function NewAccountPage() {
 	const { t } = useTranslation();
+	const { showToast } = useToast();
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 	const [customers, setCustomers] = useState<Customer[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [periods, setPeriods] = useState<ProductPeriod[]>([]);
@@ -39,14 +40,23 @@ export default function NewAccountPage() {
 	useEffect(() => {
 		async function load() {
 			try {
-				const [customersResponse, productsResponse] = await Promise.all([
-					customersApi.list({ status: "VERIFIED", size: 1000 }), // Load all verified customers
-					productsApi.list({ status: "ACTIVE", size: 1000 }) // Load all active products
+				const [customersResponse, allProducts] = await Promise.all([
+					customersApi.list({ status: "VERIFIED", size: 1000 }),
+					// Charger tous les produits actifs (toutes les pages si pagination)
+					(async () => {
+						const first = await productsApi.list({ status: "ACTIVE", page: 0, size: 500 });
+						const all: Product[] = [...first.content];
+						for (let p = 1; p < first.totalPages; p++) {
+							const next = await productsApi.list({ status: "ACTIVE", page: p, size: 500 });
+							all.push(...next.content);
+						}
+						return all;
+					})()
 				]);
 				setCustomers(customersResponse.content);
-				setProducts(productsResponse.content);
+				setProducts(allProducts);
 			} catch (e: any) {
-				setError(e?.message ?? t("account.new.errors.loadError"));
+				showToast(e?.message ?? t("account.new.errors.loadError"), "error");
 			}
 		}
 		load();
@@ -194,65 +204,42 @@ export default function NewAccountPage() {
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setLoading(true);
-		setError(null);
 
 		if (!form.clientId || form.clientId === "") {
-			setError(t("account.new.errors.clientRequired"));
+			showToast(t("account.new.errors.clientRequired"), "error");
 			setLoading(false);
 			return;
 		}
 
 		if (!form.productId || form.productId === 0) {
-			setError(t("account.new.errors.productRequired"));
+			showToast(t("account.new.errors.productRequired"), "error");
 			setLoading(false);
 			return;
 		}
 
-		// Vérifier que le compte source est fourni si le produit a des frais d'ouverture
 		if (hasOpeningFees && (!form.sourceAccountId || form.sourceAccountId === 0)) {
-			setError(t("account.new.errors.sourceAccountRequired"));
+			showToast(t("account.new.errors.sourceAccountRequired"), "error");
 			setLoading(false);
 			return;
 		}
 
 		const payload: OpenProductRequest = {
 			productId: form.productId,
-			openingAmount: form.openingAmount,
-			periodId: form.periodId,
-			currency: form.currency,
-			sourceAccountId: form.sourceAccountId
+			openingAmount: form.openingAmount ?? 0,
+			periodId: form.periodId && form.periodId > 0 ? form.periodId : undefined,
+			currency: form.currency?.trim() || undefined,
+			sourceAccountId: form.sourceAccountId && form.sourceAccountId > 0 ? form.sourceAccountId : undefined
 		};
 
 		try {
 			const created = await accountsApi.openProduct(form.clientId, payload);
-			router.push(`/accounts/${created.id}`);
-		} catch (e: any) {
-			// Mapper les erreurs du backend vers les clés de traduction
-			const errorMessage = e?.message || "";
-			let translatedError = errorMessage;
-			
-			if (errorMessage.includes("error.source.account.different.client")) {
-				translatedError = t("account.new.errors.sourceAccountDifferentClient");
-			} else if (errorMessage.includes("error.source.account.not.found")) {
-				translatedError = t("account.new.errors.sourceAccountRequired");
-			} else if (errorMessage.includes("error.opening.fee.requires.source.account")) {
-				translatedError = t("account.new.errors.sourceAccountRequired");
-			} else if (errorMessage) {
-				// Essayer de traduire d'autres erreurs connues
-				const errorKey = errorMessage.replace("error.", "").replace(/\./g, "");
-				const translationKey = `account.new.errors.${errorKey}`;
-				const translation = t(translationKey);
-				// Si la traduction existe (différente de la clé), l'utiliser
-				if (translation !== translationKey) {
-					translatedError = translation;
-				} else {
-					translatedError = errorMessage || t("account.new.errors.openError");
-				}
+			if (created?.id != null) {
+				router.push(`/accounts/${created.id}`);
 			} else {
-				translatedError = t("account.new.errors.openError");
+				showToast(t("account.new.errors.openError"), "error");
 			}
-			
-			setError(translatedError);
+		} catch (e: any) {
+			// Le toast est déjà affiché par api.ts ; on ne fait que stopper le loading
 		} finally {
 			setLoading(false);
 		}
@@ -278,17 +265,6 @@ export default function NewAccountPage() {
 
 				{/* Form */}
 				<form onSubmit={onSubmit} className="p-6 space-y-6">
-					{error && (
-						<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-							<div className="flex items-center gap-2">
-								<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								<p className="text-sm font-medium text-red-800">{error}</p>
-							</div>
-						</div>
-					)}
-
 					{/* Client */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">

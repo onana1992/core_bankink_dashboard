@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import Toast, { ToastType } from "@/components/ui/Toast";
+import { translateApiError } from "@/lib/translateApiError";
 
 interface ToastMessage {
 	message: string;
@@ -17,19 +19,20 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 const TOAST_EVENT_NAME = "show-toast";
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+	const { t } = useTranslation();
 	const [toast, setToast] = useState<ToastMessage | null>(null);
 
-	const showToast = (message: string, type: ToastType = "error") => {
-		setToast({ message, type });
-	};
+	const showToast = useCallback((message: string, type: ToastType = "error") => {
+		setToast({ message: translateApiError(message, t), type });
+	}, [t]);
 
 	useEffect(() => {
-		// Écouter les événements de toast depuis n'importe où dans l'application
 		const handleToastEvent = (event: Event) => {
 			const customEvent = event as CustomEvent<{ message: string; type: ToastType }>;
 			if (customEvent.detail) {
+				const rawMessage = customEvent.detail.message;
 				setToast({
-					message: customEvent.detail.message,
+					message: translateApiError(rawMessage, t),
 					type: customEvent.detail.type || "error"
 				});
 			}
@@ -40,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 		return () => {
 			window.removeEventListener(TOAST_EVENT_NAME, handleToastEvent as EventListener);
 		};
-	}, []);
+	}, [t]);
 
 	return (
 		<ToastContext.Provider value={{ showToast }}>

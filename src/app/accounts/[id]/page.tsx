@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi, interestsApi, feesApi } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import type { Account, AccountStatus, Customer, Product, Transaction, Hold, ProductFee } from "@/types";
 
 export default function AccountDetailPage() {
@@ -210,7 +211,7 @@ export default function AccountDetailPage() {
 
 	async function handleApplyInterest() {
 		if (!interestPeriodDays || !account) {
-			alert("Veuillez remplir tous les champs requis");
+			showToast("Veuillez remplir tous les champs requis", "error");
 			return;
 		}
 		setActionLoading(true);
@@ -225,7 +226,7 @@ export default function AccountDetailPage() {
 			await load();
 			await loadInterestHistory();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de l'application des intérêts");
+			showToast(e?.message ?? "Erreur lors de l'application des intérêts", "error");
 		} finally {
 			setActionLoading(false);
 		}
@@ -233,7 +234,7 @@ export default function AccountDetailPage() {
 
 	async function handleApplyFee() {
 		if (!selectedFeeType || !account) {
-			alert("Veuillez sélectionner un type de frais");
+			showToast("Veuillez sélectionner un type de frais", "error");
 			return;
 		}
 		setActionLoading(true);
@@ -252,7 +253,7 @@ export default function AccountDetailPage() {
 			await load();
 			await loadFeeHistory();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de l'application du frais");
+			showToast(e?.message ?? "Erreur lors de l'application du frais", "error");
 		} finally {
 			setActionLoading(false);
 		}
@@ -260,7 +261,7 @@ export default function AccountDetailPage() {
 
 	async function handleCreateHold() {
 		if (!holdAmount || !holdReason || !account) {
-			alert("Veuillez remplir tous les champs requis");
+			showToast("Veuillez remplir tous les champs requis", "error");
 			return;
 		}
 		setActionLoading(true);
@@ -278,7 +279,7 @@ export default function AccountDetailPage() {
 			await loadHolds();
 			await load(); // Recharger le compte pour mettre à jour le solde disponible
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la création de la réservation");
+			showToast(e?.message ?? "Erreur lors de la création de la réservation", "error");
 		} finally {
 			setActionLoading(false);
 		}
@@ -292,7 +293,7 @@ export default function AccountDetailPage() {
 			await loadHolds();
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la libération de la réservation");
+			showToast(e?.message ?? "Erreur lors de la libération de la réservation", "error");
 		} finally {
 			setActionLoading(false);
 		}
@@ -300,7 +301,7 @@ export default function AccountDetailPage() {
 
 	async function handleClose() {
 		if (!closeReason.trim()) {
-			alert(t("account.detail.close.reasonRequired"));
+			showToast(t("account.detail.close.reasonRequired"), "error");
 			return;
 		}
 		setActionLoading(true);
@@ -330,7 +331,7 @@ export default function AccountDetailPage() {
 			setFreezeReason("");
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors du gel du compte");
+			showToast(e?.message ?? "Erreur lors du gel du compte", "error");
 		} finally {
 			setActionLoading(false);
 		}
@@ -343,7 +344,7 @@ export default function AccountDetailPage() {
 			await accountsApi.unfreeze(accountId);
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors du dégel du compte");
+			showToast(e?.message ?? "Erreur lors du dégel du compte", "error");
 		} finally {
 			setActionLoading(false);
 		}

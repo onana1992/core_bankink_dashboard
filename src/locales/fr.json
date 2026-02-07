@@ -388,12 +388,20 @@
 			"errors": {
 				"clientRequired": "Le client est requis",
 				"productRequired": "Le produit est requis",
+				"clientNotFound": "Client introuvable",
+				"productNotFound": "Produit introuvable",
+				"productMustBeActive": "Le produit doit être actif",
 				"sourceAccountRequired": "Le compte source est obligatoire car le produit a des frais d'ouverture configurés",
+				"openingFeeZeroAmount": "Le montant des frais d'ouverture calculé est nul.",
 				"sourceAccountDifferentClient": "Le compte source sélectionné n'appartient pas au même client",
 				"loadError": "Erreur lors du chargement des données",
 				"periodsLoadError": "Erreur lors du chargement des périodes",
 				"accountsLoadError": "Erreur lors du chargement des comptes du client",
-				"openError": "Échec de l'ouverture du compte"
+				"openError": "Échec de l'ouverture du compte",
+				"openingAmountBelowMinimum": "Le montant d'ouverture ({{amount}} {{currency}}) est inférieur au minimum requis ({{minimum}} {{currency}}).",
+				"openingAmountExceedsMaximum": "Le montant d'ouverture ({{amount}} {{currency}}) dépasse le maximum autorisé ({{maximum}} {{currency}}).",
+				"openingAmountBelowPeriodMinimum": "Le montant d'ouverture ({{amount}} {{currency}}) est inférieur au minimum requis pour cette période ({{minimum}} {{currency}}).",
+				"openingAmountExceedsPeriodMaximum": "Le montant d'ouverture ({{amount}} {{currency}}) dépasse le maximum autorisé pour cette période ({{maximum}} {{currency}})."
 			}
 		},
 		"detail": {
@@ -534,7 +542,7 @@
 				"periods": "Périodes",
 				"penalties": "Pénalités",
 				"eligibility": "Règles d'éligibilité",
-				"glMappings": "Mappings GL"
+				"glMappings": "Mappings Grand Livre"
 			},
 			"categories": {
 				"CURRENT_ACCOUNT": "Compte courant",
@@ -1046,17 +1054,20 @@
 				}
 			},
 			"glMappings": {
-				"title": "Mappings GL",
+				"title": "Mappings Grand Livre",
+				"subtitle": "Association des comptes GL aux produits bancaires",
 				"add": "Ajouter un mapping",
-				"addButton": "+ Ajouter un mapping",
+				"addButton": "Ajouter un mapping",
 				"loading": "Chargement...",
 				"deleteError": "Erreur lors de la suppression",
 				"addError": "Erreur lors de l'ajout",
 				"updateError": "Erreur lors de la modification",
+				"missingMappings": "Mappings manquants",
 				"form": {
 					"mappingType": "Type de mapping *",
 					"ledgerAccountId": "Compte GL *",
 					"selectLedgerAccount": "Sélectionner un compte GL",
+					"requiredAccountsLabel": "Comptes GL requis",
 					"add": "Créer",
 					"creating": "Création...",
 					"edit": "Modifier",
@@ -1065,23 +1076,58 @@
 					"newTitle": "Nouveau mapping GL",
 					"editTitle": "Modifier le mapping GL"
 				},
-				"table": {
-					"type": "Type",
-					"ledgerAccount": "Compte GL",
-					"actions": "Actions"
+				"validation": {
+					"selectAccount": "Un compte GL doit être sélectionné",
+					"accountNotFound": "Le compte GL sélectionné n'existe pas",
+					"accountMustBeActive": "Le compte GL doit être actif",
+					"accountTypeMismatch": "Le compte GL doit être de type {{types}} pour un mapping {{mappingType}}",
+					"mappingTypeAlreadyExists": "Un mapping de ce type existe déjà pour ce produit"
 				},
+				"table": {
+					"type": "Type de mapping",
+					"ledgerAccount": "Compte GL",
+					"currency": "Devise",
+					"accountType": "Type de compte",
+					"actions": "Actions",
+					"edit": "Modifier",
+					"delete": "Supprimer"
+				},
+				"empty": {
+					"title": "Aucun mapping GL configuré",
+					"description": "Ajoutez un mapping pour associer ce produit à un compte GL"
+				},
+				"noAccountsForType": "Aucun compte GL actif disponible pour ce type de mapping",
+				"confirmDelete": "Êtes-vous sûr de vouloir supprimer ce mapping ?",
+				"footerDisplay": "Affichage de {{count}} mapping",
+				"footerDisplayPlural": "Affichage de {{count}} mappings",
 				"mappingTypes": {
-					"ASSET_ACCOUNT": "Compte d'actif",
-					"LIABILITY_ACCOUNT": "Compte de passif",
-					"FEE_ACCOUNT": "Compte de frais",
-					"INTEREST_ACCOUNT": "Compte d'intérêts",
-					"REVENUE_ACCOUNT": "Compte de revenus",
-					"EXPENSE_ACCOUNT": "Compte de charges"
+					"ASSET_ACCOUNT": "Compte actif",
+					"LIABILITY_ACCOUNT": "Compte passif",
+					"FEE_ACCOUNT": "Compte frais",
+					"INTEREST_ACCOUNT": "Compte intérêts",
+					"REVENUE_ACCOUNT": "Compte revenus",
+					"EXPENSE_ACCOUNT": "Compte charges"
+				},
+				"accountTypes": {
+					"ASSET": "Actif",
+					"LIABILITY": "Passif",
+					"EQUITY": "Capitaux propres",
+					"REVENUE": "Produit",
+					"EXPENSE": "Charge"
+				},
+				"requiredTypes": {
+					"ASSET": "ACTIF",
+					"LIABILITY": "PASSIF",
+					"EXPENSE_OR_REVENUE": "CHARGE ou PRODUIT",
+					"REVENUE": "PRODUIT",
+					"EXPENSE": "CHARGE"
 				},
 				"loadingAccounts": "Chargement des comptes GL...",
 				"error": {
 					"loadAccounts": "Erreur lors du chargement des comptes GL",
-					"save": "Erreur lors de la {{action}}"
+					"save": "Erreur lors de la {{action}}",
+					"create": "Erreur lors de la création",
+					"update": "Erreur lors de la modification"
 				}
 			}
 		}

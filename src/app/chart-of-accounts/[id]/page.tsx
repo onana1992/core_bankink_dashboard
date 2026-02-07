@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { chartOfAccountsApi } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import type { ChartOfAccount, AccountType, UpdateChartOfAccountRequest } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -130,7 +131,7 @@ export default function ChartOfAccountDetailPage() {
 			});
 			loadAccount();
 		} catch (e: any) {
-			alert(e?.message || "Erreur lors de la modification");
+			showToast(e?.message || "Erreur lors de la modification", "error");
 		}
 	}
 
@@ -143,7 +144,7 @@ export default function ChartOfAccountDetailPage() {
 			await chartOfAccountsApi.delete(account.id);
 			router.push("/chart-of-accounts");
 		} catch (e: any) {
-			alert(e?.message || "Erreur lors de la suppression");
+			showToast(e?.message || "Erreur lors de la suppression", "error");
 		}
 	}
 

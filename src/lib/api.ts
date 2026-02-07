@@ -280,15 +280,16 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 			}
 		}
 		
-		// Afficher un toast au lieu d'une erreur console (sauf si silent = true)
+		// Afficher un toast (sauf si silent = true) et lancer une erreur pour que l'appelant puisse la gérer
 		if (!silent && typeof window !== "undefined") {
 			const event = new CustomEvent("show-toast", {
 				detail: { message: errorMessage, type: "error" }
 			});
 			window.dispatchEvent(event);
 		}
-		
-		return undefined as T;
+		const err = new Error(errorMessage);
+		(err as any).status = res.status;
+		throw err;
 	}
 
 	// Si la réponse est OK, parser le JSON

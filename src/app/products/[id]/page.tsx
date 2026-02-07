@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import { productsApi, productGLMappingsApi } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import {
 	Edit2,
 	Package,
@@ -181,7 +182,7 @@ export default function ProductDetailPage() {
 			await productsApi.activate(product.id);
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur");
+			showToast(e?.message ?? "Erreur", "error");
 		}
 	}
 
@@ -191,7 +192,7 @@ export default function ProductDetailPage() {
 			await productsApi.deactivate(product.id);
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur");
+			showToast(e?.message ?? "Erreur", "error");
 		}
 	}
 
@@ -226,7 +227,7 @@ export default function ProductDetailPage() {
 			router.push("/products");
 		} catch (e: any) {
 			// Le backend vérifie les comptes et retourne un message d'erreur approprié
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -236,7 +237,7 @@ export default function ProductDetailPage() {
 			await productsApi.deleteInterestRate(id, rateId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -246,7 +247,7 @@ export default function ProductDetailPage() {
 			await productsApi.deleteFee(id, feeId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -256,7 +257,7 @@ export default function ProductDetailPage() {
 			await productsApi.deleteLimit(id, limitId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -266,7 +267,7 @@ export default function ProductDetailPage() {
 			await productsApi.deletePeriod(id, periodId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -276,7 +277,7 @@ export default function ProductDetailPage() {
 			await productsApi.deletePenalty(id, penaltyId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -286,7 +287,7 @@ export default function ProductDetailPage() {
 			await productsApi.deleteEligibilityRule(id, ruleId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -297,7 +298,7 @@ export default function ProductDetailPage() {
 			await productGLMappingsApi.delete(id, mappingId);
 			await loadAllConfigurations();
 		} catch (e: any) {
-			alert(e?.message ?? "Erreur lors de la suppression");
+			showToast(e?.message ?? "Erreur lors de la suppression", "error");
 		}
 	}
 
@@ -5104,15 +5105,14 @@ function ProductGLMappingsTab({
 		const errors: Record<string, string> = {};
 
 		if (!form.ledgerAccountId || form.ledgerAccountId === 0) {
-			errors.ledgerAccountId = "Un compte GL doit être sélectionné";
+			errors.ledgerAccountId = t("product.detail.glMappings.validation.selectAccount");
 		} else {
 			const selectedAccount = ledgerAccounts.find(a => a.id === form.ledgerAccountId);
 			if (!selectedAccount) {
-				errors.ledgerAccountId = "Le compte GL sélectionné n'existe pas";
+				errors.ledgerAccountId = t("product.detail.glMappings.validation.accountNotFound");
 			} else if (selectedAccount.status !== "ACTIVE") {
-				errors.ledgerAccountId = "Le compte GL doit être actif";
+				errors.ledgerAccountId = t("product.detail.glMappings.validation.accountMustBeActive");
 			} else {
-				// Vérifier la cohérence du type
 				const requiredTypes: Record<import("@/types").MappingType, import("@/types").AccountType[]> = {
 					ASSET_ACCOUNT: ["ASSET"],
 					LIABILITY_ACCOUNT: ["LIABILITY"],
@@ -5124,15 +5124,18 @@ function ProductGLMappingsTab({
 
 				const allowedTypes = requiredTypes[form.mappingType];
 				if (!allowedTypes.includes(selectedAccount.accountType)) {
-					errors.ledgerAccountId = `Le compte GL doit être de type ${allowedTypes.join(" ou ")} pour un mapping ${form.mappingType}`;
+					const typesStr = allowedTypes.map(at => t(`product.detail.glMappings.accountTypes.${at}`)).join(" ou ");
+					errors.ledgerAccountId = t("product.detail.glMappings.validation.accountTypeMismatch", {
+						types: typesStr,
+						mappingType: getMappingTypeLabel(form.mappingType)
+					});
 				}
 			}
 		}
 
-		// Vérifier l'unicité du type de mapping
 		const existingMapping = mappings.find(m => m.mappingType === form.mappingType && (!editingMapping || m.id !== editingMapping.id));
 		if (existingMapping) {
-			errors.mappingType = "Un mapping de ce type existe déjà pour ce produit";
+			errors.mappingType = t("product.detail.glMappings.validation.mappingTypeAlreadyExists");
 		}
 
 		setValidationErrors(errors);
@@ -5163,22 +5166,23 @@ function ProductGLMappingsTab({
 			onCloseForm();
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? `Erreur lors de la ${editingMapping ? "modification" : "création"}`);
+			setError(e?.message ?? (editingMapping ? t("product.detail.glMappings.error.update") : t("product.detail.glMappings.error.create")));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	function getRequiredAccountTypes(mappingType: import("@/types").MappingType): string {
-		const types: Record<import("@/types").MappingType, string> = {
+		const typeKeys: Record<import("@/types").MappingType, "ASSET" | "LIABILITY" | "EXPENSE_OR_REVENUE" | "REVENUE" | "EXPENSE"> = {
 			ASSET_ACCOUNT: "ASSET",
 			LIABILITY_ACCOUNT: "LIABILITY",
-			FEE_ACCOUNT: "EXPENSE ou REVENUE",
-			INTEREST_ACCOUNT: "EXPENSE ou REVENUE",
+			FEE_ACCOUNT: "EXPENSE_OR_REVENUE",
+			INTEREST_ACCOUNT: "EXPENSE_OR_REVENUE",
 			REVENUE_ACCOUNT: "REVENUE",
 			EXPENSE_ACCOUNT: "EXPENSE"
 		};
-		return types[mappingType] || "";
+		const key = typeKeys[mappingType];
+		return key ? t(`product.detail.glMappings.requiredTypes.${key}`) : "";
 	}
 
 	function filterLedgerAccountsByMappingType(mappingType: import("@/types").MappingType): import("@/types").LedgerAccount[] {
@@ -5198,26 +5202,11 @@ function ProductGLMappingsTab({
 	}
 
 	function getMappingTypeLabel(type: import("@/types").MappingType) {
-		const labels: Record<import("@/types").MappingType, string> = {
-			ASSET_ACCOUNT: "Compte actif",
-			LIABILITY_ACCOUNT: "Compte passif",
-			FEE_ACCOUNT: "Compte frais",
-			INTEREST_ACCOUNT: "Compte intérêts",
-			REVENUE_ACCOUNT: "Compte revenus",
-			EXPENSE_ACCOUNT: "Compte charges"
-		};
-		return labels[type] || type;
+		return t(`product.detail.glMappings.mappingTypes.${type}`);
 	}
 
 	function getAccountTypeLabel(type: import("@/types").AccountType): string {
-		const labels: Record<import("@/types").AccountType, string> = {
-			ASSET: "Actif",
-			LIABILITY: "Passif",
-			EQUITY: "Capitaux propres",
-			REVENUE: "Produit",
-			EXPENSE: "Charge"
-		};
-		return labels[type] || type;
+		return t(`product.detail.glMappings.accountTypes.${type}`);
 	}
 
 	if (loading) {
@@ -5239,15 +5228,15 @@ function ProductGLMappingsTab({
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
 				<div>
-					<h3 className="text-lg font-semibold text-gray-900">Mappings Grand Livre</h3>
-					<p className="text-sm text-gray-600 mt-1">Association des comptes GL aux produits bancaires</p>
+					<h3 className="text-lg font-semibold text-gray-900">{t("product.detail.glMappings.title")}</h3>
+					<p className="text-sm text-gray-600 mt-1">{t("product.detail.glMappings.subtitle")}</p>
 					{missingMappings.length > 0 && (
 						<div className="mt-3 p-3 bg-orange-50 border-l-4 border-orange-400 rounded-r-md">
 							<p className="text-sm text-orange-800 flex items-center gap-2">
 								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 								</svg>
-								Mappings manquants: {missingMappings.map(t => getMappingTypeLabel(t)).join(", ")}
+								{t("product.detail.glMappings.missingMappings")}: {missingMappings.map(m => getMappingTypeLabel(m)).join(", ")}
 							</p>
 						</div>
 					)}
@@ -5294,7 +5283,7 @@ function ProductGLMappingsTab({
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div className="grid grid-cols-2 gap-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Type de mapping *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("product.detail.glMappings.form.mappingType")}</label>
 								<div className="relative">
 									<select
 										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
@@ -5305,7 +5294,7 @@ function ProductGLMappingsTab({
 										value={form.mappingType}
 										onChange={e => {
 											const newType = e.target.value as import("@/types").MappingType;
-											setForm({ ...form, mappingType: newType, ledgerAccountId: 0 }); // Réinitialiser le compte GL
+											setForm({ ...form, mappingType: newType, ledgerAccountId: 0 });
 											if (validationErrors.mappingType) {
 												setValidationErrors({ ...validationErrors, mappingType: "" });
 											}
@@ -5313,12 +5302,12 @@ function ProductGLMappingsTab({
 										required
 										disabled={!!editingMapping}
 									>
-										<option value="ASSET_ACCOUNT">Compte actif</option>
-										<option value="LIABILITY_ACCOUNT">Compte passif</option>
-										<option value="FEE_ACCOUNT">Compte frais</option>
-										<option value="INTEREST_ACCOUNT">Compte intérêts</option>
-										<option value="REVENUE_ACCOUNT">Compte revenus</option>
-										<option value="EXPENSE_ACCOUNT">Compte charges</option>
+										<option value="ASSET_ACCOUNT">{t("product.detail.glMappings.mappingTypes.ASSET_ACCOUNT")}</option>
+										<option value="LIABILITY_ACCOUNT">{t("product.detail.glMappings.mappingTypes.LIABILITY_ACCOUNT")}</option>
+										<option value="FEE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.FEE_ACCOUNT")}</option>
+										<option value="INTEREST_ACCOUNT">{t("product.detail.glMappings.mappingTypes.INTEREST_ACCOUNT")}</option>
+										<option value="REVENUE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.REVENUE_ACCOUNT")}</option>
+										<option value="EXPENSE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.EXPENSE_ACCOUNT")}</option>
 									</select>
 									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
 										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5330,11 +5319,11 @@ function ProductGLMappingsTab({
 									<p className="text-xs text-red-600 mt-1">{validationErrors.mappingType}</p>
 								)}
 								<p className="text-xs text-gray-500 mt-1">
-									Comptes GL requis: <span className="font-medium">{getRequiredAccountTypes(form.mappingType)}</span>
+									{t("product.detail.glMappings.form.requiredAccountsLabel")}: <span className="font-medium">{getRequiredAccountTypes(form.mappingType)}</span>
 								</p>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Compte GL *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("product.detail.glMappings.form.ledgerAccountId")}</label>
 								<div className="relative">
 									<select
 										className={`w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md bg-white text-sm transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none ${
@@ -5349,7 +5338,7 @@ function ProductGLMappingsTab({
 										}}
 										required
 									>
-										<option value={0} disabled>Sélectionner un compte GL</option>
+										<option value={0} disabled>{t("product.detail.glMappings.form.selectLedgerAccount")}</option>
 										{filterLedgerAccountsByMappingType(form.mappingType).map(account => (
 											<option key={account.id} value={account.id}>
 												{account.code} - {account.name} ({account.currency}) - {getAccountTypeLabel(account.accountType)}
@@ -5370,7 +5359,7 @@ function ProductGLMappingsTab({
 										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 										</svg>
-										Aucun compte GL actif disponible pour ce type de mapping
+										{t("product.detail.glMappings.noAccountsForType")}
 									</p>
 								)}
 							</div>
@@ -5401,8 +5390,8 @@ function ProductGLMappingsTab({
 					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 					</svg>
-					<p className="text-gray-500 text-lg font-medium">Aucun mapping GL configuré</p>
-					<p className="text-gray-400 text-sm mt-2">Ajoutez un mapping pour associer ce produit à un compte GL</p>
+					<p className="text-gray-500 text-lg font-medium">{t("product.detail.glMappings.empty.title")}</p>
+					<p className="text-gray-400 text-sm mt-2">{t("product.detail.glMappings.empty.description")}</p>
 				</div>
 			) : (
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -5410,11 +5399,11 @@ function ProductGLMappingsTab({
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type de mapping</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte GL</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type de compte</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.type")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.ledgerAccount")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.currency")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.accountType")}</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -5475,13 +5464,13 @@ function ProductGLMappingsTab({
 														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 														</svg>
-														Modifier
+														{t("product.detail.glMappings.table.edit")}
 													</Button>
 													<Button
 														variant="outline"
 														size="sm"
 														onClick={() => {
-															if (confirm("Êtes-vous sûr de vouloir supprimer ce mapping ?")) {
+															if (confirm(t("product.detail.glMappings.confirmDelete"))) {
 																onDelete(mapping.id);
 															}
 														}}
@@ -5490,7 +5479,7 @@ function ProductGLMappingsTab({
 														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 														</svg>
-														Supprimer
+														{t("product.detail.glMappings.table.delete")}
 													</Button>
 												</div>
 											</td>
@@ -5503,7 +5492,9 @@ function ProductGLMappingsTab({
 					{mappings.length > 0 && (
 						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
 							<p className="text-sm text-gray-600">
-								Affichage de <span className="font-semibold">{mappings.length}</span> mapping{mappings.length > 1 ? "s" : ""}
+								{mappings.length > 1
+									? t("product.detail.glMappings.footerDisplayPlural", { count: mappings.length })
+									: t("product.detail.glMappings.footerDisplay", { count: mappings.length })}
 							</p>
 						</div>
 					)}

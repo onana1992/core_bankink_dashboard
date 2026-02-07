@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { transactionsApi, accountsApi, transfersApi, customersApi } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import type { Transaction, TransactionEntry, TransactionStatus, Account, Transfer, Customer } from "@/types";
 
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
@@ -123,7 +124,7 @@ export default function TransactionDetailPage() {
 
 	async function handleReverse() {
 		if (!reverseReason.trim()) {
-			alert(t("transaction.detail.reverse.reasonRequired"));
+			showToast(t("transaction.detail.reverse.reasonRequired"), "error");
 			return;
 		}
 		setReverseLoading(true);
@@ -133,7 +134,7 @@ export default function TransactionDetailPage() {
 			setReverseReason("");
 			await load();
 		} catch (e: any) {
-			alert(e?.message ?? t("transaction.detail.reverse.error"));
+			showToast(e?.message ?? t("transaction.detail.reverse.error"), "error");
 		} finally {
 			setReverseLoading(false);
 		}
