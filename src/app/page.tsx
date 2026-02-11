@@ -6,6 +6,7 @@ import i18n from "@/lib/i18n";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { dashboardApi, accountsApi, transactionsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import type { Account, Transaction } from "@/types";
 import { 
 	Users, 
@@ -58,14 +59,10 @@ export default function Dashboard() {
 	}
 
 	function formatCurrency(amount: number | string | null | undefined, currency: string = "XAF"): string {
-		if (amount == null) return "0.00";
+		if (amount == null) return formatAmount(0, currency, i18n.language === "fr" ? "fr-FR" : "en-US");
 		const num = typeof amount === "string" ? parseFloat(amount) : amount;
-		const currentLang = i18n.language || "fr";
-		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
-		return new Intl.NumberFormat(locale, {
-			style: 'currency',
-			currency: currency
-		}).format(num);
+		if (Number.isNaN(num)) return formatAmount(0, currency, i18n.language === "fr" ? "fr-FR" : "en-US");
+		return formatAmount(num, currency, i18n.language === "fr" ? "fr-FR" : "en-US");
 	}
 
 	function formatNumber(num: number): string {

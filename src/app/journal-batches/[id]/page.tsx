@@ -10,12 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { JournalBatch, JournalBatchStatus, LedgerEntry } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { formatAmount as formatAmountUtil } from "@/lib/utils";
 
-const STATUS_LABELS: Record<JournalBatchStatus, string> = {
-	DRAFT: "Brouillon",
-	POSTED: "Posté",
-	CLOSED: "Clôturé"
-};
 
 const STATUS_COLORS: Record<JournalBatchStatus, string> = {
 	DRAFT: "bg-yellow-100 text-yellow-800",
@@ -29,6 +25,12 @@ export default function JournalBatchDetailPage() {
 	const router = useRouter();
 	const batchId = params.id as string;
 	const { isAuthenticated, loading: authLoading } = useAuth();
+
+	const STATUS_LABELS: Record<JournalBatchStatus, string> = {
+		DRAFT: t("journalBatches.statusDraft"),
+		POSTED: t("journalBatches.statusPosted"),
+		CLOSED: t("journalBatches.statusClosed")
+	};
 
 	const [batch, setBatch] = useState<JournalBatch | null>(null);
 	const [entries, setEntries] = useState<LedgerEntry[]>([]);
@@ -54,7 +56,7 @@ export default function JournalBatchDetailPage() {
 			const data = await journalBatchesApi.get(batchId);
 			setBatch(data);
 		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement du lot");
+			setError(e?.message ?? t("journalBatches.detail.errorLoad"));
 		} finally {
 			setLoading(false);
 		}
@@ -75,14 +77,14 @@ export default function JournalBatchDetailPage() {
 
 	async function handlePost() {
 		if (!batch) return;
-		if (!confirm("Êtes-vous sûr de vouloir poster ce lot ? Cette action valide l'équilibre et change le statut en POSTED.")) {
+		if (!confirm(t("journalBatches.detail.confirmPost"))) {
 			return;
 		}
 		setActionLoading(true);
 		try {
 			const updatedBatch = await journalBatchesApi.post(batchId);
 			setBatch(updatedBatch);
-			setToast({ message: "Lot posté avec succès", type: "success" });
+			setToast({ message: t("journalBatches.detail.toastPosted"), type: "success" });
 			setTimeout(() => {
 				window.location.reload();
 			}, 1500);
@@ -95,19 +97,19 @@ export default function JournalBatchDetailPage() {
 
 	async function handleClose() {
 		if (!batch) return;
-		if (!confirm("Êtes-vous sûr de vouloir clôturer ce lot ? Cette action est irréversible.")) {
+		if (!confirm(t("journalBatches.detail.confirmClose"))) {
 			return;
 		}
 		setActionLoading(true);
 		try {
 			const updatedBatch = await journalBatchesApi.close(batchId);
 			setBatch(updatedBatch);
-			setToast({ message: "Lot clôturé avec succès", type: "success" });
+			setToast({ message: t("journalBatches.detail.toastClosed"), type: "success" });
 			setTimeout(() => {
 				window.location.reload();
 			}, 1500);
 		} catch (e: any) {
-			setToast({ message: e?.message ?? "Erreur lors de la clôture du lot", type: "error" });
+			setToast({ message: e?.message ?? t("journalBatches.errorClose"), type: "error" });
 		} finally {
 			setActionLoading(false);
 		}
@@ -119,23 +121,25 @@ export default function JournalBatchDetailPage() {
 		try {
 			await journalBatchesApi.recalculateTotals(batchId);
 			await loadBatch();
-			setToast({ message: "Totaux recalculés avec succès", type: "success" });
+			setToast({ message: t("journalBatches.detail.toastRecalculated"), type: "success" });
 		} catch (e: any) {
-			setToast({ message: e?.message ?? "Erreur lors du recalcul des totaux", type: "error" });
+			setToast({ message: e?.message ?? t("journalBatches.detail.errorRecalculate"), type: "error" });
 		} finally {
 			setActionLoading(false);
 		}
 	}
 
 	function formatAmount(amount: number, currency: string): string {
-		return new Intl.NumberFormat("fr-FR", {
-			style: "currency",
-			currency: currency || "XAF"
-		}).format(amount);
+		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
+		return formatAmountUtil(amount, currency, locale);
 	}
 
-	function formatDate(dateString: string): string {
-		return new Date(dateString).toLocaleDateString("fr-FR", {
+	/** Pour les chaînes date seule "YYYY-MM-DD" : évite le décalage d'un jour en fuseaux à l'ouest de UTC */
+	function formatDateOnly(dateString: string): string {
+		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
+		const [y, m, d] = dateString.split("-").map(Number);
+		const date = new Date(y, m - 1, d);
+		return date.toLocaleDateString(locale, {
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric"
@@ -143,7 +147,8 @@ export default function JournalBatchDetailPage() {
 	}
 
 	function formatDateTime(dateString: string): string {
-		return new Date(dateString).toLocaleString("fr-FR", {
+		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
+		return new Date(dateString).toLocaleString(locale, {
 			day: "2-digit",
 			month: "2-digit",
 			year: "numeric",
@@ -161,7 +166,7 @@ export default function JournalBatchDetailPage() {
 			<div className="flex items-center justify-center min-h-screen">
 				<div className="text-center">
 					<div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement du lot...</p>
+					<p className="mt-4 text-gray-600">{t("journalBatches.detail.loadingBatch")}</p>
 				</div>
 			</div>
 		);
@@ -217,7 +222,7 @@ export default function JournalBatchDetailPage() {
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 								</svg>
-								Retour
+								{t("journalBatches.detail.back")}
 							</Button>
 						</Link>
 						<h1 className="text-3xl font-bold text-gray-900">{batch.batchNumber}</h1>
@@ -225,7 +230,7 @@ export default function JournalBatchDetailPage() {
 							{STATUS_LABELS[batch.status]}
 						</Badge>
 					</div>
-					<p className="text-gray-600">Détails du lot de journalisation</p>
+					<p className="text-gray-600">{t("journalBatches.detail.subtitle")}</p>
 				</div>
 				<div className="flex gap-3">
 					{batch.status === "DRAFT" && (
@@ -239,7 +244,7 @@ export default function JournalBatchDetailPage() {
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 								</svg>
-								Recalculer les totaux
+								{t("journalBatches.detail.recalculateTotals")}
 							</Button>
 							<Button
 								onClick={handlePost}
@@ -249,7 +254,7 @@ export default function JournalBatchDetailPage() {
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
-								Poster le lot
+								{t("journalBatches.detail.postBatch")}
 							</Button>
 						</>
 					)}
@@ -262,7 +267,7 @@ export default function JournalBatchDetailPage() {
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 							</svg>
-							Clôturer le lot
+							{t("journalBatches.detail.closeBatch")}
 						</Button>
 					)}
 				</div>
@@ -270,36 +275,36 @@ export default function JournalBatchDetailPage() {
 
 			{/* Informations du lot */}
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-				<h2 className="text-xl font-semibold text-gray-900 mb-4">Informations du lot</h2>
+				<h2 className="text-xl font-semibold text-gray-900 mb-4">{t("journalBatches.detail.batchInfo")}</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Numéro de lot</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.batchNumber")}</label>
 						<p className="text-lg font-mono font-semibold text-gray-900">{batch.batchNumber}</p>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Date du lot</label>
-						<p className="text-lg text-gray-900">{formatDate(batch.batchDate)}</p>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.batchDate")}</label>
+						<p className="text-lg text-gray-900">{formatDateOnly(batch.batchDate)}</p>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Statut</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.status")}</label>
 						<Badge className={STATUS_COLORS[batch.status]}>
 							{STATUS_LABELS[batch.status]}
 						</Badge>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Total Débit</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.totalDebit")}</label>
 						<p className="text-lg font-mono font-semibold text-gray-900">
 							{formatAmount(batch.totalDebit, batch.currency)}
 						</p>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Total Crédit</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.totalCredit")}</label>
 						<p className="text-lg font-mono font-semibold text-gray-900">
 							{formatAmount(batch.totalCredit, batch.currency)}
 						</p>
 					</div>
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Devise</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.currency")}</label>
 						<p className="text-lg text-gray-900">
 							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
 								{entries.length > 0 ? entries[0].currency : "XAF"}
@@ -308,23 +313,23 @@ export default function JournalBatchDetailPage() {
 					</div>
 					{batch.description && (
 						<div className="md:col-span-2">
-							<label className="block text-sm font-medium text-gray-500 mb-1">Description</label>
+							<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.description")}</label>
 							<p className="text-gray-900">{batch.description}</p>
 						</div>
 					)}
 					<div>
-						<label className="block text-sm font-medium text-gray-500 mb-1">Créé le</label>
+						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.createdAt")}</label>
 						<p className="text-gray-900">{formatDateTime(batch.createdAt)}</p>
 					</div>
 					{batch.status === "POSTED" && (
 						<div>
-							<label className="block text-sm font-medium text-gray-500 mb-1">Posté le</label>
+							<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.postedAt")}</label>
 							<p className="text-gray-900">{formatDateTime(batch.updatedAt)}</p>
 						</div>
 					)}
 					{batch.status === "CLOSED" && (
 						<div>
-							<label className="block text-sm font-medium text-gray-500 mb-1">Clôturé le</label>
+							<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.closedAt")}</label>
 							<p className="text-gray-900">{formatDateTime(batch.updatedAt)}</p>
 						</div>
 					)}
@@ -351,16 +356,16 @@ export default function JournalBatchDetailPage() {
 								isBalanced ? "text-green-800" : "text-red-800"
 							}`}>
 								{isBalanced 
-									? "Lot équilibré ✓" 
-									: `Lot déséquilibré - Écart: ${formatAmount(difference, currency)}`
+									? t("journalBatches.detail.balanced")
+									: t("journalBatches.detail.unbalanced", { amount: formatAmount(difference, currency) })
 								}
 							</p>
 							<p className={`text-sm mt-1 ${
 								isBalanced ? "text-green-700" : "text-red-700"
 							}`}>
 								{isBalanced 
-									? "Les totaux débit et crédit sont égaux. Le lot peut être posté."
-									: "Les totaux débit et crédit ne sont pas égaux. Veuillez corriger les écritures avant de poster."
+									? t("journalBatches.detail.balancedHint")
+									: t("journalBatches.detail.unbalancedHint")
 								}
 							</p>
 						</div>
@@ -393,15 +398,15 @@ export default function JournalBatchDetailPage() {
 				{entriesLoading ? (
 					<div className="p-12 text-center">
 						<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-						<p className="mt-4 text-gray-600">Chargement des écritures...</p>
+						<p className="mt-4 text-gray-600">{t("journalBatches.detail.loadingEntries")}</p>
 					</div>
 				) : entries.length === 0 ? (
 					<div className="p-12 text-center">
 						<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 						</svg>
-						<p className="text-gray-500 text-lg font-medium">Aucune écriture trouvée</p>
-						<p className="text-gray-400 text-sm mt-2">Ce lot ne contient pas encore d'écritures</p>
+						<p className="text-gray-500 text-lg font-medium">{t("journalBatches.detail.noEntries")}</p>
+						<p className="text-gray-400 text-sm mt-2">{t("journalBatches.detail.noEntriesHint")}</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
@@ -421,14 +426,14 @@ export default function JournalBatchDetailPage() {
 								{entries.map((entry) => (
 									<tr key={entry.id} className="hover:bg-gray-50 transition-colors">
 										<td className="px-6 py-4 whitespace-nowrap text-gray-600">
-											{formatDate(entry.entryDate)}
+											{formatDateOnly(entry.entryDate)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Link
 												href={`/ledger-accounts/${entry.ledgerAccountId}`}
 												className="text-blue-600 hover:text-blue-800 hover:underline font-mono"
 											>
-												{entry.ledgerAccountCode || `GL-${entry.ledgerAccountId}`}
+												{entry.ledgerAccount?.code ?? entry.ledgerAccountCode ?? `GL-${entry.ledgerAccountId}`}
 											</Link>
 										</td>
 										<td className="px-6 py-4 text-gray-600">
@@ -460,7 +465,7 @@ export default function JournalBatchDetailPage() {
 							<tfoot className="bg-gray-50">
 								<tr>
 									<td colSpan={3} className="px-6 py-4 text-right font-semibold text-gray-700">
-										Totaux:
+										{t("journalBatches.detail.totals")}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap text-right font-mono font-semibold text-gray-900">
 										{formatAmount(

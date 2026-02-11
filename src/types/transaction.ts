@@ -26,6 +26,8 @@ export interface TransactionEntry {
 	id: number;
 	transactionId: number;
 	ledgerAccountId?: number | null;
+	/** Code du compte Grand Livre (ex: GL-CASH-XAF) */
+	ledgerAccountCode?: string | null;
 	entryType: EntryType;
 	amount: number;
 	currency: string;

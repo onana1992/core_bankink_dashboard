@@ -7,6 +7,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { transactionsApi, accountsApi } from "@/lib/api";
+import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import type { Transaction, TransactionType, TransactionStatus, Account } from "@/types";
 
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
@@ -21,7 +22,7 @@ interface TransactionListByTypeProps {
 	transactionType: TransactionType;
 	title: string;
 	description: string;
-	newPagePath: string;
+	newPagePath?: string;
 	icon?: React.ReactNode;
 }
 
@@ -114,10 +115,7 @@ export default function TransactionListByType({
 	function formatAmount(amount: number, currency: string): string {
 		const currentLang = i18n.language || "fr";
 		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
-		return new Intl.NumberFormat(locale, {
-			style: "currency",
-			currency: currency || "XAF"
-		}).format(amount);
+		return formatAmountUtil(amount, currency, locale);
 	}
 
 	function formatDate(dateString: string): string {
@@ -145,14 +143,16 @@ export default function TransactionListByType({
 					<h1 className="text-3xl font-bold text-gray-900">{title}</h1>
 					<p className="text-gray-600 mt-1">{description}</p>
 				</div>
-				<Link href={newPagePath}>
-					<Button className="flex items-center gap-2">
-						<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-						</svg>
-						{t("transaction.byType.new")}
-					</Button>
-				</Link>
+				{newPagePath && (
+					<Link href={newPagePath}>
+						<Button className="flex items-center gap-2">
+							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+							</svg>
+							{t("transaction.byType.new")}
+						</Button>
+					</Link>
+				)}
 			</div>
 
 			{error && (

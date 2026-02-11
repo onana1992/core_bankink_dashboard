@@ -1251,6 +1251,91 @@
 			"displaying_other": "Displaying {{count}} entries"
 		}
 	},
+	"journalBatches": {
+		"title": "Journal Batches",
+		"subtitle": "Accounting journal batch management",
+		"refresh": "Refresh",
+		"newBatch": "New batch",
+		"cancel": "Cancel",
+		"filters": "Filters",
+		"status": "Status",
+		"allStatuses": "All statuses",
+		"startDate": "Start date",
+		"endDate": "End date",
+		"statusDraft": "Draft",
+		"statusPosted": "Posted",
+		"statusClosed": "Closed",
+		"formNewTitle": "New journal batch",
+		"formBatchNumber": "Batch number *",
+		"formBatchDate": "Batch date *",
+		"formDescription": "Description",
+		"formDescriptionPlaceholder": "Journal batch description...",
+		"formCreate": "Create",
+		"creating": "Creating...",
+		"number": "Number",
+		"date": "Date",
+		"description": "Description",
+		"debit": "Debit",
+		"credit": "Credit",
+		"actions": "Actions",
+		"view": "View",
+		"post": "Post",
+		"close": "Close",
+		"loadingBatches": "Loading batches...",
+		"noBatches": "No journal batches found",
+		"noBatchesHint": "Try adjusting your filters or create a new batch",
+		"errorLoad": "Error loading journal batches",
+		"errorCreate": "Error creating batch",
+		"errorPost": "Error posting batch",
+		"errorClose": "Error closing batch",
+		"confirmPost": "Are you sure you want to post this batch? This action validates the balance and changes the status to POSTED.",
+		"confirmClose": "Are you sure you want to close this batch? This action is irreversible.",
+		"displaying": "Displaying {{count}} of {{total}} batch(es)",
+		"itemsPerPage": "Items per page",
+		"first": "First",
+		"previous": "Previous",
+		"next": "Next",
+		"last": "Last",
+		"pageOf": "Page {{current}} of {{total}}",
+		"detail": {
+			"back": "Back",
+			"backToList": "Back to list",
+			"subtitle": "Journal batch details",
+			"recalculateTotals": "Recalculate totals",
+			"postBatch": "Post batch",
+			"closeBatch": "Close batch",
+			"batchInfo": "Batch information",
+			"batchNumber": "Batch number",
+			"batchDate": "Batch date",
+			"totalDebit": "Total Debit",
+			"totalCredit": "Total Credit",
+			"currency": "Currency",
+			"createdAt": "Created at",
+			"postedAt": "Posted at",
+			"closedAt": "Closed at",
+			"balanced": "Batch balanced ✓",
+			"unbalanced": "Batch unbalanced - Difference: {{amount}}",
+			"balancedHint": "Debit and credit totals are equal. The batch can be posted.",
+			"unbalancedHint": "Debit and credit totals are not equal. Please correct the entries before posting.",
+			"entries": "Entries",
+			"entriesCount": "Entries ({{count}})",
+			"refresh": "Refresh",
+			"loadingBatch": "Loading batch...",
+			"loadingEntries": "Loading entries...",
+			"noEntries": "No entries found",
+			"noEntriesHint": "This batch does not contain any entries yet",
+			"glAccount": "GL Account",
+			"reference": "Reference",
+			"totals": "Totals:",
+			"errorLoad": "Error loading batch",
+			"toastPosted": "Batch posted successfully",
+			"toastClosed": "Batch closed successfully",
+			"toastRecalculated": "Totals recalculated successfully",
+			"errorRecalculate": "Error recalculating totals",
+			"confirmPost": "Are you sure you want to post this batch? This action validates the balance and changes the status to POSTED.",
+			"confirmClose": "Are you sure you want to close this batch? This action is irreversible."
+		}
+	},
 	"transfer": {
 		"new": {
 			"title": "New Transfer",
@@ -1314,7 +1399,10 @@
 			"amount": {
 				"label": "Amount",
 				"required": "*",
-				"placeholder": "0.00"
+				"placeholder": "0.00",
+				"placeholderAdjustment": "Positive = credit, negative = debit",
+				"adjustmentHint": "positive = increase balance, negative = decrease",
+				"adjustmentNonZero": "Amount must not be zero (positive or negative)"
 			},
 			"currency": {
 				"label": "Currency",
@@ -1533,6 +1621,80 @@
 				"loadAccounts": "Error loading accounts",
 				"loadTransactions": "Error loading {{type}}"
 			}
+		}
+	},
+	"hold": {
+		"list": {
+			"title": "Fund Reservations (Holds)",
+			"description": "View and manage holds by account.",
+			"backToTransactions": "Back to transactions",
+			"selectAccount": "Select an account",
+			"selectAccountHint": "Select an account to view its holds",
+			"selectAccountHintDetail": "Search by account number or choose from the list.",
+			"filters": {
+				"title": "Filters"
+			},
+			"stats": {
+				"total": "Total",
+				"pending": "Pending",
+				"applied": "Applied",
+				"released": "Released",
+				"expired": "Expired",
+				"totalPendingAmount": "Total amount (pending)"
+			},
+			"accountNumberOrId": "Account number or ID",
+			"accountNumberPlaceholder": "e.g. CUR-1234567890",
+			"search": "Search",
+			"orSelect": "Or select an account",
+			"balance": "Balance",
+			"available": "Available",
+			"viewAccount": "View account",
+			"holdsForAccount": "Holds for this account",
+			"createHold": "Create hold",
+			"noHolds": "No holds",
+			"amount": "Amount",
+			"reason": "Reason",
+			"status": "Status",
+			"expiresAt": "Expires at",
+			"actions": "Actions",
+			"release": "Release",
+			"viewTransaction": "View transaction",
+			"createSuccess": "Hold created.",
+			"releaseSuccess": "Hold released.",
+			"errors": {
+				"loadAccounts": "Error loading accounts",
+				"loadHolds": "Error loading holds",
+				"accountNotFound": "Account not found",
+				"createFailed": "Failed to create hold",
+				"releaseFailed": "Failed to release hold"
+			}
+		},
+		"detail": {
+			"title": "Hold",
+			"subtitle": "Fund reservation details",
+			"backToList": "Back to holds",
+			"info": "Details",
+			"releasedAt": "Released at",
+			"account": "Account",
+			"transaction": "Linked transaction",
+			"notFound": "Hold not found.",
+			"errors": {
+				"loadFailed": "Error loading hold"
+			}
+		},
+		"form": {
+			"amount": "Amount",
+			"currency": "Currency",
+			"reason": "Reason",
+			"reasonPlaceholder": "Reason for the hold...",
+			"expiresAt": "Expiration date (optional)",
+			"submit": "Create hold"
+		},
+		"status": {
+			"PENDING": "Pending",
+			"APPLIED": "Applied",
+			"RELEASED": "Released",
+			"EXPIRED": "Expired"
 		}
 	},
 	"user": {

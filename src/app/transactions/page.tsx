@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { transactionsApi, accountsApi } from "@/lib/api";
+import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import type { Transaction, TransactionType, TransactionStatus, Account } from "@/types";
 
 const TRANSACTION_STATUS_COLORS: Record<TransactionStatus, string> = {
@@ -117,10 +118,7 @@ export default function TransactionsPage() {
 	function formatAmount(amount: number, currency: string): string {
 		const currentLang = i18n.language || "fr";
 		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
-		return new Intl.NumberFormat(locale, {
-			style: "currency",
-			currency: currency || "XAF"
-		}).format(amount);
+		return formatAmountUtil(amount, currency, locale);
 	}
 
 	function formatDate(dateString: string): string {
@@ -238,7 +236,7 @@ export default function TransactionsPage() {
 				</div>
 				<div className="mt-6 pt-6 border-t border-gray-200">
 					<h3 className="text-sm font-semibold text-gray-900 mb-3">{t("transaction.list.types.create")}</h3>
-					<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+					<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
 						<Link href="/transactions/deposit/new">
 							<Button variant="outline" size="sm" className="w-full justify-center">
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,14 +261,6 @@ export default function TransactionsPage() {
 								{t("transaction.list.types.transfer")}
 							</Button>
 						</Link>
-						<Link href="/transactions/fee/new">
-							<Button variant="outline" size="sm" className="w-full justify-center">
-								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								{t("transaction.list.types.fee")}
-							</Button>
-						</Link>
 						<Link href="/transactions/interest/new">
 							<Button variant="outline" size="sm" className="w-full justify-center">
 								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,14 +275,6 @@ export default function TransactionsPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 								</svg>
 								{t("transaction.list.types.adjustment")}
-							</Button>
-						</Link>
-						<Link href="/transactions/reversal/new">
-							<Button variant="outline" size="sm" className="w-full justify-center">
-								<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-								</svg>
-								{t("transaction.list.types.reversal")}
 							</Button>
 						</Link>
 					</div>

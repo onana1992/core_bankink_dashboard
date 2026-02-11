@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 import { transactionsApi, accountsApi, transfersApi, customersApi } from "@/lib/api";
+import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import { showToast } from "@/lib/toast";
 import type { Transaction, TransactionEntry, TransactionStatus, Account, Transfer, Customer } from "@/types";
 
@@ -141,13 +142,9 @@ export default function TransactionDetailPage() {
 	}
 
 	function formatAmount(amount: number, currency: string): string {
-		// Utiliser la locale basée sur la langue i18n
 		const currentLang = i18n.language || "fr";
 		const locale = currentLang === "fr" ? "fr-FR" : "en-US";
-		return new Intl.NumberFormat(locale, {
-			style: "currency",
-			currency: currency || "XAF"
-		}).format(amount);
+		return formatAmountUtil(amount, currency, locale);
 	}
 
 	function formatDate(dateString: string): string {
@@ -564,8 +561,10 @@ export default function TransactionDetailPage() {
 											</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											{entry.ledgerAccountId ? (
-												<span className="font-mono text-gray-600">{entry.ledgerAccountId}</span>
+											{entry.ledgerAccountCode != null && entry.ledgerAccountCode !== "" ? (
+												<span className="font-mono text-gray-600">{entry.ledgerAccountCode}</span>
+											) : entry.ledgerAccountId != null ? (
+												<span className="font-mono text-gray-500">{entry.ledgerAccountId}</span>
 											) : (
 												<span className="text-gray-400">—</span>
 											)}

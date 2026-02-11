@@ -9,11 +9,13 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi, interestsApi, feesApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import { showToast } from "@/lib/toast";
 import type { Account, AccountStatus, Customer, Product, Transaction, Hold, ProductFee } from "@/types";
 
 export default function AccountDetailPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const params = useParams();
 	const router = useRouter();
 	const accountId = params.id as string;
@@ -406,10 +408,7 @@ export default function AccountDetailPage() {
 	}
 
 	function formatCurrency(amount: number, currency: string) {
-		return new Intl.NumberFormat('fr-FR', {
-			style: 'currency',
-			currency: currency
-		}).format(amount);
+		return formatAmount(amount, currency || "XAF", locale);
 	}
 
 	if (loading) {

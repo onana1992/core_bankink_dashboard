@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { transfersApi, accountsApi, customersApi } from "@/lib/api";
+import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import type { Transfer, Account, Customer } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -99,10 +100,7 @@ export default function TransferDetailPage() {
 	}
 
 	function formatCurrency(amount: number, currency: string) {
-		return new Intl.NumberFormat("fr-FR", {
-			style: "currency",
-			currency: currency || "XAF"
-		}).format(amount);
+		return formatAmountUtil(amount, currency, "fr-FR");
 	}
 
 	function formatDate(dateString: string) {

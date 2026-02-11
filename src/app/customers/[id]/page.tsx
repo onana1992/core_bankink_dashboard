@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { customersApi, accountsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import type {
 	AddAddressRequest,
 	AddRelatedPersonRequest,
@@ -22,7 +23,8 @@ import type {
 } from "@/types";
 
 export default function CustomerDetailPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const params = useParams<{ id: string }>();
 	const router = useRouter();
 	const id = useMemo(() => Number(params?.id), [params]);
@@ -2156,18 +2158,12 @@ export default function CustomerDetailPage() {
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-right">
 													<span className={`font-mono font-semibold ${account.balance >= 0 ? "text-gray-900" : "text-red-600"}`}>
-														{new Intl.NumberFormat("fr-FR", {
-															style: "currency",
-															currency: account.currency || "XAF"
-														}).format(account.balance)}
+														{formatAmount(account.balance, account.currency || "XAF", locale)}
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-right">
 													<span className={`font-mono font-semibold ${account.availableBalance >= 0 ? "text-gray-900" : "text-red-600"}`}>
-														{new Intl.NumberFormat("fr-FR", {
-															style: "currency",
-															currency: account.currency || "XAF"
-														}).format(account.availableBalance)}
+														{formatAmount(account.availableBalance, account.currency || "XAF", locale)}
 													</span>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-gray-600">

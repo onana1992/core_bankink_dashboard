@@ -12,6 +12,7 @@ interface ToastProps {
 }
 
 export default function Toast({ message, type, onClose, duration = 3000 }: ToastProps) {
+	const displayMessage = typeof message === "string" ? message : "";
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			onClose();
@@ -36,7 +37,7 @@ export default function Toast({ message, type, onClose, duration = 3000 }: Toast
 			}}
 		>
 			<div className="flex items-center gap-2">
-				<span className="font-medium">{message}</span>
+				<span className="font-medium">{displayMessage}</span>
 				<button
 					onClick={onClose}
 					className="ml-2 text-current opacity-70 hover:opacity-100 text-xl leading-none font-bold"

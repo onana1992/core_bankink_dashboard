@@ -7,6 +7,7 @@ import { generateIdempotencyKey } from "@/lib/idempotency";
 import type { Account, CreateTransactionRequest, Customer, TransactionType } from "@/types";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Toast from "@/components/ui/Toast";
 
 interface TransactionFormProps {
 	transactionType: TransactionType;
@@ -36,8 +37,8 @@ export default function TransactionForm({
 	const [descriptionText, setDescriptionText] = useState<string>("");
 	const [valueDate, setValueDate] = useState<string>("");
 	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-	
+	const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+
 	// Client search modal state
 	const [showClientModal, setShowClientModal] = useState(false);
 	const [clientSearch, setClientSearch] = useState("");
@@ -123,23 +124,29 @@ export default function TransactionForm({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setError(null);
 		setLoading(true);
 
 		if (!selectedAccountId) {
-			setError("Veuillez sélectionner un compte");
+			setToast({ message: t("transaction.form.account.noAccountsAvailable"), type: "error" });
 			setLoading(false);
 			return;
 		}
 
-		if (!amount || parseFloat(amount) <= 0) {
-			setError("Veuillez saisir un montant valide");
+		const amountNum = parseFloat(amount);
+		const isAdjustment = transactionType === "ADJUSTMENT";
+		if (!amount || isNaN(amountNum)) {
+			setToast({ message: t("transaction.form.amount.placeholder"), type: "error" });
+			setLoading(false);
+			return;
+		}
+		if (isAdjustment ? amountNum === 0 : amountNum <= 0) {
+			setToast({ message: isAdjustment ? t("transaction.form.amount.adjustmentNonZero") : t("transaction.form.amount.placeholder"), type: "error" });
 			setLoading(false);
 			return;
 		}
 
 		if (!currency) {
-			setError("Veuillez sélectionner une devise");
+			setToast({ message: t("transaction.form.currency.placeholder"), type: "error" });
 			setLoading(false);
 			return;
 		}
@@ -148,24 +155,22 @@ export default function TransactionForm({
 			const data: CreateTransactionRequest = {
 				type: transactionType,
 				accountId: selectedAccountId,
-				amount: parseFloat(amount),
+				amount: amountNum,
 				currency: currency,
 				description: descriptionText || undefined,
 				valueDate: valueDate || undefined
 			};
 
-			// Générer une clé d'idempotence unique pour éviter les doublons
 			const idempotencyKey = generateIdempotencyKey(transactionType.toLowerCase());
 
 			if (onSubmit) {
 				await onSubmit(data);
 			} else {
-				// Default submission - passer la clé d'idempotence
 				const transaction = await transactionsApi.create(data, idempotencyKey);
 				window.location.href = `/transactions/${transaction.id}`;
 			}
 		} catch (e: any) {
-			setError(e?.message || t("transaction.form.errors.createError"));
+			setToast({ message: e?.message || t("transaction.form.errors.createError"), type: "error" });
 			setLoading(false);
 		}
 	};
@@ -182,6 +187,7 @@ export default function TransactionForm({
 
 	return (
 		<div className="max-w-4xl mx-auto">
+			{toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 				{/* Header */}
 				<div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-5 border-b border-gray-200">
@@ -196,17 +202,6 @@ export default function TransactionForm({
 
 				{/* Form */}
 				<form onSubmit={handleSubmit} className="p-6 space-y-6">
-					{error && (
-						<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-							<div className="flex items-center gap-2">
-								<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								<p className="text-sm font-medium text-red-800">{error}</p>
-							</div>
-						</div>
-					)}
-
 					{/* Client Selection */}
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -354,14 +349,17 @@ export default function TransactionForm({
 					<div>
 						<label className="block text-sm font-semibold text-gray-900 mb-2">
 							{t("transaction.form.amount.label")} <span className="text-red-500">{t("transaction.form.amount.required")}</span>
+							{transactionType === "ADJUSTMENT" && (
+								<span className="ml-2 text-xs font-normal text-gray-500">({t("transaction.form.amount.adjustmentHint")})</span>
+							)}
 						</label>
 						<Input
 							type="number"
 							step="0.01"
-							min="0"
+							min={transactionType === "ADJUSTMENT" ? undefined : "0"}
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
-							placeholder={t("transaction.form.amount.placeholder")}
+							placeholder={transactionType === "ADJUSTMENT" ? t("transaction.form.amount.placeholderAdjustment") : t("transaction.form.amount.placeholder")}
 							required
 							className="w-full"
 						/>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { ledgerAccountsApi, chartOfAccountsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { LedgerAccount, AccountType, LedgerAccountStatus, ChartOfAccount, UpdateLedgerAccountRequest, LedgerEntry } from "@/types";
 import Button from "@/components/ui/Button";
@@ -125,6 +126,18 @@ export default function LedgerAccountDetailPage() {
 			default:
 				return "neutral";
 		}
+	}
+
+	/** Pour les chaînes date seule "YYYY-MM-DD" : évite le décalage d'un jour en fuseaux à l'ouest de UTC */
+	function formatDateOnly(dateString: string): string {
+		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
+		const [y, m, d] = dateString.split("-").map(Number);
+		const date = new Date(y, m - 1, d);
+		return date.toLocaleDateString(locale, {
+			day: "2-digit",
+			month: "2-digit",
+			year: "numeric"
+		});
 	}
 
 	function validateForm(): boolean {
@@ -362,10 +375,10 @@ export default function LedgerAccountDetailPage() {
 						<h3 className="text-sm font-medium text-gray-700">{t("ledgerAccount.table.balance")}</h3>
 					</div>
 					<div className="text-3xl font-bold text-gray-900">
-						{account.balance.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+						{formatAmount(account.balance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 					<div className="text-sm text-gray-500 mt-1">
-						{t("ledgerAccount.detail.availableBalance")}: {account.availableBalance.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+						{t("ledgerAccount.detail.availableBalance")}: {formatAmount(account.availableBalance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 				</div>
 				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -409,19 +422,19 @@ export default function LedgerAccountDetailPage() {
 				<div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl shadow-sm border border-green-200">
 					<div className="text-sm font-medium text-green-700 mb-1">{t("ledgerAccount.entries.totalDebit")}</div>
 					<div className="text-3xl font-bold text-green-900">
-						{entriesStats.totalDebit.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+						{formatAmount(entriesStats.totalDebit, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 				</div>
 				<div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-xl shadow-sm border border-red-200">
 					<div className="text-sm font-medium text-red-700 mb-1">{t("ledgerAccount.entries.totalCredit")}</div>
 					<div className="text-3xl font-bold text-red-900">
-						{entriesStats.totalCredit.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+						{formatAmount(entriesStats.totalCredit, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 				</div>
 				<div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl shadow-sm border border-purple-200">
 					<div className="text-sm font-medium text-purple-700 mb-1">{t("ledgerAccount.entries.balance")}</div>
 					<div className="text-3xl font-bold text-purple-900">
-						{entriesStats.balance.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+						{formatAmount(entriesStats.balance, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 				</div>
 			</div>
@@ -501,10 +514,10 @@ export default function LedgerAccountDetailPage() {
 										return (
 											<tr key={entry.id} className="hover:bg-gray-50 transition-colors">
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-													{new Date(entry.entryDate).toLocaleDateString("fr-FR")}
+													{formatDateOnly(entry.entryDate)}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-													{new Date(entry.valueDate).toLocaleDateString("fr-FR")}
+													{formatDateOnly(entry.valueDate)}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<Badge variant={isDebit ? "info" : "warning"}>
@@ -512,10 +525,10 @@ export default function LedgerAccountDetailPage() {
 													</Badge>
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-													{isDebit ? entry.debitAmount.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "-"}
+													{isDebit ? formatAmount(entry.debitAmount, entry.currency ?? account.currency, i18n.language === "fr" ? "fr-FR" : "en-US") : "-"}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-													{!isDebit ? entry.creditAmount.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "-"}
+													{!isDebit ? formatAmount(entry.creditAmount, entry.currency ?? account.currency, i18n.language === "fr" ? "fr-FR" : "en-US") : "-"}
 												</td>
 												<td className="px-6 py-4 text-sm text-gray-600">
 													{entry.description || "-"}

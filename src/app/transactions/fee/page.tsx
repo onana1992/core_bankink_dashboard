@@ -10,7 +10,6 @@ export default function FeesPage() {
 			transactionType="FEE"
 			title={t("transaction.list.types.fees")}
 			description={t("transaction.list.types.fees")}
-			newPagePath="/transactions/fee/new"
 		/>
 	);
 }

@@ -95,6 +95,7 @@ export interface CreateJournalBatchRequest {
 export interface LedgerEntry {
 	id: number;
 	ledgerAccountId: number;
+	ledgerAccount?: { code: string; name?: string } | null;
 	ledgerAccountCode?: string;
 	entryDate: string;
 	valueDate: string;

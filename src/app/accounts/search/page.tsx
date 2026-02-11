@@ -6,6 +6,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { accountsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import type { Account } from "@/types";
 
 export default function SearchAccountPage() {
@@ -60,10 +61,7 @@ export default function SearchAccountPage() {
 	}
 
 	function formatCurrency(amount: number, currency: string) {
-		return new Intl.NumberFormat('fr-FR', {
-			style: 'currency',
-			currency: currency
-		}).format(amount);
+		return formatAmount(amount, currency || "XAF", "fr-FR");
 	}
 
 	return (

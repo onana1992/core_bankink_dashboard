@@ -8,10 +8,12 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
 import { accountsApi, customersApi, productsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import type { Account, AccountStatus, Customer, Product } from "@/types";
 
 export default function AccountsPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [accounts, setAccounts] = useState<Account[]>([]);
@@ -131,10 +133,7 @@ export default function AccountsPage() {
 	}
 
 	function formatCurrency(amount: number, currency: string) {
-		return new Intl.NumberFormat('fr-FR', {
-			style: 'currency',
-			currency: currency
-		}).format(amount);
+		return formatAmount(amount, currency || "XAF", locale);
 	}
 
 	return (

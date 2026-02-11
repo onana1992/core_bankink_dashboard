@@ -1659,6 +1659,14 @@ export const transfersApi = {
 };
 
 export const holdsApi = {
+	async list(): Promise<Hold[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/holds`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Hold[]>(res);
+	},
+
 	async get(id: number | string): Promise<Hold> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/holds/${id}`, {
 			headers: getAuthHeaders(),

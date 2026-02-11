@@ -22,7 +22,7 @@
 		"allTransactions": "Toutes les transactions",
 		"journal": "Journal",
 		"transfers": "Virements",
-		"holds": "Blocages",
+		"holds": "Réservations",
 		"users": "Utilisateurs",
 		"roles": "Rôles",
 		"permissions": "Permissions",
@@ -1251,6 +1251,91 @@
 			"displaying_other": "Affichage de {{count}} écritures"
 		}
 	},
+	"journalBatches": {
+		"title": "Lots de journalisation",
+		"subtitle": "Gestion des lots de journalisation comptable",
+		"refresh": "Actualiser",
+		"newBatch": "Nouveau lot",
+		"cancel": "Annuler",
+		"filters": "Filtres",
+		"status": "Statut",
+		"allStatuses": "Tous les statuts",
+		"startDate": "Date début",
+		"endDate": "Date fin",
+		"statusDraft": "Brouillon",
+		"statusPosted": "Posté",
+		"statusClosed": "Clôturé",
+		"formNewTitle": "Nouveau lot de journalisation",
+		"formBatchNumber": "Numéro de lot *",
+		"formBatchDate": "Date du lot *",
+		"formDescription": "Description",
+		"formDescriptionPlaceholder": "Description du lot de journalisation...",
+		"formCreate": "Créer",
+		"creating": "Création...",
+		"number": "Numéro",
+		"date": "Date",
+		"description": "Description",
+		"debit": "Débit",
+		"credit": "Crédit",
+		"actions": "Actions",
+		"view": "Voir",
+		"post": "Poster",
+		"close": "Clôturer",
+		"loadingBatches": "Chargement des lots...",
+		"noBatches": "Aucun lot de journalisation trouvé",
+		"noBatchesHint": "Essayez de modifier vos filtres ou créez un nouveau lot",
+		"errorLoad": "Erreur lors du chargement des lots de journalisation",
+		"errorCreate": "Erreur lors de la création du lot",
+		"errorPost": "Erreur lors du posting du lot",
+		"errorClose": "Erreur lors de la clôture du lot",
+		"confirmPost": "Êtes-vous sûr de vouloir poster ce lot ? Cette action valide l'équilibre et change le statut en POSTED.",
+		"confirmClose": "Êtes-vous sûr de vouloir clôturer ce lot ? Cette action est irréversible.",
+		"displaying": "Affichage de {{count}} sur {{total}} lot(s)",
+		"itemsPerPage": "Éléments par page",
+		"first": "Premier",
+		"previous": "Précédent",
+		"next": "Suivant",
+		"last": "Dernier",
+		"pageOf": "Page {{current}} sur {{total}}",
+		"detail": {
+			"back": "Retour",
+			"backToList": "Retour à la liste",
+			"subtitle": "Détails du lot de journalisation",
+			"recalculateTotals": "Recalculer les totaux",
+			"postBatch": "Poster le lot",
+			"closeBatch": "Clôturer le lot",
+			"batchInfo": "Informations du lot",
+			"batchNumber": "Numéro de lot",
+			"batchDate": "Date du lot",
+			"totalDebit": "Total Débit",
+			"totalCredit": "Total Crédit",
+			"currency": "Devise",
+			"createdAt": "Créé le",
+			"postedAt": "Posté le",
+			"closedAt": "Clôturé le",
+			"balanced": "Lot équilibré ✓",
+			"unbalanced": "Lot déséquilibré - Écart: {{amount}}",
+			"balancedHint": "Les totaux débit et crédit sont égaux. Le lot peut être posté.",
+			"unbalancedHint": "Les totaux débit et crédit ne sont pas égaux. Veuillez corriger les écritures avant de poster.",
+			"entries": "Écritures",
+			"entriesCount": "Écritures ({{count}})",
+			"refresh": "Actualiser",
+			"loadingBatch": "Chargement du lot...",
+			"loadingEntries": "Chargement des écritures...",
+			"noEntries": "Aucune écriture trouvée",
+			"noEntriesHint": "Ce lot ne contient pas encore d'écritures",
+			"glAccount": "Compte GL",
+			"reference": "Référence",
+			"totals": "Totaux:",
+			"errorLoad": "Erreur lors du chargement du lot",
+			"toastPosted": "Lot posté avec succès",
+			"toastClosed": "Lot clôturé avec succès",
+			"toastRecalculated": "Totaux recalculés avec succès",
+			"errorRecalculate": "Erreur lors du recalcul des totaux",
+			"confirmPost": "Êtes-vous sûr de vouloir poster ce lot ? Cette action valide l'équilibre et change le statut en POSTED.",
+			"confirmClose": "Êtes-vous sûr de vouloir clôturer ce lot ? Cette action est irréversible."
+		}
+	},
 	"transfer": {
 		"new": {
 			"title": "Nouveau virement",
@@ -1314,7 +1399,10 @@
 			"amount": {
 				"label": "Montant",
 				"required": "*",
-				"placeholder": "0.00"
+				"placeholder": "0.00",
+				"placeholderAdjustment": "Positif = crédit, négatif = débit",
+				"adjustmentHint": "positif = augmentation du solde, négatif = diminution",
+				"adjustmentNonZero": "Le montant ne doit pas être nul (positif ou négatif)"
 			},
 			"currency": {
 				"label": "Devise",
@@ -1533,6 +1621,80 @@
 				"loadAccounts": "Erreur lors du chargement des comptes",
 				"loadTransactions": "Erreur lors du chargement des {{type}}"
 			}
+		}
+	},
+	"hold": {
+		"list": {
+			"title": "Réservations de fonds",
+			"description": "Consulter et gérer les réservations (holds) par compte.",
+			"backToTransactions": "Retour aux transactions",
+			"selectAccount": "Choisir un compte",
+			"selectAccountHint": "Sélectionnez un compte pour afficher ses réservations",
+			"selectAccountHintDetail": "Recherchez par numéro de compte ou choisissez dans la liste.",
+			"filters": {
+				"title": "Filtres"
+			},
+			"stats": {
+				"total": "Total",
+				"pending": "En attente",
+				"applied": "Appliquées",
+				"released": "Libérées",
+				"expired": "Expirées",
+				"totalPendingAmount": "Montant total (en attente)"
+			},
+			"accountNumberOrId": "Numéro de compte ou ID",
+			"accountNumberPlaceholder": "Ex: CUR-1234567890",
+			"search": "Rechercher",
+			"orSelect": "Ou sélectionner un compte",
+			"balance": "Solde",
+			"available": "Disponible",
+			"viewAccount": "Voir le compte",
+			"holdsForAccount": "Réservations de ce compte",
+			"createHold": "Créer une réservation",
+			"noHolds": "Aucune réservation",
+			"amount": "Montant",
+			"reason": "Raison",
+			"status": "Statut",
+			"expiresAt": "Expire le",
+			"actions": "Actions",
+			"release": "Libérer",
+			"viewTransaction": "Voir la transaction",
+			"createSuccess": "Réservation créée.",
+			"releaseSuccess": "Réservation libérée.",
+			"errors": {
+				"loadAccounts": "Erreur lors du chargement des comptes",
+				"loadHolds": "Erreur lors du chargement des réservations",
+				"accountNotFound": "Compte non trouvé",
+				"createFailed": "Échec de la création de la réservation",
+				"releaseFailed": "Échec de la libération"
+			}
+		},
+		"detail": {
+			"title": "Réservation",
+			"subtitle": "Détail de la réservation de fonds",
+			"backToList": "Retour aux réservations",
+			"info": "Informations",
+			"releasedAt": "Libérée le",
+			"account": "Compte",
+			"transaction": "Transaction liée",
+			"notFound": "Réservation introuvable.",
+			"errors": {
+				"loadFailed": "Erreur lors du chargement de la réservation"
+			}
+		},
+		"form": {
+			"amount": "Montant",
+			"currency": "Devise",
+			"reason": "Raison",
+			"reasonPlaceholder": "Raison de la réservation...",
+			"expiresAt": "Date d'expiration (optionnel)",
+			"submit": "Créer la réservation"
+		},
+		"status": {
+			"PENDING": "En attente",
+			"APPLIED": "Appliquée",
+			"RELEASED": "Libérée",
+			"EXPIRED": "Expirée"
 		}
 	},
 	"common": {

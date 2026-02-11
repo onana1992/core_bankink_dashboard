@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { ledgerAccountsApi, chartOfAccountsApi } from "@/lib/api";
+import { formatAmount } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { LedgerAccount, AccountType, LedgerAccountStatus, ChartOfAccount, CreateLedgerAccountRequest, UpdateLedgerAccountRequest } from "@/types";
 import Button from "@/components/ui/Button";
@@ -631,7 +632,7 @@ export default function LedgerAccountsPage() {
 											</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-gray-900 font-medium">
-											{account.balance.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {account.currency}
+											{formatAmount(account.balance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge variant={account.status === "ACTIVE" ? "success" : "neutral"}>
