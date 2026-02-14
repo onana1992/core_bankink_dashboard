@@ -11,6 +11,7 @@ import Toast from "@/components/ui/Toast";
 import { accountsApi, customersApi, productsApi, transactionsApi, holdsApi, interestsApi, feesApi } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
 import { showToast } from "@/lib/toast";
+import { CloudDownload } from "lucide-react";
 import type { Account, AccountStatus, Customer, Product, Transaction, Hold, ProductFee } from "@/types";
 
 export default function AccountDetailPage() {
@@ -1132,10 +1133,11 @@ export default function AccountDetailPage() {
 											{hold.status === "PENDING" && (
 												<button
 													onClick={() => handleReleaseHold(hold.id)}
-													className="text-red-600 hover:underline"
+													className="inline-flex items-center gap-1 text-red-600 hover:underline"
 													disabled={actionLoading}
 												>
-													Libérer
+													<CloudDownload className="w-4 h-4" />
+													{t("hold.list.release")}
 												</button>
 											)}
 										</td>

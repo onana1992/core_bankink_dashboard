@@ -78,7 +78,14 @@ import type {
 	ClosureStatus,
 	CloseDayRequest,
 	CloseMonthRequest,
-	ClosureValidationResponse
+	ClosureValidationResponse,
+	LoanScheduleItem,
+	LoanSimulationResult,
+	DisburseRequest,
+	LoanApplication,
+	LoanApplicationStatus,
+	SubmitLoanApplicationRequest,
+	DecideLoanApplicationRequest
 } from "@/types";
 
 // Validate and set API base URL
@@ -215,14 +222,16 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 
 		// Gérer les erreurs de conflit (409 Conflict)
 		if (res.status === 409) {
-			let errorMessage = "Un conflit s'est produit. Cette ressource existe déjà.";
+			let errorMessage: string = "Un conflit s'est produit. Cette ressource existe déjà.";
 			if (text) {
 				try {
 					const json = JSON.parse(text);
-					if (json.message) {
-						errorMessage = json.message;
-					} else if (json.error) {
-						errorMessage = json.error;
+					const toStr = (v: unknown): string =>
+						v == null ? "" : typeof v === "string" ? v : Array.isArray(v) ? v.join(", ") : typeof v === "object" ? Object.values(v).flat().join(", ") || JSON.stringify(v) : String(v);
+					if (json.message != null) {
+						errorMessage = toStr(json.message);
+					} else if (json.error != null) {
+						errorMessage = toStr(json.error);
 					} else {
 						errorMessage = text;
 					}
@@ -230,14 +239,15 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 					errorMessage = text || errorMessage;
 				}
 			}
+			const safeMessage = String(errorMessage ?? "").trim() || "Un conflit s'est produit. Cette ressource existe déjà.";
 			// Afficher un toast
 			if (typeof window !== "undefined") {
 				const event = new CustomEvent("show-toast", {
-					detail: { message: errorMessage, type: "error" }
+					detail: { message: safeMessage, type: "error" }
 				});
 				window.dispatchEvent(event);
 			}
-			const error = new Error(errorMessage);
+			const error = new Error(safeMessage);
 			(error as any).status = 409;
 			throw error;
 		}
@@ -248,46 +258,47 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 			// Essayer de parser comme JSON pour les erreurs de validation
 			try {
 				const json = JSON.parse(text);
-				// Extraire le message d'erreur principal
-				if (json.message) {
-					errorMessage = json.message;
-				} else if (json.error) {
-					errorMessage = json.error;
-				} else if (json.errors) {
-					// Si c'est un objet d'erreurs de validation
-					if (typeof json.errors === 'string') {
-						// Si errors est une string, essayer de la parser comme JSON
+				// Extraire le message d'erreur principal (toujours en string)
+				const toStr = (v: unknown): string =>
+					v == null ? "" : typeof v === "string" ? v : Array.isArray(v) ? v.join(", ") : typeof v === "object" ? Object.values(v).flat().join(", ") || JSON.stringify(v) : String(v);
+				if (json.message != null) {
+					errorMessage = toStr(json.message);
+				}
+				if (!errorMessage && json.error != null) {
+					errorMessage = toStr(json.error);
+				}
+				if (!errorMessage && json.errors != null) {
+					if (typeof json.errors === "string") {
 						try {
-							const parsedErrors = JSON.parse(json.errors);
-							if (typeof parsedErrors === 'object') {
-								errorMessage = Object.values(parsedErrors).join(', ');
-							} else {
-								errorMessage = json.errors;
-							}
+							const parsed = JSON.parse(json.errors);
+							errorMessage = typeof parsed === "object" ? Object.values(parsed).flat().join(", ") : String(parsed);
 						} catch {
 							errorMessage = json.errors;
 						}
-					} else if (typeof json.errors === 'object') {
-						errorMessage = Object.values(json.errors).join(', ');
+					} else if (typeof json.errors === "object") {
+						errorMessage = Object.values(json.errors).flat().join(", ");
 					} else {
 						errorMessage = String(json.errors);
 					}
-				} else {
+				}
+				if (!errorMessage) {
 					errorMessage = text;
 				}
 			} catch {
 				errorMessage = text || `HTTP ${res.status}`;
 			}
 		}
-		
+		const messageToShow = (typeof errorMessage === "string" && errorMessage.trim()) ? errorMessage : `HTTP ${res.status}`;
+		const safeMessage = String(messageToShow ?? "").trim() || `HTTP ${res.status}`;
+
 		// Afficher un toast (sauf si silent = true) et lancer une erreur pour que l'appelant puisse la gérer
 		if (!silent && typeof window !== "undefined") {
 			const event = new CustomEvent("show-toast", {
-				detail: { message: errorMessage, type: "error" }
+				detail: { message: safeMessage, type: "error" }
 			});
 			window.dispatchEvent(event);
 		}
-		const err = new Error(errorMessage);
+		const err = new Error(safeMessage);
 		(err as any).status = res.status;
 		throw err;
 	}
@@ -927,6 +938,117 @@ export const accountsApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<Account>(res);
+	}
+};
+
+export const loansApi = {
+	async list(params?: {
+		clientId?: number;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.clientId) usp.set("clientId", String(params.clientId));
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async get(accountId: number | string): Promise<Account> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<Account>(res);
+	},
+
+	async getSchedule(accountId: number | string): Promise<LoanScheduleItem[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/schedule`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanScheduleItem[]>(res);
+	},
+
+	async generateSchedule(accountId: number | string): Promise<LoanScheduleItem[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/schedule/generate`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LoanScheduleItem[]>(res);
+	},
+
+	async disburse(accountId: number | string, payload: DisburseRequest): Promise<Transaction> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/disburse`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<Transaction>(res);
+	},
+
+	async simulate(principal: number, annualRatePercent: number, months: number): Promise<LoanSimulationResult> {
+		const usp = new URLSearchParams();
+		usp.set("principal", String(principal));
+		usp.set("annualRatePercent", String(annualRatePercent));
+		usp.set("months", String(months));
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/simulate?${usp.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanSimulationResult>(res);
+	}
+};
+
+export const loanApplicationsApi = {
+	async submit(payload: SubmitLoanApplicationRequest): Promise<LoanApplication> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/applications`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LoanApplication>(res);
+	},
+
+	async list(params?: {
+		clientId?: number;
+		status?: LoanApplicationStatus;
+		page?: number;
+		size?: number;
+	}): Promise<{ content: LoanApplication[]; totalElements: number; totalPages: number; number: number; size: number }> {
+		const usp = new URLSearchParams();
+		if (params?.clientId != null) usp.set("clientId", String(params.clientId));
+		if (params?.status) usp.set("status", params.status);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/applications${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<{ content: LoanApplication[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+	},
+
+	async get(id: number | string): Promise<LoanApplication> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/applications/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanApplication>(res);
+	},
+
+	async decide(id: number | string, payload: DecideLoanApplicationRequest): Promise<LoanApplication> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/applications/${id}/decide`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LoanApplication>(res);
 	}
 };
 

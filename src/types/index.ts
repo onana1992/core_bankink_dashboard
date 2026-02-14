@@ -6,5 +6,5 @@ export * from './transaction';
 export * from './transfer';
 export * from './ledger';
 export * from './closure';
-
+export * from './loan';
 

@@ -12,6 +12,8 @@ export interface Account {
 	openingAmount?: number | null;
 	interestRate?: number | null;
 	periodId?: number | null;
+	/** Nombre de mois de la période (exposé par l’API pour les prêts). */
+	periodMonths?: number | null;
 	maturityDate?: string | null;
 	openedAt?: string;
 	closedAt?: string | null;

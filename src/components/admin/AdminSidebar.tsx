@@ -35,7 +35,12 @@ import {
 	DollarSign,
 	Sparkles,
 	Settings2,
-	RotateCcw
+	RotateCcw,
+	Landmark,
+	List,
+	PlusCircle,
+	Calculator,
+	ClipboardList
 } from "lucide-react";
 
 function Chevron() {
@@ -101,6 +106,22 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 					</details>
 
 					<NavLink href="/products" label={t("sidebar.productCatalog")} icon={Package} collapsed={collapsed} />
+
+					<details className="group rounded-md">
+						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
+							<span className="flex items-center gap-2">
+								<Landmark className="h-4 w-4 text-gray-700" />
+								<span className={labelClass}>{t("sidebar.loans")}</span>
+							</span>
+							{!collapsed && <Chevron />}
+						</summary>
+						<div className="mt-1 space-y-1 pl-3">
+							<NavLink href="/loans" label={t("sidebar.loansList")} icon={List} collapsed={collapsed} />
+							<NavLink href="/loans/applications" label={t("sidebar.loanApplications")} icon={ClipboardList} collapsed={collapsed} />
+							<NavLink href="/loans/new" label={t("sidebar.openLoan")} icon={PlusCircle} collapsed={collapsed} />
+							<NavLink href="/loans/simulate" label={t("sidebar.loanSimulation")} icon={Calculator} collapsed={collapsed} />
+						</div>
+					</details>
 
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
