@@ -40,7 +40,8 @@ import {
 	List,
 	PlusCircle,
 	Calculator,
-	ClipboardList
+	ClipboardList,
+	Server
 } from "lucide-react";
 
 function Chevron() {
@@ -242,6 +243,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							<NavLink href="/users" label={t("sidebar.users")} icon={Users} collapsed={collapsed} />
 							<NavLink href="/roles" label={t("sidebar.roles")} icon={KeyRound} collapsed={collapsed} />
 							<NavLink href="/permissions" label={t("sidebar.permissions")} icon={ShieldCheck} collapsed={collapsed} />
+							<NavLink href="/services" label={t("sidebar.services")} icon={Server} collapsed={collapsed} />
 							<NavLink href="/audit" label={t("sidebar.auditCompliance")} icon={ScrollText} collapsed={collapsed} />
 						</div>
 					</details>

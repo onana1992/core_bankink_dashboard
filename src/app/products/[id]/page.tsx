@@ -232,7 +232,7 @@ export default function ProductDetailPage() {
 	}
 
 	async function handleDeleteRate(rateId: number) {
-		if (!confirm("Êtes-vous sûr de vouloir supprimer ce taux d'intérêt ?")) return;
+		if (!confirm(t("product.detail.rates.confirmDelete"))) return;
 		try {
 			await productsApi.deleteInterestRate(id, rateId);
 			await loadAllConfigurations();
@@ -262,7 +262,7 @@ export default function ProductDetailPage() {
 	}
 
 	async function handleDeletePeriod(periodId: number) {
-		if (!confirm("Êtes-vous sûr de vouloir supprimer cette période ?")) return;
+		if (!confirm(t("product.detail.periods.confirmDelete"))) return;
 		try {
 			await productsApi.deletePeriod(id, periodId);
 			await loadAllConfigurations();
@@ -272,7 +272,7 @@ export default function ProductDetailPage() {
 	}
 
 	async function handleDeletePenalty(penaltyId: number) {
-		if (!confirm("Êtes-vous sûr de vouloir supprimer cette pénalité ?")) return;
+		if (!confirm(t("product.detail.penalties.confirmDelete"))) return;
 		try {
 			await productsApi.deletePenalty(id, penaltyId);
 			await loadAllConfigurations();
@@ -1059,20 +1059,20 @@ function InterestRatesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de taux *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.rateType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.rateType}
 								onChange={e => setForm({ ...form, rateType: e.target.value as RateType })}
 								required
 							>
-								<option value="DEPOSIT">Dépôt</option>
-								<option value="LENDING">Prêt</option>
-								<option value="PENALTY">Pénalité</option>
+								<option value="DEPOSIT">{t("product.detail.rates.rateTypes.DEPOSIT")}</option>
+								<option value="LENDING">{t("product.detail.rates.rateTypes.LENDING")}</option>
+								<option value="PENALTY">{t("product.detail.rates.rateTypes.PENALTY")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur du taux (%) *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.rateValue")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -1110,7 +1110,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période min (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minPeriodDays")}</label>
 							<Input
 								type="number"
 								value={form.minPeriodDays ?? ""}
@@ -1118,7 +1118,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période max (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxPeriodDays")}</label>
 							<Input
 								type="number"
 								value={form.maxPeriodDays ?? ""}
@@ -1133,9 +1133,9 @@ function InterestRatesTab({
 								onChange={e => setForm({ ...form, calculationMethod: e.target.value as CalculationMethod })}
 								required
 							>
-								<option value="SIMPLE">Simple</option>
-								<option value="COMPOUND">Composé</option>
-								<option value="FLOATING">Flottant</option>
+								<option value="SIMPLE">{t("product.detail.rates.calculationMethods.SIMPLE")}</option>
+								<option value="COMPOUND">{t("product.detail.rates.calculationMethods.COMPOUND")}</option>
+								<option value="FLOATING">{t("product.detail.rates.calculationMethods.FLOATING")}</option>
 							</select>
 						</div>
 						{form.calculationMethod === "COMPOUND" && (
@@ -1146,11 +1146,11 @@ function InterestRatesTab({
 									value={form.compoundingFrequency ?? ""}
 									onChange={e => setForm({ ...form, compoundingFrequency: e.target.value as CompoundingFrequency })}
 								>
-									<option value="">Sélectionner</option>
-									<option value="DAILY">Quotidienne</option>
-									<option value="MONTHLY">Mensuelle</option>
-									<option value="QUARTERLY">Trimestrielle</option>
-									<option value="YEARLY">Annuelle</option>
+									<option value="">{t("product.detail.rates.form.selectOption")}</option>
+									<option value="DAILY">{t("product.detail.rates.compoundingFrequencies.DAILY")}</option>
+									<option value="MONTHLY">{t("product.detail.rates.compoundingFrequencies.MONTHLY")}</option>
+									<option value="QUARTERLY">{t("product.detail.rates.compoundingFrequencies.QUARTERLY")}</option>
+									<option value="YEARLY">{t("product.detail.rates.compoundingFrequencies.YEARLY")}</option>
 								</select>
 							</div>
 						)}
@@ -1173,8 +1173,8 @@ function InterestRatesTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.adding") : t("product.detail.rates.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -1182,7 +1182,7 @@ function InterestRatesTab({
 			{/* Debug info - à retirer en production */}
 			{process.env.NODE_ENV === 'development' && (
 				<div className="text-xs text-gray-400 mb-2">
-					Debug: {rates.length} taux chargés
+					{t("product.detail.rates.debugRatesLoaded", { count: rates.length })}
 				</div>
 			)}
 
@@ -1193,11 +1193,11 @@ function InterestRatesTab({
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Type</th>
-								<th className="px-4 py-2 text-left">Taux</th>
-								<th className="px-4 py-2 text-left">Montant</th>
-								<th className="px-4 py-2 text-left">Période</th>
-								<th className="px-4 py-2 text-left">Méthode</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.type")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.value")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.amount")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.period")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.method")}</th>
 								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
@@ -1205,7 +1205,7 @@ function InterestRatesTab({
 						<tbody className="relative">
 							{rates.map(rate => (
 								<tr key={rate.id} className="border-t">
-									<td className="px-4 py-2">{rate.rateType}</td>
+									<td className="px-4 py-2">{t(`product.detail.rates.rateTypes.${rate.rateType}`)}</td>
 									<td className="px-4 py-2">{rate.rateValue}%</td>
 									<td className="px-4 py-2">
 										{rate.minAmount != null || rate.maxAmount != null
@@ -1214,16 +1214,16 @@ function InterestRatesTab({
 									</td>
 									<td className="px-4 py-2">
 										{rate.minPeriodDays != null || rate.maxPeriodDays != null
-											? `${rate.minPeriodDays ?? "0"} - ${rate.maxPeriodDays ?? "∞"} jours`
+											? `${rate.minPeriodDays ?? "0"} - ${rate.maxPeriodDays ?? "∞"} ${t("product.detail.rates.table.days")}`
 											: "-"}
 									</td>
 									<td className="px-4 py-2">
-										{rate.calculationMethod}
-										{rate.compoundingFrequency && ` (${rate.compoundingFrequency})`}
+										{t(`product.detail.rates.calculationMethods.${rate.calculationMethod}`)}
+										{rate.compoundingFrequency && ` (${t(`product.detail.rates.compoundingFrequencies.${rate.compoundingFrequency}`)})`}
 									</td>
 									<td className="px-4 py-2">
 										<Badge variant={rate.isActive ? "success" : "neutral"}>
-											{rate.isActive ? "Oui" : "Non"}
+											{rate.isActive ? t("common.yes") : t("common.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -1339,7 +1339,7 @@ function InterestRatesTab({
 									</div>
 									<div>
 										<h3 className="text-xl font-bold text-white">{t("product.detail.rates.modal.title")}</h3>
-										<p className="text-sm text-blue-100 mt-0.5">{selectedRate.rateType}</p>
+										<p className="text-sm text-blue-100 mt-0.5">{t(`product.detail.rates.rateTypes.${selectedRate.rateType}`)}</p>
 									</div>
 								</div>
 								<button
@@ -1363,14 +1363,14 @@ function InterestRatesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Type de taux
+										{t("product.detail.rates.modal.rateType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedRate.rateType}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.rates.rateTypes.${selectedRate.rateType}`)}</div>
 								</div>
 								<div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200">
 									<label className="text-xs font-medium text-cyan-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<Percent className="w-3 h-3" />
-										Valeur du taux
+										{t("product.detail.rates.modal.rateValue")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										<span className="text-2xl text-cyan-700">{selectedRate.rateValue}%</span>
@@ -1381,7 +1381,7 @@ function InterestRatesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
 										</svg>
-										Montant minimum
+										{t("product.detail.rates.modal.minAmount")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedRate.minAmount != null ? (
@@ -1396,7 +1396,7 @@ function InterestRatesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 										</svg>
-										Montant maximum
+										{t("product.detail.rates.modal.maxAmount")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedRate.maxAmount != null ? (
@@ -1409,7 +1409,7 @@ function InterestRatesTab({
 								<div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
 									<label className="text-xs font-medium text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<Calendar className="w-3 h-3" />
-										Période minimum (jours)
+										{t("product.detail.rates.modal.minPeriodDays")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedRate.minPeriodDays != null ? (
@@ -1422,7 +1422,7 @@ function InterestRatesTab({
 								<div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border border-teal-200">
 									<label className="text-xs font-medium text-teal-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<Calendar className="w-3 h-3" />
-										Période maximum (jours)
+										{t("product.detail.rates.modal.maxPeriodDays")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedRate.maxPeriodDays != null ? (
@@ -1435,9 +1435,9 @@ function InterestRatesTab({
 								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
 									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<BarChart3 className="w-3 h-3" />
-										Méthode de calcul
+										{t("product.detail.rates.modal.calculationMethod")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedRate.calculationMethod}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.rates.calculationMethods.${selectedRate.calculationMethod}`)}</div>
 								</div>
 								{selectedRate.compoundingFrequency && (
 									<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
@@ -1445,9 +1445,9 @@ function InterestRatesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 											</svg>
-											Fréquence de capitalisation
+											{t("product.detail.rates.modal.compoundingFrequency")}
 										</label>
-										<div className="mt-1 font-semibold text-gray-900">{selectedRate.compoundingFrequency}</div>
+										<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.rates.compoundingFrequencies.${selectedRate.compoundingFrequency}`)}</div>
 									</div>
 								)}
 							</div>
@@ -1459,7 +1459,7 @@ function InterestRatesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date d'effet
+										{t("product.detail.rates.modal.effectiveFrom")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedRate.effectiveFrom}</dd>
 								</div>
@@ -1468,7 +1468,7 @@ function InterestRatesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date de fin
+										{t("product.detail.rates.modal.effectiveTo")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedRate.effectiveTo ?? "-"}</dd>
 								</div>
@@ -1477,7 +1477,7 @@ function InterestRatesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Statut
+										{t("product.detail.rates.modal.status")}
 									</dt>
 									<dd>
 										<Badge variant={selectedRate.isActive ? "success" : "neutral"}>
@@ -1494,7 +1494,7 @@ function InterestRatesTab({
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								Fermer
+								{t("product.detail.rates.modal.close")}
 							</Button>
 						</div>
 					</div>
@@ -1511,7 +1511,7 @@ function InterestRatesTab({
 						// Convertir editRateValueInput en number avant soumission
 						const rateValue = editRateValueInput === "" ? 0 : parseFloat(editRateValueInput);
 						if (isNaN(rateValue)) {
-							setError("La valeur du taux doit être un nombre valide");
+							setError(t("product.detail.rates.error.invalidRateValue"));
 							setSubmitting(false);
 							return;
 						}
@@ -1544,20 +1544,20 @@ function InterestRatesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de taux *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.rateType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.rateType}
 								onChange={e => setForm({ ...form, rateType: e.target.value as RateType })}
 								required
 							>
-								<option value="DEPOSIT">Dépôt</option>
-								<option value="LENDING">Prêt</option>
-								<option value="PENALTY">Pénalité</option>
+								<option value="DEPOSIT">{t("product.detail.rates.rateTypes.DEPOSIT")}</option>
+								<option value="LENDING">{t("product.detail.rates.rateTypes.LENDING")}</option>
+								<option value="PENALTY">{t("product.detail.rates.rateTypes.PENALTY")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Valeur du taux (%) *</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.rateValue")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -1595,7 +1595,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période min (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.minPeriodDays")}</label>
 							<Input
 								type="number"
 								value={form.minPeriodDays ?? ""}
@@ -1603,7 +1603,7 @@ function InterestRatesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période max (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxPeriodDays")}</label>
 							<Input
 								type="number"
 								value={form.maxPeriodDays ?? ""}
@@ -1618,9 +1618,9 @@ function InterestRatesTab({
 								onChange={e => setForm({ ...form, calculationMethod: e.target.value as CalculationMethod })}
 								required
 							>
-								<option value="SIMPLE">Simple</option>
-								<option value="COMPOUND">Composé</option>
-								<option value="FLOATING">Flottant</option>
+								<option value="SIMPLE">{t("product.detail.rates.calculationMethods.SIMPLE")}</option>
+								<option value="COMPOUND">{t("product.detail.rates.calculationMethods.COMPOUND")}</option>
+								<option value="FLOATING">{t("product.detail.rates.calculationMethods.FLOATING")}</option>
 							</select>
 						</div>
 						{form.calculationMethod === "COMPOUND" && (
@@ -1631,11 +1631,11 @@ function InterestRatesTab({
 									value={form.compoundingFrequency ?? ""}
 									onChange={e => setForm({ ...form, compoundingFrequency: e.target.value as CompoundingFrequency })}
 								>
-									<option value="">Sélectionner</option>
-									<option value="DAILY">Quotidienne</option>
-									<option value="MONTHLY">Mensuelle</option>
-									<option value="QUARTERLY">Trimestrielle</option>
-									<option value="YEARLY">Annuelle</option>
+									<option value="">{t("product.detail.rates.form.selectOption")}</option>
+									<option value="DAILY">{t("product.detail.rates.compoundingFrequencies.DAILY")}</option>
+									<option value="MONTHLY">{t("product.detail.rates.compoundingFrequencies.MONTHLY")}</option>
+									<option value="QUARTERLY">{t("product.detail.rates.compoundingFrequencies.QUARTERLY")}</option>
+									<option value="YEARLY">{t("product.detail.rates.compoundingFrequencies.YEARLY")}</option>
 								</select>
 							</div>
 						)}
@@ -1663,8 +1663,8 @@ function InterestRatesTab({
 								value={form.isActive ? "true" : "false"}
 								onChange={e => setForm({ ...form, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("common.yes")}</option>
+								<option value="false">{t("common.no")}</option>
 							</select>
 						</div>
 					</div>
@@ -3223,7 +3223,7 @@ function PeriodsTab({
 		e.preventDefault();
 		const periodDays = form.periodDays;
 		if (periodDays == null || Number.isNaN(periodDays)) {
-			setError(t("product.detail.periods.daysRequired") ?? "Durée en jours requise");
+			setError(t("product.detail.periods.daysRequired"));
 			return;
 		}
 		setSubmitting(true);
@@ -3239,20 +3239,20 @@ function PeriodsTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? t("product.detail.rates.addError"));
+			setError(e?.message ?? t("product.detail.periods.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.periods.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Périodes ({periods.length})</h3>
+				<h3 className="text-lg font-semibold">{t("product.detail.periods.title")} ({periods.length})</h3>
 				{!showForm && <Button onClick={onAdd}>{t("product.detail.periods.addButton")}</Button>}
 			</div>
 
@@ -3261,7 +3261,7 @@ function PeriodsTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Nom de la période *</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodName")}</label>
 							<Input
 								value={form.periodName}
 								onChange={e => setForm({ ...form, periodName: e.target.value })}
@@ -3269,7 +3269,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en jours *</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodDaysLabel")}</label>
 							<Input
 								type="number"
 								value={form.periodDays ?? ""}
@@ -3278,7 +3278,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en mois</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodMonthsLabel")}</label>
 							<Input
 								type="number"
 								value={form.periodMonths ?? ""}
@@ -3286,7 +3286,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en années</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodYearsLabel")}</label>
 							<Input
 								type="number"
 								value={form.periodYears ?? ""}
@@ -3303,7 +3303,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3312,7 +3312,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3321,7 +3321,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Ordre d'affichage</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.displayOrder")}</label>
 							<Input
 								type="number"
 								value={form.displayOrder ?? ""}
@@ -3330,25 +3330,25 @@ function PeriodsTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.periods.form.adding") : t("product.detail.periods.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.periods.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
 
 			{periods.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucune période configurée</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.periods.noPeriods")}</div>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Nom</th>
-								<th className="px-4 py-2 text-left">Durée</th>
-								<th className="px-4 py-2 text-left">Taux</th>
-								<th className="px-4 py-2 text-left">Montant</th>
-								<th className="px-4 py-2 text-left">Ordre</th>
-								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.name")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.duration")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.rate")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.amount")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.order")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.periods.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
@@ -3357,9 +3357,9 @@ function PeriodsTab({
 								<tr key={period.id} className="border-t">
 									<td className="px-4 py-2">{period.periodName}</td>
 									<td className="px-4 py-2">
-										{period.periodDays} jours
-										{period.periodMonths && ` (${period.periodMonths} mois)`}
-										{period.periodYears && ` (${period.periodYears} ans)`}
+										{period.periodDays} {t("product.detail.periods.table.days")}
+										{period.periodMonths && ` (${period.periodMonths} ${t("product.detail.periods.table.months")})`}
+										{period.periodYears && ` (${period.periodYears} ${t("product.detail.periods.table.years")})`}
 									</td>
 									<td className="px-4 py-2">{period.interestRate != null ? `${period.interestRate}%` : "-"}</td>
 									<td className="px-4 py-2">
@@ -3370,7 +3370,7 @@ function PeriodsTab({
 									<td className="px-4 py-2">{period.displayOrder}</td>
 									<td className="px-4 py-2">
 										<Badge variant={period.isActive ? "success" : "neutral"}>
-											{period.isActive ? "Oui" : "Non"}
+											{period.isActive ? t("common.yes") : t("common.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -3419,7 +3419,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															{t("product.detail.rates.view")}
+															{t("product.detail.periods.view")}
 														</button>
 														<button
 															type="button"
@@ -3433,7 +3433,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															{t("product.detail.rates.edit")}
+															{t("product.detail.periods.edit")}
 														</button>
 														<button
 															type="button"
@@ -3445,7 +3445,7 @@ function PeriodsTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															{t("product.detail.rates.delete")}
+															{t("product.detail.periods.delete")}
 														</button>
 													</div>
 												</>
@@ -3476,43 +3476,43 @@ function PeriodsTab({
 						<div className="space-y-4">
 							<div className="grid grid-cols-2 gap-4">
 								<div>
-									<label className="text-sm font-medium text-gray-500">Nom</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.periodName")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.periodName}</div>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-500">Durée (jours)</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.periodDays")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.periodDays}</div>
 								</div>
 								{selectedPeriod.periodMonths && (
 									<div>
-										<label className="text-sm font-medium text-gray-500">Durée (mois)</label>
+										<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.periodMonths")}</label>
 										<div className="mt-1 text-sm">{selectedPeriod.periodMonths}</div>
 									</div>
 								)}
 								{selectedPeriod.periodYears && (
 									<div>
-										<label className="text-sm font-medium text-gray-500">Durée (années)</label>
+										<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.periodYears")}</label>
 										<div className="mt-1 text-sm">{selectedPeriod.periodYears}</div>
 									</div>
 								)}
 								<div>
-									<label className="text-sm font-medium text-gray-500">Taux d'intérêt</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.interestRate")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.interestRate != null ? `${selectedPeriod.interestRate}%` : "-"}</div>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-500">Montant minimum</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.minAmount")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.minAmount != null ? `${selectedPeriod.minAmount}` : "-"}</div>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-500">Montant maximum</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.maxAmount")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.maxAmount != null ? `${selectedPeriod.maxAmount}` : "-"}</div>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-500">Ordre d'affichage</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.displayOrder")}</label>
 									<div className="mt-1 text-sm">{selectedPeriod.displayOrder}</div>
 								</div>
 								<div>
-									<label className="text-sm font-medium text-gray-500">Statut</label>
+									<label className="text-sm font-medium text-gray-500">{t("product.detail.periods.modal.status")}</label>
 									<div className="mt-1">
 										<Badge variant={selectedPeriod.isActive ? "success" : "neutral"}>
 											{selectedPeriod.isActive ? t("product.detail.periods.modal.active") : t("product.detail.periods.modal.inactive")}
@@ -3522,7 +3522,7 @@ function PeriodsTab({
 							</div>
 						</div>
 						<div className="mt-6 flex justify-end">
-							<Button variant="outline" onClick={() => setShowViewModal(false)}>Fermer</Button>
+							<Button variant="outline" onClick={() => setShowViewModal(false)}>{t("product.detail.periods.modal.close")}</Button>
 						</div>
 					</div>
 				</div>
@@ -3534,7 +3534,7 @@ function PeriodsTab({
 					e.preventDefault();
 					const periodDays = editForm.periodDays;
 					if (periodDays == null || Number.isNaN(periodDays)) {
-						setError(t("product.detail.periods.daysRequired") ?? "Durée en jours requise");
+						setError(t("product.detail.periods.daysRequired"));
 						return;
 					}
 					setSubmitting(true);
@@ -3555,7 +3555,7 @@ function PeriodsTab({
 						setSelectedPeriod(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? t("product.detail.rates.updateError"));
+						setError(e?.message ?? t("product.detail.periods.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
@@ -3577,7 +3577,7 @@ function PeriodsTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Nom de la période *</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodName")}</label>
 							<Input
 								value={editForm.periodName}
 								onChange={e => setEditForm({ ...editForm, periodName: e.target.value })}
@@ -3585,7 +3585,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en jours *</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodDaysLabel")}</label>
 							<Input
 								type="number"
 								value={editForm.periodDays ?? ""}
@@ -3594,7 +3594,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en mois</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodMonthsLabel")}</label>
 							<Input
 								type="number"
 								value={editForm.periodMonths ?? ""}
@@ -3602,7 +3602,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Durée en années</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.periodYearsLabel")}</label>
 							<Input
 								type="number"
 								value={editForm.periodYears ?? ""}
@@ -3619,7 +3619,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.minAmount")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.minAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3628,7 +3628,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.maxAmount")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.maxAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3637,7 +3637,7 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Ordre d'affichage</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.displayOrder")}</label>
 							<Input
 								type="number"
 								value={editForm.displayOrder ?? ""}
@@ -3645,24 +3645,24 @@ function PeriodsTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.periods.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
 								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("common.yes")}</option>
+								<option value="false">{t("common.no")}</option>
 							</select>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.periods.form.editing") : t("product.detail.periods.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPeriod(null);
 							setError(null);
-						}}>{t("product.detail.rates.form.cancel")}</Button>
+						}}>{t("product.detail.periods.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -3749,20 +3749,20 @@ function PenaltiesTab({
 			});
 			onRefresh();
 		} catch (e: any) {
-			setError(e?.message ?? t("product.detail.rates.addError"));
+			setError(e?.message ?? t("product.detail.penalties.addError"));
 		} finally {
 			setSubmitting(false);
 		}
 	}
 
 	if (loading) {
-		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.rates.loading")}</div>;
+		return <div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.penalties.loading")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<div className="flex justify-between items-center">
-				<h3 className="text-lg font-semibold">Pénalités ({penalties.length})</h3>
+				<h3 className="text-lg font-semibold">{t("product.detail.penalties.title")} ({penalties.length})</h3>
 				{!showForm && <Button onClick={onAdd}>{t("product.detail.penalties.addButton")}</Button>}
 			</div>
 
@@ -3771,24 +3771,24 @@ function PenaltiesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de pénalité *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.penaltyType}
 								onChange={e => setForm({ ...form, penaltyType: e.target.value as PenaltyType })}
 								required
 							>
-								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
-								<option value="OVERDRAFT">Découvert</option>
-								<option value="LATE_PAYMENT">Retard de paiement</option>
-								<option value="MIN_BALANCE_VIOLATION">Violation solde minimum</option>
-								<option value="EXCESS_TRANSACTION">Transaction excessive</option>
-								<option value="PREPAYMENT">Prépaiement</option>
-								<option value="OTHER">Autre</option>
+								<option value="EARLY_WITHDRAWAL">{t("product.detail.penalties.penaltyTypes.EARLY_WITHDRAWAL")}</option>
+								<option value="OVERDRAFT">{t("product.detail.penalties.penaltyTypes.OVERDRAFT")}</option>
+								<option value="LATE_PAYMENT">{t("product.detail.penalties.penaltyTypes.LATE_PAYMENT")}</option>
+								<option value="MIN_BALANCE_VIOLATION">{t("product.detail.penalties.penaltyTypes.MIN_BALANCE_VIOLATION")}</option>
+								<option value="EXCESS_TRANSACTION">{t("product.detail.penalties.penaltyTypes.EXCESS_TRANSACTION")}</option>
+								<option value="PREPAYMENT">{t("product.detail.penalties.penaltyTypes.PREPAYMENT")}</option>
+								<option value="OTHER">{t("product.detail.penalties.penaltyTypes.OTHER")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Nom de la pénalité *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyName")}</label>
 							<Input
 								value={form.penaltyName}
 								onChange={e => setForm({ ...form, penaltyName: e.target.value })}
@@ -3796,22 +3796,22 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Base de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.calculationBase")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.calculationBase}
 								onChange={e => setForm({ ...form, calculationBase: e.target.value as PenaltyCalculationBase })}
 								required
 							>
-								<option value="FIXED">Fixe</option>
-								<option value="PRINCIPAL">Principal</option>
-								<option value="INTEREST">Intérêt</option>
-								<option value="BALANCE">Solde</option>
-								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+								<option value="FIXED">{t("product.detail.penalties.calculationBases.FIXED")}</option>
+								<option value="PRINCIPAL">{t("product.detail.penalties.calculationBases.PRINCIPAL")}</option>
+								<option value="INTEREST">{t("product.detail.penalties.calculationBases.INTEREST")}</option>
+								<option value="BALANCE">{t("product.detail.penalties.calculationBases.BALANCE")}</option>
+								<option value="TRANSACTION_AMOUNT">{t("product.detail.penalties.calculationBases.TRANSACTION_AMOUNT")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant fixe</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3820,7 +3820,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pourcentage</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyPercentage")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -3829,7 +3829,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pénalité minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.minPenalty")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3838,7 +3838,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pénalité maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.maxPenalty")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -3847,7 +3847,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période de grâce (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.gracePeriodDays")}</label>
 							<Input
 								type="number"
 								value={form.gracePeriodDays ?? ""}
@@ -3855,7 +3855,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={form.effectiveFrom}
@@ -3864,7 +3864,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={form.effectiveTo ?? ""}
@@ -3873,42 +3873,42 @@ function PenaltiesTab({
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? "Ajout..." : "Ajouter"}</Button>
-						<Button type="button" variant="outline" onClick={onCloseForm}>Annuler</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.penalties.form.adding") : t("product.detail.penalties.form.add")}</Button>
+						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.penalties.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
 
 			{penalties.length === 0 ? (
-				<div className="text-sm text-gray-500 py-8 text-center">Aucune pénalité configurée</div>
+				<div className="text-sm text-gray-500 py-8 text-center">{t("product.detail.penalties.noPenalties")}</div>
 			) : (
 				<div className="overflow-x-auto">
 					<table className="min-w-full text-sm">
 						<thead className="bg-gray-50">
 							<tr>
-								<th className="px-4 py-2 text-left">Type</th>
-								<th className="px-4 py-2 text-left">Nom</th>
-								<th className="px-4 py-2 text-left">Montant</th>
-								<th className="px-4 py-2 text-left">Base</th>
-								<th className="px-4 py-2 text-left">Période de grâce</th>
-								<th className="px-4 py-2 text-left">{t("product.detail.rates.table.active")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.type")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.name")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.amount")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.base")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.gracePeriod")}</th>
+								<th className="px-4 py-2 text-left">{t("product.detail.penalties.table.active")}</th>
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
 						<tbody>
 							{penalties.map(penalty => (
 								<tr key={penalty.id} className="border-t">
-									<td className="px-4 py-2">{penalty.penaltyType}</td>
+									<td className="px-4 py-2">{t(`product.detail.penalties.penaltyTypes.${penalty.penaltyType}`)}</td>
 									<td className="px-4 py-2">{penalty.penaltyName}</td>
 									<td className="px-4 py-2">
 										{penalty.penaltyAmount != null ? `${penalty.penaltyAmount} ${penalty.currency}` : ""}
 										{penalty.penaltyPercentage != null ? `${penalty.penaltyPercentage}%` : ""}
 									</td>
-									<td className="px-4 py-2">{penalty.calculationBase}</td>
-									<td className="px-4 py-2">{penalty.gracePeriodDays != null ? `${penalty.gracePeriodDays} jours` : "-"}</td>
+									<td className="px-4 py-2">{t(`product.detail.penalties.calculationBases.${penalty.calculationBase}`)}</td>
+									<td className="px-4 py-2">{penalty.gracePeriodDays != null ? `${penalty.gracePeriodDays} ${t("product.detail.penalties.table.days")}` : "-"}</td>
 									<td className="px-4 py-2">
 										<Badge variant={penalty.isActive ? "success" : "neutral"}>
-											{penalty.isActive ? "Oui" : "Non"}
+											{penalty.isActive ? t("common.yes") : t("common.no")}
 										</Badge>
 									</td>
 									<td className="px-4 py-2 relative overflow-visible">
@@ -3957,7 +3957,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Eye className="h-4 w-4" />
-															{t("product.detail.rates.view")}
+															{t("product.detail.penalties.view")}
 														</button>
 														<button
 															type="button"
@@ -3971,7 +3971,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
 														>
 															<Edit2 className="h-4 w-4" />
-															{t("product.detail.rates.edit")}
+															{t("product.detail.penalties.edit")}
 														</button>
 														<button
 															type="button"
@@ -3983,7 +3983,7 @@ function PenaltiesTab({
 															className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
 														>
 															<Trash2 className="h-4 w-4" />
-															{t("product.detail.rates.delete")}
+															{t("product.detail.penalties.delete")}
 														</button>
 													</div>
 												</>
@@ -4034,16 +4034,16 @@ function PenaltiesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Type de pénalité
+										{t("product.detail.penalties.modal.penaltyType")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.penaltyType}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.penalties.penaltyTypes.${selectedPenalty.penaltyType}`)}</div>
 								</div>
 								<div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
 									<label className="text-xs font-medium text-orange-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 										</svg>
-										Nom
+										{t("product.detail.penalties.modal.penaltyName")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.penaltyName}</div>
 								</div>
@@ -4052,7 +4052,7 @@ function PenaltiesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Montant fixe
+										{t("product.detail.penalties.modal.penaltyAmount")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedPenalty.penaltyAmount != null ? (
@@ -4067,7 +4067,7 @@ function PenaltiesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 										</svg>
-										Pourcentage
+										{t("product.detail.penalties.modal.penaltyPercentage")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">
 										{selectedPenalty.penaltyPercentage != null ? (
@@ -4082,16 +4082,16 @@ function PenaltiesTab({
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
 										</svg>
-										Base de calcul
+										{t("product.detail.penalties.modal.calculationBase")}
 									</label>
-									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.calculationBase}</div>
+									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.penalties.calculationBases.${selectedPenalty.calculationBase}`)}</div>
 								</div>
 								<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
 									<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 										<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Période de grâce (jours)
+										{t("product.detail.penalties.form.gracePeriodDays")}
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">{selectedPenalty.gracePeriodDays ?? "-"}</div>
 								</div>
@@ -4105,7 +4105,7 @@ function PenaltiesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
 											</svg>
-											Pénalité minimum
+											{t("product.detail.penalties.form.minPenalty")}
 										</label>
 										<div className="mt-1 font-semibold text-gray-900">
 											{selectedPenalty.minPenalty != null ? (
@@ -4120,7 +4120,7 @@ function PenaltiesTab({
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
 											</svg>
-											Pénalité maximum
+											{t("product.detail.penalties.form.maxPenalty")}
 										</label>
 										<div className="mt-1 font-semibold text-gray-900">
 											{selectedPenalty.maxPenalty != null ? (
@@ -4140,7 +4140,7 @@ function PenaltiesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date d'effet
+										{t("product.detail.penalties.modal.effectiveFrom")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedPenalty.effectiveFrom}</dd>
 								</div>
@@ -4149,7 +4149,7 @@ function PenaltiesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
 										</svg>
-										Date de fin
+										{t("product.detail.penalties.modal.effectiveTo")}
 									</dt>
 									<dd className="font-semibold text-gray-900">{selectedPenalty.effectiveTo ?? "-"}</dd>
 								</div>
@@ -4158,7 +4158,7 @@ function PenaltiesTab({
 										<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
-										Statut
+										{t("product.detail.penalties.modal.status")}
 									</dt>
 									<dd>
 										<Badge variant={selectedPenalty.isActive ? "success" : "neutral"}>
@@ -4175,7 +4175,7 @@ function PenaltiesTab({
 								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 								</svg>
-								Fermer
+								{t("product.detail.penalties.modal.close")}
 							</Button>
 						</div>
 					</div>
@@ -4207,7 +4207,7 @@ function PenaltiesTab({
 						setSelectedPenalty(null);
 						onRefresh();
 					} catch (e: any) {
-						setError(e?.message ?? t("product.detail.rates.updateError"));
+						setError(e?.message ?? t("product.detail.penalties.updateError"));
 					} finally {
 						setSubmitting(false);
 					}
@@ -4229,24 +4229,24 @@ function PenaltiesTab({
 					{error && <div className="text-sm text-red-600">{error}</div>}
 					<div className="grid grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm mb-1">Type de pénalité *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyType")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.penaltyType}
 								onChange={e => setEditForm({ ...editForm, penaltyType: e.target.value as PenaltyType })}
 								required
 							>
-								<option value="EARLY_WITHDRAWAL">Retrait anticipé</option>
-								<option value="OVERDRAFT">Découvert</option>
-								<option value="LATE_PAYMENT">Retard de paiement</option>
-								<option value="MIN_BALANCE_VIOLATION">Violation solde minimum</option>
-								<option value="EXCESS_TRANSACTION">Transaction excessive</option>
-								<option value="PREPAYMENT">Prépaiement</option>
-								<option value="OTHER">Autre</option>
+								<option value="EARLY_WITHDRAWAL">{t("product.detail.penalties.penaltyTypes.EARLY_WITHDRAWAL")}</option>
+								<option value="OVERDRAFT">{t("product.detail.penalties.penaltyTypes.OVERDRAFT")}</option>
+								<option value="LATE_PAYMENT">{t("product.detail.penalties.penaltyTypes.LATE_PAYMENT")}</option>
+								<option value="MIN_BALANCE_VIOLATION">{t("product.detail.penalties.penaltyTypes.MIN_BALANCE_VIOLATION")}</option>
+								<option value="EXCESS_TRANSACTION">{t("product.detail.penalties.penaltyTypes.EXCESS_TRANSACTION")}</option>
+								<option value="PREPAYMENT">{t("product.detail.penalties.penaltyTypes.PREPAYMENT")}</option>
+								<option value="OTHER">{t("product.detail.penalties.penaltyTypes.OTHER")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Nom de la pénalité *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyName")}</label>
 							<Input
 								value={editForm.penaltyName}
 								onChange={e => setEditForm({ ...editForm, penaltyName: e.target.value })}
@@ -4254,22 +4254,22 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Base de calcul *</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.calculationBase")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.calculationBase}
 								onChange={e => setEditForm({ ...editForm, calculationBase: e.target.value as PenaltyCalculationBase })}
 								required
 							>
-								<option value="FIXED">Fixe</option>
-								<option value="PRINCIPAL">Principal</option>
-								<option value="INTEREST">Intérêt</option>
-								<option value="BALANCE">Solde</option>
-								<option value="TRANSACTION_AMOUNT">Montant transaction</option>
+								<option value="FIXED">{t("product.detail.penalties.calculationBases.FIXED")}</option>
+								<option value="PRINCIPAL">{t("product.detail.penalties.calculationBases.PRINCIPAL")}</option>
+								<option value="INTEREST">{t("product.detail.penalties.calculationBases.INTEREST")}</option>
+								<option value="BALANCE">{t("product.detail.penalties.calculationBases.BALANCE")}</option>
+								<option value="TRANSACTION_AMOUNT">{t("product.detail.penalties.calculationBases.TRANSACTION_AMOUNT")}</option>
 							</select>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Montant fixe</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyAmount")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -4278,7 +4278,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pourcentage</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.penaltyPercentage")}</label>
 							<Input
 								type="number"
 								step="0.0001"
@@ -4287,7 +4287,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pénalité minimum</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.minPenalty")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -4296,7 +4296,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Pénalité maximum</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.maxPenalty")}</label>
 							<Input
 								type="number"
 								step="0.01"
@@ -4305,7 +4305,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Devise</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.currency")}</label>
 							<Input
 								value={editForm.currency ?? "XAF"}
 								onChange={e => setEditForm({ ...editForm, currency: e.target.value })}
@@ -4313,7 +4313,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">Période de grâce (jours)</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.gracePeriodDays")}</label>
 							<Input
 								type="number"
 								value={editForm.gracePeriodDays ?? ""}
@@ -4321,7 +4321,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.effectiveFrom")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveFrom}
@@ -4330,7 +4330,7 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveTo")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.effectiveTo")}</label>
 							<Input
 								type="date"
 								value={editForm.effectiveTo ?? ""}
@@ -4338,24 +4338,24 @@ function PenaltiesTab({
 							/>
 						</div>
 						<div>
-							<label className="block text-sm mb-1">{t("product.detail.rates.form.isActive")}</label>
+							<label className="block text-sm mb-1">{t("product.detail.penalties.form.isActive")}</label>
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.isActive ? "true" : "false"}
 								onChange={e => setEditForm({ ...editForm, isActive: e.target.value === "true" })}
 							>
-								<option value="true">Oui</option>
-								<option value="false">Non</option>
+								<option value="true">{t("common.yes")}</option>
+								<option value="false">{t("common.no")}</option>
 							</select>
 						</div>
 					</div>
 					<div className="flex gap-2">
-						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.rates.form.editing") : t("product.detail.rates.form.edit")}</Button>
+						<Button type="submit" disabled={submitting}>{submitting ? t("product.detail.penalties.form.editing") : t("product.detail.penalties.form.edit")}</Button>
 						<Button type="button" variant="outline" onClick={() => {
 							setShowEditForm(false);
 							setSelectedPenalty(null);
 							setError(null);
-						}}>{t("product.detail.rates.form.cancel")}</Button>
+						}}>{t("product.detail.penalties.form.cancel")}</Button>
 					</div>
 				</form>
 			)}
@@ -5394,24 +5394,27 @@ function ProductGLMappingsTab({
 					<p className="text-gray-400 text-sm mt-2">{t("product.detail.glMappings.empty.description")}</p>
 				</div>
 			) : (
-				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+				<div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
 					<div className="overflow-x-auto">
-						<table className="min-w-full divide-y divide-gray-200">
-							<thead className="bg-gray-50">
-								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.type")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.ledgerAccount")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.currency")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.accountType")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("product.detail.glMappings.table.actions")}</th>
+						<table className="min-w-full text-sm">
+							<thead>
+								<tr className="border-b border-gray-200 bg-gradient-to-r from-slate-50 to-gray-50">
+									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.type")}</th>
+									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.ledgerAccount")}</th>
+									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.currency")}</th>
+									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.accountType")}</th>
+									<th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">{t("product.detail.glMappings.table.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
-								{mappings.map(mapping => {
+							<tbody className="divide-y divide-gray-100">
+								{mappings.map((mapping, index) => {
 									const account = ledgerAccounts.find(a => a.id === mapping.ledgerAccountId);
 									return (
-										<tr key={mapping.id} className="hover:bg-gray-50 transition-colors">
-											<td className="px-6 py-4 whitespace-nowrap">
+										<tr
+											key={mapping.id}
+											className={`transition-colors ${index % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-indigo-50/50`}
+										>
+											<td className="px-4 py-3 whitespace-nowrap">
 												<Badge variant={
 													mapping.mappingType === "ASSET_ACCOUNT" ? "info" :
 													mapping.mappingType === "LIABILITY_ACCOUNT" ? "danger" :
@@ -5421,25 +5424,27 @@ function ProductGLMappingsTab({
 													{getMappingTypeLabel(mapping.mappingType)}
 												</Badge>
 											</td>
-											<td className="px-6 py-4">
+											<td className="px-4 py-3">
 												{account ? (
-													<Link href={`/ledger-accounts/${account.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-														{account.code} - {account.name}
+													<Link href={`/ledger-accounts/${account.id}`} className="text-indigo-600 hover:text-indigo-800 hover:underline font-medium">
+														<span className="font-mono text-xs text-slate-500">{account.code}</span>
+														<span className="mx-1.5 text-gray-300">·</span>
+														{account.name}
 													</Link>
 												) : (
-													<span className="text-gray-500">ID: {mapping.ledgerAccountId}</span>
+													<span className="text-gray-500 font-mono text-xs">ID: {mapping.ledgerAccountId}</span>
 												)}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className="px-4 py-3 whitespace-nowrap">
 												{account ? (
-													<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+													<span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200/80">
 														{account.currency}
 													</span>
 												) : (
-													<span className="text-gray-400">-</span>
+													<span className="text-gray-400">—</span>
 												)}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className="px-4 py-3 whitespace-nowrap">
 												{account ? (
 													<Badge variant={
 														account.accountType === "ASSET" ? "info" :
@@ -5450,21 +5455,21 @@ function ProductGLMappingsTab({
 														{getAccountTypeLabel(account.accountType)}
 													</Badge>
 												) : (
-													<span className="text-gray-400">-</span>
+													<span className="text-gray-400">—</span>
 												)}
 											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-right">
-												<div className="flex items-center justify-end gap-2">
+											<td className="px-4 py-3 whitespace-nowrap text-right">
+												<div className="flex items-center justify-end gap-1.5">
 													<Button
 														variant="outline"
 														size="sm"
 														onClick={() => setEditingMapping(mapping)}
-														className="flex items-center gap-1"
+														className="h-8 px-2.5 text-gray-600 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/50"
+														title={t("product.detail.glMappings.table.edit")}
 													>
 														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 														</svg>
-														{t("product.detail.glMappings.table.edit")}
 													</Button>
 													<Button
 														variant="outline"
@@ -5474,12 +5479,12 @@ function ProductGLMappingsTab({
 																onDelete(mapping.id);
 															}
 														}}
-														className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:border-red-300"
+														className="h-8 px-2.5 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200"
+														title={t("product.detail.glMappings.table.delete")}
 													>
 														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 														</svg>
-														{t("product.detail.glMappings.table.delete")}
 													</Button>
 												</div>
 											</td>
@@ -5490,8 +5495,8 @@ function ProductGLMappingsTab({
 						</table>
 					</div>
 					{mappings.length > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-							<p className="text-sm text-gray-600">
+						<div className="bg-slate-50/80 px-4 py-2.5 border-t border-gray-200 flex items-center justify-between">
+							<p className="text-xs text-slate-600">
 								{mappings.length > 1
 									? t("product.detail.glMappings.footerDisplayPlural", { count: mappings.length })
 									: t("product.detail.glMappings.footerDisplay", { count: mappings.length })}

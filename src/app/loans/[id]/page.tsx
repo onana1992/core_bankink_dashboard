@@ -6,13 +6,15 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import { loansApi } from "@/lib/api";
+import { loansApi, accountsApi } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
+import { useToast } from "@/contexts/ToastContext";
 import type { Account, AccountStatus, LoanScheduleItem } from "@/types";
 
 export default function LoanDetailPage() {
 	const params = useParams();
 	const { t, i18n } = useTranslation();
+	const { showToast } = useToast();
 	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const accountId = params.id as string;
 	const [loan, setLoan] = useState<Account | null>(null);
@@ -20,6 +22,11 @@ export default function LoanDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [generatingSchedule, setGeneratingSchedule] = useState(false);
+	const [showDisburseModal, setShowDisburseModal] = useState(false);
+	const [clientAccounts, setClientAccounts] = useState<Account[]>([]);
+	const [selectedTargetId, setSelectedTargetId] = useState<number | "">("");
+	const [disburseLoading, setDisburseLoading] = useState(false);
+	const [loadingAccounts, setLoadingAccounts] = useState(false);
 
 	async function load() {
 		if (!accountId) return;
@@ -53,6 +60,45 @@ export default function LoanDetailPage() {
 			setError(e?.message ?? "Erreur génération échéancier");
 		} finally {
 			setGeneratingSchedule(false);
+		}
+	}
+
+	const canDisburse = loan?.status === "ACTIVE" && loan?.disbursedAt == null;
+	const clientId = loan?.clientId ?? loan?.client?.id;
+
+	async function openDisburseModal() {
+		if (!clientId) return;
+		setShowDisburseModal(true);
+		setSelectedTargetId("");
+		setLoadingAccounts(true);
+		setError(null);
+		try {
+			const accounts = await accountsApi.getClientAccounts(clientId);
+			// Exclure le compte prêt et ne garder que les comptes ACTIVE
+			const eligible = accounts.filter(
+				(a) => a.id !== loan?.id && a.status === "ACTIVE"
+			);
+			setClientAccounts(eligible);
+		} catch (e: any) {
+			showToast(e?.message ?? t("loan.detail.disburseError"), "error");
+		} finally {
+			setLoadingAccounts(false);
+		}
+	}
+
+	async function handleDisburse() {
+		if (!accountId || selectedTargetId === "") return;
+		setDisburseLoading(true);
+		setError(null);
+		try {
+			await loansApi.disburse(accountId, { targetAccountId: selectedTargetId as number });
+			showToast(t("loan.detail.disburseSuccess"), "success");
+			setShowDisburseModal(false);
+			load();
+		} catch (e: any) {
+			showToast(e?.message ?? t("loan.detail.disburseError"), "error");
+		} finally {
+			setDisburseLoading(false);
 		}
 	}
 
@@ -138,14 +184,21 @@ export default function LoanDetailPage() {
 					</svg>
 					{t("loan.backToList")}
 				</Link>
-				<div className="flex items-center justify-between">
+				<div className="flex items-center justify-between flex-wrap gap-3">
 					<div>
 						<h1 className="text-3xl font-bold text-gray-900">{t("loan.detail.loanTitle", { number: loan.accountNumber })}</h1>
 						<p className="text-gray-600 mt-1">{loan.product?.name ?? "—"}</p>
 					</div>
-					<Link href={`/accounts/${loan.id}`}>
-						<Button variant="outline" size="sm">{t("loan.detail.viewAsAccount")}</Button>
-					</Link>
+					<div className="flex items-center gap-2">
+						{canDisburse && (
+							<Button size="sm" onClick={openDisburseModal}>
+								{t("loan.detail.disburse")}
+							</Button>
+						)}
+						<Link href={`/accounts/${loan.id}`}>
+							<Button variant="outline" size="sm">{t("loan.detail.viewAsAccount")}</Button>
+						</Link>
+					</div>
 				</div>
 			</div>
 
@@ -212,6 +265,12 @@ export default function LoanDetailPage() {
 							<dt className="text-sm font-medium text-gray-500 mb-1">{t("loan.detail.openingAmount")}</dt>
 							<dd className="font-medium text-gray-900">{loan.openingAmount != null ? formatAmount(loan.openingAmount, loan.currency, locale) : "—"}</dd>
 						</div>
+						{loan.disbursedAt != null && (
+							<div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+								<dt className="text-sm font-medium text-gray-500 mb-1">{t("loan.detail.disbursedAt")}</dt>
+								<dd className="font-medium text-gray-900">{formatDate(loan.disbursedAt)}</dd>
+							</div>
+						)}
 					</dl>
 				</div>
 			</div>
@@ -286,6 +345,48 @@ export default function LoanDetailPage() {
 					</div>
 				)}
 			</div>
+
+			{/* Modal Décaissement */}
+			{showDisburseModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !disburseLoading && setShowDisburseModal(false)}>
+					<div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+						<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.disburseModalTitle")}</h3>
+						<p className="text-sm text-gray-600">{t("loan.detail.disburseModalDesc")}</p>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">{t("loan.detail.disburseTargetAccount")}</label>
+							{loadingAccounts ? (
+								<p className="text-sm text-gray-500">{t("loan.detail.loading")}</p>
+							) : clientAccounts.length === 0 ? (
+								<p className="text-sm text-amber-700">{t("loan.detail.disburseNoAccounts")}</p>
+							) : (
+								<select
+									className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									value={selectedTargetId}
+									onChange={(e) => setSelectedTargetId(e.target.value === "" ? "" : Number(e.target.value))}
+								>
+									<option value="">{t("loan.detail.disburseSelectAccount")}</option>
+									{clientAccounts.map((acc) => (
+										<option key={acc.id} value={acc.id}>
+											{acc.accountNumber} — {acc.product?.name ?? acc.id} ({formatAmount(acc.balance, acc.currency, locale)})
+										</option>
+									))}
+								</select>
+							)}
+						</div>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button variant="outline" onClick={() => !disburseLoading && setShowDisburseModal(false)} disabled={disburseLoading}>
+								{t("loan.apply.cancel")}
+							</Button>
+							<Button
+								onClick={handleDisburse}
+								disabled={disburseLoading || selectedTargetId === "" || clientAccounts.length === 0}
+							>
+								{disburseLoading ? t("loan.detail.disburseLoading") : t("loan.detail.disburseConfirm")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

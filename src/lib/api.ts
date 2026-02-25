@@ -51,6 +51,14 @@ import type {
 	AssignRoleRequest,
 	AssignPermissionsRequest,
 	UserStatus,
+	ServiceRegistry,
+	ServiceToken,
+	ServiceStatus,
+	ServiceTokenStatus,
+	CreateServiceRegistryRequest,
+	UpdateServiceRegistryRequest,
+	GenerateServiceTokenRequest,
+	GenerateServiceTokenResponse,
 	ChartOfAccount,
 	CreateChartOfAccountRequest,
 	UpdateChartOfAccountRequest,
@@ -1242,6 +1250,110 @@ export const usersApi = {
 			headers: getAuthHeaders()
 		});
 		await handleJsonResponse(res);
+	}
+};
+
+export type ServiceRegistryPageResponse = {
+	content: ServiceRegistry[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+};
+
+export type ServiceTokenPageResponse = {
+	content: ServiceToken[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+};
+
+export const servicesApi = {
+	async list(params?: { status?: ServiceStatus; slug?: string; page?: number; size?: number }): Promise<ServiceRegistryPageResponse> {
+		const usp = new URLSearchParams();
+		if (params?.status) usp.set("status", params.status);
+		if (params?.slug) usp.set("slug", params.slug);
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ServiceRegistryPageResponse>(res);
+	},
+
+	async get(id: number | string): Promise<ServiceRegistry> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ServiceRegistry>(res);
+	},
+
+	async create(payload: CreateServiceRegistryRequest): Promise<ServiceRegistry> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ServiceRegistry>(res);
+	},
+
+	async update(id: number | string, payload: UpdateServiceRegistryRequest): Promise<ServiceRegistry> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${id}`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ServiceRegistry>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	},
+
+	async generateToken(serviceId: number | string, payload: GenerateServiceTokenRequest): Promise<GenerateServiceTokenResponse> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${serviceId}/tokens`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<GenerateServiceTokenResponse>(res);
+	},
+
+	async listTokens(serviceId: number | string, params?: { page?: number; size?: number }): Promise<ServiceTokenPageResponse> {
+		const usp = new URLSearchParams();
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${serviceId}/tokens${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ServiceTokenPageResponse>(res);
+	},
+
+	async revokeToken(serviceId: number | string, tokenId: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${serviceId}/tokens/${tokenId}/revoke`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	},
+
+	/** Crée l'utilisateur du service (svc-{slug}) et l'associe au service. */
+	async createServiceUser(serviceId: number | string): Promise<ServiceRegistry> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${serviceId}/create-service-user`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<ServiceRegistry>(res);
 	}
 };
 

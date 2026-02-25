@@ -123,6 +123,74 @@ export interface AssignPermissionsRequest {
 	permissionIds: number[];
 }
 
+// --- Service Registry (tokens pour applications tierces) ---
+export type ServiceStatus = "ACTIVE" | "INACTIVE" | "REVOKED";
+export type ServiceTokenStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
+
+export interface ServiceRegistry {
+	id: number;
+	externalId: string;
+	name: string;
+	slug: string;
+	description?: string | null;
+	status: ServiceStatus;
+	createdAt: string;
+	updatedAt: string;
+	createdBy?: number | null;
+	/** Utilisateur associé au service (le service = cet utilisateur). */
+	linkedUserId?: number | null;
+	metadata?: Record<string, unknown> | null;
+}
+
+export interface ServiceToken {
+	id: number;
+	serviceId: number;
+	userId: number;
+	jti: string;
+	/** Valeur JWT stockée (affichable/copiable). Null pour les anciens tokens non persistés. */
+	tokenValue?: string | null;
+	name?: string | null;
+	status: ServiceTokenStatus;
+	expiresAt?: string | null;
+	createdAt: string;
+	revokedAt?: string | null;
+	lastUsedAt?: string | null;
+}
+
+export interface CreateServiceRegistryRequest {
+	name: string;
+	slug: string;
+	description?: string | null;
+	metadata?: Record<string, unknown> | null;
+	/** Si true, crée et lie l'utilisateur svc-{slug} au service. Défaut true. */
+	createServiceUser?: boolean;
+}
+
+export interface UpdateServiceRegistryRequest {
+	name?: string;
+	description?: string | null;
+	status?: ServiceStatus;
+	metadata?: Record<string, unknown> | null;
+}
+
+export interface GenerateServiceTokenRequest {
+	/** Optionnel : si absent, utilise l'utilisateur lié au service. */
+	userId?: number | null;
+	name?: string | null;
+	/** Durée de vie en secondes ; null ou 0 = pas d'expiration. */
+	expiresInSeconds?: number | null;
+}
+
+export interface GenerateServiceTokenResponse {
+	tokenId: number;
+	accessToken: string;
+	tokenType: string;
+	expiresAt: string;
+	serviceId: number;
+	userId: number;
+	message: string;
+}
+
 export interface AuditStatisticsResponse {
 	totalEvents: number;
 	eventsLast24Hours: number;
