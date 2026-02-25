@@ -30,6 +30,26 @@ export interface DisburseRequest {
 	targetAccountId: number;
 }
 
+export interface RepayLoanRequest {
+	sourceAccountId: number;
+	amount: number;
+}
+
+export interface LoanRepaymentAllocationItem {
+	installmentNumber: number;
+	dueDate: string;
+	principalPaid: number;
+	interestPaid: number;
+}
+
+export interface LoanRepaymentResult {
+	fromTransaction: { id: number; amount: number; [key: string]: unknown };
+	loanTransaction: { id: number; amount: number; [key: string]: unknown };
+	/** Montant du paiement affecté aux pénalités (priorité avant échéancier). */
+	penaltyAllocation: number;
+	allocations: LoanRepaymentAllocationItem[];
+}
+
 // UC-L07 / UC-L08 : Demandes de prêt (workflow)
 export type LoanApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 

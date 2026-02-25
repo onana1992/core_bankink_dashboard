@@ -90,6 +90,8 @@ import type {
 	LoanScheduleItem,
 	LoanSimulationResult,
 	DisburseRequest,
+	RepayLoanRequest,
+	LoanRepaymentResult,
 	LoanApplication,
 	LoanApplicationStatus,
 	SubmitLoanApplicationRequest,
@@ -998,6 +1000,15 @@ export const loansApi = {
 			body: JSON.stringify(payload)
 		});
 		return handleJsonResponse<Transaction>(res);
+	},
+
+	async repay(accountId: number | string, payload: RepayLoanRequest): Promise<LoanRepaymentResult> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/repay`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LoanRepaymentResult>(res);
 	},
 
 	async simulate(principal: number, annualRatePercent: number, months: number): Promise<LoanSimulationResult> {

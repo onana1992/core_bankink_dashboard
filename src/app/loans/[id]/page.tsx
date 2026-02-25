@@ -27,6 +27,12 @@ export default function LoanDetailPage() {
 	const [selectedTargetId, setSelectedTargetId] = useState<number | "">("");
 	const [disburseLoading, setDisburseLoading] = useState(false);
 	const [loadingAccounts, setLoadingAccounts] = useState(false);
+	const [showRepayModal, setShowRepayModal] = useState(false);
+	const [repaySourceAccountId, setRepaySourceAccountId] = useState<number | "">("");
+	const [repayAmount, setRepayAmount] = useState("");
+	const [repayLoading, setRepayLoading] = useState(false);
+	const [repayAccounts, setRepayAccounts] = useState<Account[]>([]);
+	const [loadingRepayAccounts, setLoadingRepayAccounts] = useState(false);
 
 	async function load() {
 		if (!accountId) return;
@@ -102,6 +108,59 @@ export default function LoanDetailPage() {
 		}
 	}
 
+	const hasPendingOrPartial = schedule.some((r) => r.status === "PENDING" || r.status === "PARTIAL");
+	const canRepay = loan?.status === "ACTIVE" && Number(loan?.balance ?? 0) > 0;
+
+	async function openRepayModal() {
+		if (!clientId) return;
+		setShowRepayModal(true);
+		setRepaySourceAccountId("");
+		setRepayAmount("");
+		setLoadingRepayAccounts(true);
+		setError(null);
+		try {
+			const accounts = await accountsApi.getClientAccounts(clientId);
+			const eligible = accounts.filter((a) => a.id !== loan?.id && a.status === "ACTIVE");
+			setRepayAccounts(eligible);
+		} catch (e: any) {
+			showToast(e?.message ?? t("loan.detail.repayError"), "error");
+		} finally {
+			setLoadingRepayAccounts(false);
+		}
+	}
+
+	async function handleRepay() {
+		if (!accountId || repaySourceAccountId === "" || !repayAmount) return;
+		const amount = Number(repayAmount);
+		if (isNaN(amount) || amount <= 0) {
+			showToast(t("loan.detail.repayAmountInvalid"), "error");
+			return;
+		}
+		setRepayLoading(true);
+		setError(null);
+		try {
+			const result = await loansApi.repay(accountId, { sourceAccountId: repaySourceAccountId as number, amount });
+			const penaltyPart = Number(result.penaltyAllocation ?? 0);
+			if (penaltyPart > 0) {
+				showToast(
+					t("loan.detail.repaySuccessWithPenalty", {
+						penalty: formatAmount(penaltyPart, loan?.currency ?? "XAF", locale),
+						schedule: formatAmount(amount - penaltyPart, loan?.currency ?? "XAF", locale)
+					}),
+					"success"
+				);
+			} else {
+				showToast(t("loan.detail.repaySuccess"), "success");
+			}
+			setShowRepayModal(false);
+			load();
+		} catch (e: any) {
+			showToast(e?.message ?? t("loan.detail.repayError"), "error");
+		} finally {
+			setRepayLoading(false);
+		}
+	}
+
 	function formatDate(dateStr: string | null | undefined) {
 		if (!dateStr) return "—";
 		return new Date(dateStr).toLocaleDateString(locale);
@@ -134,6 +193,19 @@ export default function LoanDetailPage() {
 		});
 		return { totalPrincipal, totalInterest, totalAmount };
 	}, [schedule]);
+
+	// Décomposition : reste échéancier (principal+intérêts) vs pénalités (balance = scheduleRemaining + penaltyBalance)
+	const { scheduleRemaining, penaltyBalance } = useMemo(() => {
+		let remaining = 0;
+		schedule.forEach((row) => {
+			const principalDue = Math.max(0, Number(row.principalAmount ?? 0) - Number(row.paidPrincipal ?? 0));
+			const interestDue = Math.max(0, Number(row.interestAmount ?? 0) - Number(row.paidInterest ?? 0));
+			remaining += principalDue + interestDue;
+		});
+		const balance = Number(loan?.balance ?? 0);
+		const penalty = Math.max(0, balance - remaining);
+		return { scheduleRemaining: remaining, penaltyBalance: penalty };
+	}, [schedule, loan?.balance]);
 
 	if (loading && !loan) {
 		return (
@@ -195,6 +267,11 @@ export default function LoanDetailPage() {
 								{t("loan.detail.disburse")}
 							</Button>
 						)}
+						{canRepay && (
+							<Button size="sm" variant="outline" onClick={openRepayModal}>
+								{t("loan.detail.repay")}
+							</Button>
+						)}
 						<Link href={`/accounts/${loan.id}`}>
 							<Button variant="outline" size="sm">{t("loan.detail.viewAsAccount")}</Button>
 						</Link>
@@ -227,10 +304,21 @@ export default function LoanDetailPage() {
 					</div>
 				</div>
 				<div className="p-5 space-y-5">
-					<div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-100">
-						<dt className="text-sm font-medium text-amber-800 mb-1">{t("loan.detail.balanceDue")}</dt>
-						<dd className="text-2xl font-bold text-amber-900">{formatAmount(loan.balance, loan.currency, locale)}</dd>
-						<p className="text-xs text-amber-700/80 mt-1">{loan.currency}</p>
+					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+						<div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
+							<dt className="text-sm font-medium text-slate-700 mb-1">{t("loan.detail.scheduleRemaining")}</dt>
+							<dd className="text-xl font-bold text-slate-900">{formatAmount(scheduleRemaining, loan.currency, locale)}</dd>
+							<p className="text-xs text-slate-600 mt-1">{t("loan.detail.scheduleRemainingHint")}</p>
+						</div>
+						<div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
+							<dt className="text-sm font-medium text-amber-800 mb-1">{t("loan.detail.penaltyBalance")}</dt>
+							<dd className="text-xl font-bold text-amber-900">{formatAmount(penaltyBalance, loan.currency, locale)}</dd>
+							<p className="text-xs text-amber-700/80 mt-1">{t("loan.detail.penaltyBalanceHint")}</p>
+						</div>
+						<div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-100">
+							<dt className="text-sm font-medium text-amber-800 mb-1">{t("loan.detail.balanceDueFormula")}</dt>
+							<dd className="text-2xl font-bold text-amber-900">{formatAmount(scheduleRemaining + penaltyBalance, loan.currency, locale)}</dd>
+						</div>
 					</div>
 					<dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 						<div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
@@ -308,6 +396,7 @@ export default function LoanDetailPage() {
 									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.total")}</th>
 									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.outstanding")}</th>
 									<th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.status")}</th>
+									<th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.detail")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200">
@@ -329,6 +418,14 @@ export default function LoanDetailPage() {
 												{row.status}
 											</Badge>
 										</td>
+										<td className="px-4 py-2 text-center">
+											<Link
+												href={`/loans/${accountId}/schedule/${row.id}`}
+												className="inline-flex items-center justify-center rounded-md border h-8 px-3 text-sm hover:bg-gray-50 transition-colors"
+											>
+												{t("loan.detail.table.detail")}
+											</Link>
+										</td>
 									</tr>
 								))}
 							</tbody>
@@ -338,13 +435,70 @@ export default function LoanDetailPage() {
 									<td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatAmount(scheduleTotals.totalPrincipal, loan.currency, locale)}</td>
 									<td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatAmount(scheduleTotals.totalInterest, loan.currency, locale)}</td>
 									<td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">{formatAmount(scheduleTotals.totalAmount, loan.currency, locale)}</td>
-									<td colSpan={2} className="px-4 py-3" />
+									<td colSpan={3} className="px-4 py-3" />
 								</tr>
 							</tfoot>
 						</table>
 					</div>
 				)}
 			</div>
+
+{/* Modal Remboursement */}
+			{showRepayModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => !repayLoading && setShowRepayModal(false)}>
+					<div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+						<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.repayModalTitle")}</h3>
+						<p className="text-sm text-gray-600">{t("loan.detail.repayModalDesc")}</p>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">{t("loan.detail.repaySourceAccount")}</label>
+							{loadingRepayAccounts ? (
+								<p className="text-sm text-gray-500">{t("loan.detail.loading")}</p>
+							) : repayAccounts.length === 0 ? (
+								<p className="text-sm text-amber-700">{t("loan.detail.disburseNoAccounts")}</p>
+							) : (
+								<select
+									className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+									value={repaySourceAccountId}
+									onChange={(e) => setRepaySourceAccountId(e.target.value === "" ? "" : Number(e.target.value))}
+								>
+									<option value="">{t("loan.detail.repaySelectAccount")}</option>
+									{repayAccounts.map((acc) => (
+										<option key={acc.id} value={acc.id}>
+											{acc.accountNumber} — {acc.product?.name ?? acc.id} ({formatAmount(acc.balance, acc.currency, locale)})
+										</option>
+									))}
+								</select>
+							)}
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">{t("loan.detail.repayAmount")}</label>
+							<input
+								type="number"
+								min="0.01"
+								step="0.01"
+								className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+								placeholder="0.00"
+								value={repayAmount}
+								onChange={(e) => setRepayAmount(e.target.value)}
+							/>
+							{loan?.currency && (
+								<p className="text-xs text-gray-500 mt-1">{loan.currency}</p>
+							)}
+						</div>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button variant="outline" onClick={() => !repayLoading && setShowRepayModal(false)} disabled={repayLoading}>
+								{t("loan.apply.cancel")}
+							</Button>
+							<Button
+								onClick={handleRepay}
+								disabled={repayLoading || repaySourceAccountId === "" || !repayAmount || repayAccounts.length === 0 || Number(repayAmount) <= 0}
+							>
+								{repayLoading ? t("loan.detail.repayLoading") : t("loan.detail.repayConfirm")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Modal Décaissement */}
 			{showDisburseModal && (
