@@ -16,6 +16,8 @@ export interface Account {
 	periodMonths?: number | null;
 	maturityDate?: string | null;
 	openedAt?: string;
+	/** Date de décaissement (prêts) ; null si pas encore décaissé. */
+	disbursedAt?: string | null;
 	closedAt?: string | null;
 	closedReason?: string | null;
 	openedBy?: number | null;
