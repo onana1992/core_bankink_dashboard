@@ -62,7 +62,8 @@ function NavLink({
 	collapsed?: boolean;
 }) {
 	const pathname = usePathname();
-	const active = href === "/" ? pathname === href : pathname.startsWith(href);
+	// Un seul menu/sous-menu actif à la fois : correspondance exacte du path
+	const active = pathname === href;
 	return (
 		<Link
 			href={href}
