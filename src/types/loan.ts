@@ -50,6 +50,12 @@ export interface LoanRepaymentResult {
 	allocations: LoanRepaymentAllocationItem[];
 }
 
+/** Détail du solde prêt : reste échéancier + pénalités (calcul côté serveur). */
+export interface LoanBalanceBreakdown {
+	scheduleRemaining: number;
+	penaltyBalance: number;
+}
+
 // UC-L07 / UC-L08 : Demandes de prêt (workflow)
 export type LoanApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 

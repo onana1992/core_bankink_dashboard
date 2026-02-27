@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge";
 import { loansApi, accountsApi } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
 import { useToast } from "@/contexts/ToastContext";
-import type { Account, AccountStatus, LoanScheduleItem } from "@/types";
+import type { Account, AccountStatus, LoanBalanceBreakdown, LoanScheduleItem } from "@/types";
 
 export default function LoanDetailPage() {
 	const params = useParams();
@@ -19,6 +19,7 @@ export default function LoanDetailPage() {
 	const accountId = params.id as string;
 	const [loan, setLoan] = useState<Account | null>(null);
 	const [schedule, setSchedule] = useState<LoanScheduleItem[]>([]);
+	const [balanceBreakdown, setBalanceBreakdown] = useState<LoanBalanceBreakdown | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [generatingSchedule, setGeneratingSchedule] = useState(false);
@@ -39,12 +40,14 @@ export default function LoanDetailPage() {
 		setLoading(true);
 		setError(null);
 		try {
-			const [loanData, scheduleData] = await Promise.all([
+			const [loanData, scheduleData, breakdownData] = await Promise.all([
 				loansApi.get(accountId),
-				loansApi.getSchedule(accountId).catch(() => [])
+				loansApi.getSchedule(accountId).catch(() => []),
+				loansApi.getBalanceBreakdown(accountId).catch(() => null)
 			]);
 			setLoan(loanData);
 			setSchedule(scheduleData);
+			setBalanceBreakdown(breakdownData ?? null);
 		} catch (e: any) {
 			setError(e?.message ?? t("loan.detail.loadError"));
 		} finally {
@@ -153,7 +156,8 @@ export default function LoanDetailPage() {
 				showToast(t("loan.detail.repaySuccess"), "success");
 			}
 			setShowRepayModal(false);
-			load();
+			// Recharger prêt, échéancier et breakdown pour mettre à jour Pénalités / Reste échéancier
+			await load();
 		} catch (e: any) {
 			showToast(e?.message ?? t("loan.detail.repayError"), "error");
 		} finally {
@@ -194,8 +198,14 @@ export default function LoanDetailPage() {
 		return { totalPrincipal, totalInterest, totalAmount };
 	}, [schedule]);
 
-	// Décomposition : reste échéancier (principal+intérêts) vs pénalités (balance = scheduleRemaining + penaltyBalance)
+	// Décomposition : reste échéancier (principal+intérêts) vs pénalités — priorité au breakdown serveur (même logique que le remboursement)
 	const { scheduleRemaining, penaltyBalance } = useMemo(() => {
+		if (balanceBreakdown != null) {
+			return {
+				scheduleRemaining: Number(balanceBreakdown.scheduleRemaining ?? 0),
+				penaltyBalance: Number(balanceBreakdown.penaltyBalance ?? 0)
+			};
+		}
 		let remaining = 0;
 		schedule.forEach((row) => {
 			const principalDue = Math.max(0, Number(row.principalAmount ?? 0) - Number(row.paidPrincipal ?? 0));
@@ -205,7 +215,7 @@ export default function LoanDetailPage() {
 		const balance = Number(loan?.balance ?? 0);
 		const penalty = Math.max(0, balance - remaining);
 		return { scheduleRemaining: remaining, penaltyBalance: penalty };
-	}, [schedule, loan?.balance]);
+	}, [schedule, loan?.balance, balanceBreakdown]);
 
 	if (loading && !loan) {
 		return (

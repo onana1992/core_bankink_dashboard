@@ -89,6 +89,7 @@ import type {
 	ClosureValidationResponse,
 	LoanScheduleItem,
 	LoanSimulationResult,
+	LoanBalanceBreakdown,
 	DisburseRequest,
 	RepayLoanRequest,
 	LoanRepaymentResult,
@@ -975,6 +976,14 @@ export const loansApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<Account>(res);
+	},
+
+	async getBalanceBreakdown(accountId: number | string): Promise<LoanBalanceBreakdown> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/balance-breakdown`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanBalanceBreakdown>(res);
 	},
 
 	async getSchedule(accountId: number | string): Promise<LoanScheduleItem[]> {
