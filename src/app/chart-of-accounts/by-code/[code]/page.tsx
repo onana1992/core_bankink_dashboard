@@ -167,7 +167,7 @@ export default function ChartOfAccountByCodePage() {
 									<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{children.map(child => (
 									<tr key={child.id} className="hover:bg-gray-50">
 										<td className="px-4 py-3 text-sm font-mono font-medium">{child.code}</td>

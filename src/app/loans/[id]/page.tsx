@@ -409,7 +409,7 @@ export default function LoanDetailPage() {
 									<th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.detail")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{schedule.map((row) => (
 									<tr key={row.id} className="hover:bg-gray-50">
 										<td className="px-4 py-2 text-sm text-gray-900">{row.installmentNumber}</td>

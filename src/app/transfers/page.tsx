@@ -125,7 +125,7 @@ export default function TransfersPage() {
 									</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{transfers.length === 0 ? (
 									<tr>
 										<td colSpan={7} className="px-6 py-4 text-center text-gray-500">

@@ -208,7 +208,7 @@ export default function LoanApplicationsPage() {
 										<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.actions")}</th>
 									</tr>
 								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
+								<tbody className="bg-white divide-y divide-gray-200 text-sm">
 									{applications.length === 0 ? (
 										<tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">{t("loan.application.listNoApplications")}</td></tr>
 									) : (

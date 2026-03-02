@@ -1202,7 +1202,7 @@ function InterestRatesTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody className="relative">
+						<tbody className="relative text-sm">
 							{rates.map(rate => (
 								<tr key={rate.id} className="border-t">
 									<td className="px-4 py-2">{t(`product.detail.rates.rateTypes.${rate.rateType}`)}</td>
@@ -1993,7 +1993,7 @@ function FeesTab({
 								<th className="px-4 py-2 text-left">{t("product.detail.fees.table.actions")}</th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="text-sm">
 							{fees.map(fee => (
 								<tr key={fee.id} className="border-t">
 									<td className="px-4 py-2">
@@ -2784,7 +2784,7 @@ function LimitsTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="text-sm">
 							{limits.map(limit => (
 								<tr key={limit.id} className="border-t">
 									<td className="px-4 py-2">{t(`product.detail.limits.limitTypes.${limit.limitType}` as const) || limit.limitType}</td>
@@ -3352,7 +3352,7 @@ function PeriodsTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="text-sm">
 							{periods.map(period => (
 								<tr key={period.id} className="border-t">
 									<td className="px-4 py-2">{period.periodName}</td>
@@ -3895,7 +3895,7 @@ function PenaltiesTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="text-sm">
 							{penalties.map(penalty => (
 								<tr key={penalty.id} className="border-t">
 									<td className="px-4 py-2">{t(`product.detail.penalties.penaltyTypes.${penalty.penaltyType}`)}</td>
@@ -4605,7 +4605,7 @@ function EligibilityRulesTab({
 								<th className="px-4 py-2 text-left"></th>
 							</tr>
 						</thead>
-						<tbody>
+						<tbody className="text-sm">
 							{rules.map(rule => (
 								<tr key={rule.id} className="border-t">
 									<td className="px-4 py-2">{t(`product.detail.eligibility.ruleTypes.${rule.ruleType}`) || rule.ruleType}</td>
@@ -5406,7 +5406,7 @@ function ProductGLMappingsTab({
 									<th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">{t("product.detail.glMappings.table.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-gray-100">
+							<tbody className="divide-y divide-gray-100 text-sm">
 								{mappings.map((mapping, index) => {
 									const account = ledgerAccounts.find(a => a.id === mapping.ledgerAccountId);
 									return (

@@ -2110,7 +2110,7 @@ export default function CustomerDetailPage() {
 										</th>
 									</tr>
 								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
+								<tbody className="bg-white divide-y divide-gray-200 text-sm">
 									{accounts.map((account) => {
 										const statusColors: Record<Account["status"], string> = {
 											ACTIVE: "bg-green-100 text-green-800",

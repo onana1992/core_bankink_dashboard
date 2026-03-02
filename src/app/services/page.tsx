@@ -238,7 +238,7 @@ export default function ServicesPage() {
 										</th>
 									</tr>
 								</thead>
-								<tbody className="divide-y divide-slate-100 bg-white">
+								<tbody className="divide-y divide-slate-100 bg-white text-sm">
 									{services.map((s) => (
 										<tr key={s.id} className="transition-colors hover:bg-slate-50/70">
 											<td className="whitespace-nowrap px-5 py-3.5 text-sm font-medium text-slate-900">{s.name}</td>

@@ -289,7 +289,7 @@ export default function JournalBatchesPage() {
 									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{batches.map((batch) => (
 									<tr key={batch.id} className="hover:bg-gray-50 transition-colors">
 										<td className="px-6 py-4 whitespace-nowrap">

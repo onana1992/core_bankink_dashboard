@@ -318,7 +318,7 @@ export default function ClosuresPage() {
 								<th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
 							</tr>
 						</thead>
-						<tbody className="divide-y">
+						<tbody className="divide-y text-sm">
 							{loading ? (
 								<tr>
 									<td colSpan={8} className="px-4 py-8 text-center">

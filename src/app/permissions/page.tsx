@@ -160,10 +160,13 @@ export default function PermissionsPage() {
 
 	const permissionList = Array.isArray(permissions) ? permissions : [];
 	const resourcesInPage = useMemo(() => Array.from(new Set(permissionList.map(p => p.resource))), [permissionList]);
+	// Fallback: si l'API renvoie totalElements/totalPages à 0 mais qu'on a des éléments, utiliser une estimation pour la carte et la pagination
+	const effectiveTotal = totalElements > 0 ? totalElements : (permissionList.length > 0 ? Math.max(permissionList.length, (page + 1) * size) : 0);
+	const effectiveTotalPages = totalPages > 0 ? totalPages : (effectiveTotal > 0 ? Math.max(1, Math.ceil(effectiveTotal / size)) : 0);
 	const stats = useMemo(() => ({
-		total: totalElements,
+		total: effectiveTotal,
 		byResource: resourcesInPage.length
-	}), [totalElements, resourcesInPage]);
+	}), [effectiveTotal, resourcesInPage]);
 
 	return (
 		<div className="space-y-6">
@@ -432,7 +435,7 @@ export default function PermissionsPage() {
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{permissionList.map(permission => (
 									<tr key={permission.id} className="hover:bg-gray-50 transition-colors">
 										<td className="px-6 py-4 whitespace-nowrap">
@@ -479,14 +482,16 @@ export default function PermissionsPage() {
 							</tbody>
 						</table>
 					</div>
-					{(permissionList.length > 0 || totalElements > 0) && (
+					{(permissionList.length > 0 || effectiveTotal > 0) && (
 						<TablePagination
 							page={page}
-							totalPages={totalPages}
-							totalElements={totalElements}
+							totalPages={effectiveTotalPages}
+							totalElements={effectiveTotal}
 							pageSize={size}
-							onPageChange={setPage}
-							resultsLabel={totalElements !== 1 ? t("permission.table.pagination.permissions") : t("permission.table.pagination.permission")}
+							onPageChange={(p) => {
+								setPage(p);
+							}}
+							resultsLabel={effectiveTotal !== 1 ? t("permission.table.pagination.permissions") : t("permission.table.pagination.permission")}
 							showFirstLast
 							sizeOptions={PAGE_SIZE_OPTIONS}
 							size={size}

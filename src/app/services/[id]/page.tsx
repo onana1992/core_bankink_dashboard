@@ -246,7 +246,7 @@ export default function ServiceDetailPage() {
 									<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("common.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{tokens.map((tok) => (
 									<tr key={tok.id} className="hover:bg-gray-50">
 										<td className="px-4 py-3 text-sm font-mono text-gray-600">{tok.id}</td>
@@ -316,7 +316,6 @@ export default function ServiceDetailPage() {
 						<h3 className="text-xl font-semibold text-gray-900 mb-4">{t("service.generateToken.title")}</h3>
 						{generatedToken ? (
 							<>
-								<p className="text-sm text-amber-700 mb-3">{t("service.generateToken.tokenShownOnce")}</p>
 								<textarea
 									readOnly
 									className="w-full h-24 p-3 border rounded-md font-mono text-xs bg-gray-50"

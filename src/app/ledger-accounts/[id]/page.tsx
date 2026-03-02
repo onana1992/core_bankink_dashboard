@@ -508,7 +508,7 @@ export default function LedgerAccountDetailPage() {
 										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.reference")}</th>
 									</tr>
 								</thead>
-								<tbody className="bg-white divide-y divide-gray-200">
+								<tbody className="bg-white divide-y divide-gray-200 text-sm">
 									{entries.map(entry => {
 										const isDebit = entry.debitAmount > 0;
 										return (

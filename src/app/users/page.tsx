@@ -270,7 +270,7 @@ export default function UsersPage() {
 									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("user.table.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200">
+							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{filtered.map(user => (
 									<tr key={user.id} className="hover:bg-gray-50 transition-colors">
 										<td className="px-6 py-4 whitespace-nowrap">
@@ -281,8 +281,8 @@ export default function UsersPage() {
 												{user.username}
 											</Link>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-gray-700">
-											{user.email}
+										<td className="px-6 py-4 text-gray-700 max-w-[180px]" title={user.email ?? undefined}>
+											<span className="block truncate">{user.email ?? "-"}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-gray-700">
 											{user.firstName || user.lastName
