@@ -500,12 +500,10 @@ export default function LedgerAccountDetailPage() {
 								<thead className="bg-gray-50">
 									<tr>
 										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.date")}</th>
-										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.valueDate")}</th>
 										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.type")}</th>
 										<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.debit")}</th>
 										<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.credit")}</th>
 										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.description")}</th>
-										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.reference")}</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200 text-sm">
@@ -515,9 +513,6 @@ export default function LedgerAccountDetailPage() {
 											<tr key={entry.id} className="hover:bg-gray-50 transition-colors">
 												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
 													{formatDateOnly(entry.entryDate)}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-													{formatDateOnly(entry.valueDate)}
 												</td>
 												<td className="px-6 py-4 whitespace-nowrap">
 													<Badge variant={isDebit ? "info" : "warning"}>
@@ -532,13 +527,6 @@ export default function LedgerAccountDetailPage() {
 												</td>
 												<td className="px-6 py-4 text-sm text-gray-600">
 													{entry.description || "-"}
-												</td>
-												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-													{entry.referenceType && entry.referenceId ? (
-														<span className="font-mono">
-															{entry.referenceType}#{entry.referenceId}
-														</span>
-													) : "-"}
 												</td>
 											</tr>
 										);
