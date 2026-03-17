@@ -98,7 +98,7 @@ export default function NewAccountPage() {
 
 	useEffect(() => {
 			async function loadClientAccounts() {
-				if (form.clientId && form.clientId !== "") {
+				if (form.clientId !== "") {
 					try {
 						const accounts = await accountsApi.getClientAccounts(form.clientId);
 						console.log("📋 Comptes chargés:", accounts);
@@ -134,7 +134,7 @@ export default function NewAccountPage() {
 
 	// Update client state when form.clientId changes
 	useEffect(() => {
-		if (form.clientId && form.clientId !== "") {
+		if (form.clientId !== "") {
 			const foundClient = customers.find(c => c.id === form.clientId);
 			setClient(foundClient || null);
 		} else {
@@ -205,7 +205,7 @@ export default function NewAccountPage() {
 		e.preventDefault();
 		setLoading(true);
 
-		if (!form.clientId || form.clientId === "") {
+		if (form.clientId === "") {
 			showToast(t("account.new.errors.clientRequired"), "error");
 			setLoading(false);
 			return;

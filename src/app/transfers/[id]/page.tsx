@@ -39,9 +39,9 @@ export default function TransferDetailPage() {
 				try {
 					const account = await accountsApi.get(data.fromAccountId);
 					setFromAccount(account);
-					if (account.customerId) {
+					if (account.clientId) {
 						try {
-							const customer = await customersApi.get(account.customerId);
+							const customer = await customersApi.get(account.clientId);
 							setFromCustomer(customer);
 						} catch (e) {
 							console.error("Erreur lors du chargement du client source:", e);
@@ -56,9 +56,9 @@ export default function TransferDetailPage() {
 				try {
 					const account = await accountsApi.get(data.toAccountId);
 					setToAccount(account);
-					if (account.customerId) {
+					if (account.clientId) {
 						try {
-							const customer = await customersApi.get(account.customerId);
+							const customer = await customersApi.get(account.clientId);
 							setToCustomer(customer);
 						} catch (e) {
 							console.error("Erreur lors du chargement du client destination:", e);

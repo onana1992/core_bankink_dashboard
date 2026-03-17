@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +8,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
-export default function LoginPage() {
+function LoginContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { t } = useTranslation();
@@ -121,6 +121,14 @@ export default function LoginPage() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+export default function LoginPage() {
+	return (
+		<Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center">Chargement...</div>}>
+			<LoginContent />
+		</Suspense>
 	);
 }
 

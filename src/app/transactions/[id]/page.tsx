@@ -79,22 +79,26 @@ export default function TransactionDetailPage() {
 					if (fromAccData) {
 						setFromAccount(fromAccData);
 						// Charger le client source
-						try {
-							const clientData = await customersApi.get(fromAccData.clientId);
-							setFromClient(clientData);
-						} catch (e) {
-							console.error(t("transaction.detail.errors.loadSenderClient"), e);
+						if (fromAccData.clientId != null) {
+							try {
+								const clientData = await customersApi.get(fromAccData.clientId);
+								setFromClient(clientData);
+							} catch (e) {
+								console.error(t("transaction.detail.errors.loadSenderClient"), e);
+							}
 						}
 					}
 					
 					if (toAccData) {
 						setToAccount(toAccData);
 						// Charger le client destination
-						try {
-							const clientData = await customersApi.get(toAccData.clientId);
-							setToClient(clientData);
-						} catch (e) {
-							console.error(t("transaction.detail.errors.loadRecipientClient"), e);
+						if (toAccData.clientId != null) {
+							try {
+								const clientData = await customersApi.get(toAccData.clientId);
+								setToClient(clientData);
+							} catch (e) {
+								console.error(t("transaction.detail.errors.loadRecipientClient"), e);
+							}
 						}
 					}
 				} catch (e: any) {

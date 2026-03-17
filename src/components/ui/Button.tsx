@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { ComponentProps } from "react";
 
 type ButtonProps = ComponentProps<"button"> & {
-	variant?: "default" | "outline" | "ghost";
+	variant?: "default" | "outline" | "ghost" | "secondary";
 	size?: "sm" | "md";
 };
 
@@ -12,7 +12,8 @@ export default function Button({ className, variant = "default", size = "md", ..
 	const variants = {
 		default: "bg-gray-900 text-white hover:bg-gray-800",
 		outline: "border hover:bg-gray-50",
-		ghost: "hover:bg-gray-100"
+		ghost: "hover:bg-gray-100",
+		secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200"
 	};
 	const sizes = {
 		sm: "h-8 px-3",

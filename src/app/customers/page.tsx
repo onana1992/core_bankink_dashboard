@@ -298,7 +298,7 @@ export default function CustomersPage() {
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.name")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.type")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.status")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.email")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-52">{t("common.email")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.risk")}</th>
 									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("customer.table.actions")}</th>
 								</tr>
@@ -320,8 +320,8 @@ export default function CustomersPage() {
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge variant={statusBadgeVariant(c.status)}>{t(`customer.statuses.${c.status}`)}</Badge>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-gray-700">
-											{c.email ?? "-"}
+										<td className="px-6 py-4 text-gray-700 overflow-hidden max-w-[13rem]" title={[c.email, c.phone].filter(Boolean).join(" · ") || undefined}>
+											<span className="block truncate min-w-0">{[c.email, c.phone].filter(Boolean).join(" · ") || "-"}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											{typeof c.riskScore === "number" ? (

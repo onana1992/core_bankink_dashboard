@@ -126,7 +126,7 @@ export default function AccountDetailPage() {
 		if (!accountId) return;
 		setTransactionsLoading(true);
 		try {
-			const response = await transactionsApi.getAccountTransactions(accountId, 0, 10);
+			const response = await transactionsApi.getAccountTransactions(accountId, { page: 0, size: 10 });
 			setTransactions(response.content || []);
 		} catch (e: any) {
 			console.error("Erreur lors du chargement des transactions:", e);

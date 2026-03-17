@@ -319,7 +319,7 @@ export default function Dashboard() {
 												{formatCurrency(account.balance, account.currency)}
 											</p>
 											<p className="text-xs text-gray-500">
-												{formatDate(account.createdAt)}
+												{formatDate(account.createdAt ?? "")}
 											</p>
 										</div>
 									</div>
