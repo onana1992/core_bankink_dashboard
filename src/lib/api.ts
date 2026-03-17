@@ -3,6 +3,7 @@ import type {
 	AddRelatedPersonRequest,
 	Address,
 	CreateCustomerRequest,
+	UpdateCustomerRequest,
 	Customer,
 	Document,
 	DocumentType,
@@ -366,7 +367,7 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
-	async update(id: number | string, payload: Partial<CreateCustomerRequest>): Promise<Customer> {
+	async update(id: number | string, payload: UpdateCustomerRequest): Promise<Customer> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}`, {
 			method: "PUT",
 			headers: getAuthHeaders(),
@@ -430,6 +431,18 @@ export const customersApi = {
 
 	getDocumentUrl(id: number | string, documentId: number | string): string {
 		return `${API_BASE}/api/ops/customers/${id}/documents/${documentId}/download`;
+	},
+
+	/** Télécharge le binaire d'un document (auth + refresh gérés). En échec lance une erreur. */
+	async getDocumentBlob(id: number | string, documentId: number | string): Promise<Blob> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents/${documentId}/download`, {
+			headers: getAuthHeaders(),
+		});
+		if (!res.ok) {
+			const text = await res.text();
+			throw new Error(text || `Download failed: ${res.status}`);
+		}
+		return res.blob();
 	},
 
 	async reviewDocument(

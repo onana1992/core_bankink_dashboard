@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import {
 	LayoutDashboard,
 	Users,
-	IdCard,
 	Package,
 	BadgePercent,
 	Banknote,
@@ -93,19 +92,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 				<nav className="mt-4 space-y-2">
 					<NavLink href="/" label={t("sidebar.dashboard")} icon={LayoutDashboard} collapsed={collapsed} />
 
-					<details className="group rounded-md">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-							<span className="flex items-center gap-2">
-								<Users className="h-4 w-4 text-gray-700" />
-								<span className={labelClass}>{t("sidebar.clientsKyc")}</span>
-							</span>
-							{!collapsed && <Chevron />}
-						</summary>
-						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/customers" label={t("sidebar.clients")} icon={Users} collapsed={collapsed} />
-							<NavLink href="/kyc" label={t("sidebar.kycChecks")} icon={IdCard} collapsed={collapsed} />
-						</div>
-					</details>
+					<NavLink href="/customers" label={t("sidebar.clientsKyc")} icon={Users} collapsed={collapsed} />
 
 					<NavLink href="/products" label={t("sidebar.productCatalog")} icon={Package} collapsed={collapsed} />
 

@@ -15,6 +15,12 @@ export interface Customer {
 	rejectionReason?: string | null;
 	createdAt?: string;
 	updatedAt?: string;
+	/** Sexe / genre (ex. MALE, FEMALE, OTHER) */
+	gender?: string | null;
+	/** Date de naissance (ISO date string) */
+	birthDate?: string | null;
+	/** Statut matrimonial (ex. SINGLE, MARRIED, DIVORCED, WIDOWED) */
+	maritalStatus?: string | null;
 }
 
 export type AddressType = "RESIDENTIAL" | "BUSINESS" | "MAILING";
@@ -58,6 +64,18 @@ export interface CreateCustomerRequest {
 	lastName?: string;
 	email?: string;
 	phone?: string;
+}
+
+/** Payload pour la mise à jour d'un client (tous les champs optionnels) */
+export interface UpdateCustomerRequest {
+	displayName?: string;
+	firstName?: string;
+	lastName?: string;
+	email?: string;
+	phone?: string;
+	gender?: string | null;
+	birthDate?: string | null;
+	maritalStatus?: string | null;
 }
 
 export interface AddAddressRequest {

@@ -98,8 +98,26 @@ export default function CustomerDetailPage() {
 	// État pour gérer les onglets
 	const [activeTab, setActiveTab] = useState<string>("overview");
 
+	// État pour l'édition du détail du profil
+	const [isEditingProfile, setIsEditingProfile] = useState(false);
+	const [profileFormData, setProfileFormData] = useState<{
+		firstName: string;
+		lastName: string;
+		gender: string;
+		birthDate: string;
+		maritalStatus: string;
+	}>({
+		firstName: "",
+		lastName: "",
+		gender: "",
+		birthDate: "",
+		maritalStatus: ""
+	});
+	const [savingProfile, setSavingProfile] = useState(false);
+
 	const tabs = [
 		{ id: "overview", label: t("customer.detail.tabs.overview") },
+		{ id: "profil", label: t("customer.detail.tabs.profile") },
 		{ id: "documents", label: t("customer.detail.tabs.documents") },
 		{ id: "addresses", label: t("customer.detail.tabs.addresses") },
 		...(customer?.type === "BUSINESS" ? [{ id: "related-persons", label: t("customer.detail.tabs.relatedPersons") }] : []),
@@ -153,22 +171,12 @@ export default function CustomerDetailPage() {
 	async function loadSelfieImage(documentId: number) {
 		if (!id) return;
 		try {
-			const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-			const headers: HeadersInit = {};
-			if (token) {
-				headers["Authorization"] = `Bearer ${token}`;
-			}
-			const url = customersApi.getDocumentUrl(id, documentId);
-			const response = await fetch(url, { headers });
-			if (!response.ok) {
-				throw new Error('Failed to load image');
-			}
-			const blob = await response.blob();
+			const blob = await customersApi.getDocumentBlob(id, documentId);
 			const blobUrl = URL.createObjectURL(blob);
 			setSelfieUrl(blobUrl);
 			setSelfieError(false);
 		} catch (e) {
-			console.error('Error loading selfie image:', e);
+			console.warn("Selfie image could not be loaded:", e);
 			setSelfieError(true);
 			setSelfieUrl(null);
 		}
@@ -221,6 +229,13 @@ export default function CustomerDetailPage() {
 				email: customerData.email ?? "",
 				phone: customerData.phone ?? ""
 			});
+			setProfileFormData({
+				firstName: customerData.firstName ?? "",
+				lastName: customerData.lastName ?? "",
+				gender: customerData.gender ?? "",
+				birthDate: customerData.birthDate ? customerData.birthDate.slice(0, 10) : "",
+				maritalStatus: customerData.maritalStatus ?? ""
+			});
 		} catch (e: any) {
 			setError(e?.message ?? t("customer.errors.unknown"));
 		} finally {
@@ -260,6 +275,41 @@ export default function CustomerDetailPage() {
 			});
 		}
 		setIsEditing(false);
+	}
+
+	async function handleSaveProfile() {
+		if (!id) return;
+		setSavingProfile(true);
+		setError(null);
+		try {
+			const updated = await customersApi.update(id, {
+				firstName: profileFormData.firstName || undefined,
+				lastName: profileFormData.lastName || undefined,
+				gender: profileFormData.gender || null,
+				birthDate: profileFormData.birthDate || null,
+				maritalStatus: profileFormData.maritalStatus || null
+			});
+			setCustomer(updated);
+			setIsEditingProfile(false);
+			setToast({ message: t("customer.detail.generalInfo.save"), type: "success" });
+		} catch (e: any) {
+			setToast({ message: e?.message ?? t("customer.errors.unknown"), type: "error" });
+		} finally {
+			setSavingProfile(false);
+		}
+	}
+
+	function handleCancelProfile() {
+		if (customer) {
+			setProfileFormData({
+				firstName: customer.firstName ?? "",
+				lastName: customer.lastName ?? "",
+				gender: customer.gender ?? "",
+				birthDate: customer.birthDate ? customer.birthDate.slice(0, 10) : "",
+				maritalStatus: customer.maritalStatus ?? ""
+			});
+		}
+		setIsEditingProfile(false);
 	}
 
 	useEffect(() => {
@@ -683,25 +733,13 @@ export default function CustomerDetailPage() {
 	async function openDocument(documentId: number) {
 		if (!id) return;
 		try {
-			const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-			const headers: HeadersInit = {};
-			if (token) {
-				headers["Authorization"] = `Bearer ${token}`;
-			}
-			const url = customersApi.getDocumentUrl(id, documentId);
-			const response = await fetch(url, { headers });
-			if (!response.ok) {
-				throw new Error('Failed to load document');
-			}
-			const blob = await response.blob();
+			const blob = await customersApi.getDocumentBlob(id, documentId);
 			const blobUrl = URL.createObjectURL(blob);
 			window.open(blobUrl, '_blank');
-			// Nettoyer le blob URL après un délai pour libérer la mémoire
 			setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 		} catch (e) {
-			console.error('Error loading document:', e);
+			console.warn("Document could not be loaded:", e);
 			const errorMsg = t("customer.detail.documents.uploadError");
-			setError(errorMsg);
 			setToast({ message: errorMsg, type: "error" });
 		}
 	}
@@ -831,6 +869,135 @@ export default function CustomerDetailPage() {
 
 			{/* Tab Content */}
 			<div className="mt-6">
+				{activeTab === "profil" && customer && (
+					<div className="space-y-6">
+						<div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+							<div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+								<div>
+									<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.profile.title")}</h2>
+									<p className="text-xs text-gray-500 mt-0.5">{t("customer.detail.profile.subtitle")}</p>
+								</div>
+								{!isEditingProfile && (
+									<Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
+										{t("customer.detail.generalInfo.edit")}
+									</Button>
+								)}
+							</div>
+							<div className="p-6">
+								{!isEditingProfile ? (
+									<dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+										<div>
+											<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("customer.detail.profile.lastName")}</dt>
+											<dd className="mt-1 text-gray-900">{customer.lastName ?? "—"}</dd>
+										</div>
+										<div>
+											<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("customer.detail.profile.firstName")}</dt>
+											<dd className="mt-1 text-gray-900">{customer.firstName ?? "—"}</dd>
+										</div>
+										<div>
+											<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("customer.detail.profile.gender")}</dt>
+											<dd className="mt-1 text-gray-900">
+												{customer.gender
+													? (t(`customer.detail.profile.genderValue.${customer.gender}`) !== `customer.detail.profile.genderValue.${customer.gender}`
+														? t(`customer.detail.profile.genderValue.${customer.gender}`)
+														: customer.gender)
+													: "—"}
+											</dd>
+										</div>
+										<div>
+											<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("customer.detail.profile.birthDate")}</dt>
+											<dd className="mt-1 text-gray-900">
+												{customer.birthDate
+													? new Date(customer.birthDate).toLocaleDateString(locale, { year: "numeric", month: "long", day: "numeric" })
+													: "—"}
+											</dd>
+										</div>
+										<div>
+											<dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{t("customer.detail.profile.maritalStatus")}</dt>
+											<dd className="mt-1 text-gray-900">
+												{customer.maritalStatus
+													? (t(`customer.detail.profile.maritalStatusValue.${customer.maritalStatus}`) !== `customer.detail.profile.maritalStatusValue.${customer.maritalStatus}`
+														? t(`customer.detail.profile.maritalStatusValue.${customer.maritalStatus}`)
+														: customer.maritalStatus)
+													: "—"}
+											</dd>
+										</div>
+									</dl>
+								) : (
+									<form
+										onSubmit={e => {
+											e.preventDefault();
+											handleSaveProfile();
+										}}
+										className="space-y-4"
+									>
+										<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+											<div>
+												<label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.profile.lastName")}</label>
+												<Input
+													value={profileFormData.lastName}
+													onChange={e => setProfileFormData(prev => ({ ...prev, lastName: e.target.value }))}
+												/>
+											</div>
+											<div>
+												<label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.profile.firstName")}</label>
+												<Input
+													value={profileFormData.firstName}
+													onChange={e => setProfileFormData(prev => ({ ...prev, firstName: e.target.value }))}
+												/>
+											</div>
+											<div>
+												<label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.profile.gender")}</label>
+												<select
+													value={profileFormData.gender}
+													onChange={e => setProfileFormData(prev => ({ ...prev, gender: e.target.value }))}
+													className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+												>
+													<option value="">—</option>
+													<option value="MALE">{t("customer.detail.profile.genderValue.MALE")}</option>
+													<option value="FEMALE">{t("customer.detail.profile.genderValue.FEMALE")}</option>
+													<option value="OTHER">{t("customer.detail.profile.genderValue.OTHER")}</option>
+												</select>
+											</div>
+											<div>
+												<label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.profile.birthDate")}</label>
+												<Input
+													type="date"
+													value={profileFormData.birthDate}
+													onChange={e => setProfileFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+												/>
+											</div>
+											<div>
+												<label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{t("customer.detail.profile.maritalStatus")}</label>
+												<select
+													value={profileFormData.maritalStatus}
+													onChange={e => setProfileFormData(prev => ({ ...prev, maritalStatus: e.target.value }))}
+													className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+												>
+													<option value="">—</option>
+													<option value="SINGLE">{t("customer.detail.profile.maritalStatusValue.SINGLE")}</option>
+													<option value="MARRIED">{t("customer.detail.profile.maritalStatusValue.MARRIED")}</option>
+													<option value="DIVORCED">{t("customer.detail.profile.maritalStatusValue.DIVORCED")}</option>
+													<option value="WIDOWED">{t("customer.detail.profile.maritalStatusValue.WIDOWED")}</option>
+													<option value="OTHER">{t("customer.detail.profile.maritalStatusValue.OTHER")}</option>
+												</select>
+											</div>
+										</div>
+										<div className="flex gap-2 pt-2 border-t border-gray-200">
+											<Button type="submit" disabled={savingProfile}>
+												{savingProfile ? t("customer.detail.generalInfo.saving") : t("customer.detail.generalInfo.save")}
+											</Button>
+											<Button type="button" variant="outline" onClick={handleCancelProfile} disabled={savingProfile}>
+												{t("customer.detail.generalInfo.cancel")}
+											</Button>
+										</div>
+									</form>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
+
 				{activeTab === "overview" && (
 					<div className="space-y-6">
 						{/* Carte Selfie améliorée */}
@@ -1895,10 +2062,10 @@ export default function CustomerDetailPage() {
 										<Badge variant={reviewStatusBadgeVariant(customer.emailReviewStatus)}>{reviewStatusLabel(customer.emailReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
-										<Button size="sm" onClick={() => doSetEmailReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+										<Button size="sm" onClick={() => doSetEmailReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null || customer.emailReviewStatus === "APPROVED"}>
 											{reviewStatusSubmitting === "email" ? "..." : t("customer.detail.kyc.approveButton")}
 										</Button>
-										<Button size="sm" variant="outline" onClick={() => doSetEmailReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+										<Button size="sm" variant="outline" onClick={() => doSetEmailReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null || customer.emailReviewStatus === "APPROVED"} className="border-red-300 text-red-700 hover:bg-red-50">
 											{t("customer.detail.kyc.rejectButton")}
 										</Button>
 									</div>
@@ -1915,10 +2082,10 @@ export default function CustomerDetailPage() {
 										<Badge variant={reviewStatusBadgeVariant(customer.profileReviewStatus)}>{reviewStatusLabel(customer.profileReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
-										<Button size="sm" onClick={() => doSetProfileReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+										<Button size="sm" onClick={() => doSetProfileReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null || customer.profileReviewStatus === "APPROVED"}>
 											{reviewStatusSubmitting === "profile" ? "..." : t("customer.detail.kyc.approveButton")}
 										</Button>
-										<Button size="sm" variant="outline" onClick={() => doSetProfileReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+										<Button size="sm" variant="outline" onClick={() => doSetProfileReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null || customer.profileReviewStatus === "APPROVED"} className="border-red-300 text-red-700 hover:bg-red-50">
 											{t("customer.detail.kyc.rejectButton")}
 										</Button>
 									</div>
@@ -1935,10 +2102,10 @@ export default function CustomerDetailPage() {
 										<Badge variant={reviewStatusBadgeVariant(customer.identityReviewStatus)}>{reviewStatusLabel(customer.identityReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
-										<Button size="sm" onClick={() => doSetIdentityReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+										<Button size="sm" onClick={() => doSetIdentityReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null || customer.identityReviewStatus === "APPROVED"}>
 											{reviewStatusSubmitting === "identity" ? "..." : t("customer.detail.kyc.approveButton")}
 										</Button>
-										<Button size="sm" variant="outline" onClick={() => doSetIdentityReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+										<Button size="sm" variant="outline" onClick={() => doSetIdentityReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null || customer.identityReviewStatus === "APPROVED"} className="border-red-300 text-red-700 hover:bg-red-50">
 											{t("customer.detail.kyc.rejectButton")}
 										</Button>
 									</div>
@@ -1960,7 +2127,7 @@ export default function CustomerDetailPage() {
 									<div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50">
 										<h4 className="text-sm font-medium text-gray-800 mb-1">{t("customer.detail.kyc.submit.title")}</h4>
 										<p className="text-xs text-gray-500 mb-3">{t("customer.detail.kyc.submit.description")}</p>
-										<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} size="sm">
+										<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null || customer.status === "VERIFIED" || customer.status === "PENDING_REVIEW"} size="sm">
 											{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
 										</Button>
 									</div>
@@ -1977,7 +2144,7 @@ export default function CustomerDetailPage() {
 												{t("customer.detail.kyc.verify.pepFlag")}
 											</label>
 										</div>
-										<Button onClick={doVerifyKyc} disabled={kycSubmitting !== null} size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-50">
+										<Button onClick={doVerifyKyc} disabled={kycSubmitting !== null || customer.status === "VERIFIED"} size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-50">
 											{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
 										</Button>
 									</div>
@@ -1985,7 +2152,7 @@ export default function CustomerDetailPage() {
 										<h4 className="text-sm font-medium text-gray-800 mb-1">{t("customer.detail.kyc.reject.title")}</h4>
 										<p className="text-xs text-gray-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
 										{!showRejectForm ? (
-											<Button variant="outline" size="sm" onClick={() => setShowRejectForm(true)} disabled={kycSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+											<Button variant="outline" size="sm" onClick={() => setShowRejectForm(true)} disabled={kycSubmitting !== null || customer.status === "VERIFIED"} className="border-red-300 text-red-700 hover:bg-red-50">
 												{t("customer.detail.kyc.reject.button")}
 											</Button>
 										) : (
@@ -1998,7 +2165,7 @@ export default function CustomerDetailPage() {
 													rows={2}
 												/>
 												<div className="flex gap-2">
-													<Button size="sm" variant="outline" onClick={doRejectKyc} disabled={kycSubmitting !== null || !rejectionReason.trim()} className="border-red-300 text-red-700 hover:bg-red-50">
+													<Button size="sm" variant="outline" onClick={doRejectKyc} disabled={kycSubmitting !== null || !rejectionReason.trim() || customer.status === "VERIFIED"} className="border-red-300 text-red-700 hover:bg-red-50">
 														{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
 													</Button>
 													<Button size="sm" variant="ghost" onClick={() => { setShowRejectForm(false); setRejectionReason(""); }} disabled={kycSubmitting !== null}>

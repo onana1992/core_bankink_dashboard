@@ -5,7 +5,7 @@
 		"dashboard": "Tableau de bord",
 		"clientsKyc": "Clients & KYC",
 		"clients": "Clients",
-		"kycChecks": "Vérifications KYC",
+		"kycChecks": "Vérification KYC",
 		"productCatalog": "Catalogue de produits",
 		"products": "Produits",
 		"pricingRules": "Règles de tarification",
@@ -194,6 +194,7 @@
 			"error": "Erreur",
 			"notFound": "Client non trouvé",
 			"tabs": {
+				"profile": "Détail du profil",
 				"overview": "Vue d'ensemble",
 				"documents": "Documents",
 				"addresses": "Adresses",
@@ -226,6 +227,35 @@
 				"save": "Enregistrer",
 				"saving": "Sauvegarde...",
 				"cancel": "Annuler"
+			},
+			"profile": {
+				"title": "Informations personnelles",
+				"subtitle": "Détail du profil du client",
+				"firstName": "Prénom",
+				"lastName": "Nom",
+				"gender": "Sexe",
+				"birthDate": "Date de naissance",
+				"maritalStatus": "Statut matrimonial",
+				"genderValue": {
+					"MALE": "Homme",
+					"FEMALE": "Femme",
+					"OTHER": "Autre"
+				},
+				"maritalStatusValue": {
+					"SINGLE": "Célibataire",
+					"MARRIED": "Marié(e)",
+					"DIVORCED": "Divorcé(e)",
+					"WIDOWED": "Veuf(ve)",
+					"OTHER": "Autre"
+				}
+			},
+			"profileDetail": {
+				"reviewStatus": {
+					"PENDING": "En attente",
+					"PENDING_REVIEW": "En attente d'examen",
+					"APPROVED": "Approuvé",
+					"REJECTED": "Rejeté"
+				}
 			},
 			"documents": {
 				"title": "Documents",
