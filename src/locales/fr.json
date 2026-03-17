@@ -313,11 +313,18 @@
 			},
 			"kyc": {
 				"title": "Actions KYC",
-				"subtitle": "Soumission, vérification et rejet",
+				"subtitle": "Revue email, profil, identité et statut client",
+				"emailReview": "Revue de l'email",
+				"profileReview": "Revue du profil",
+				"identityReview": "Revue de l'identité",
+				"clientStatus": "Statut client",
+				"currentStatus": "Statut actuel",
+				"approveButton": "Approuver",
+				"rejectButton": "Rejeter",
 				"submit": {
-					"title": "Soumission",
-					"description": "Soumettre le dossier pour revue (DRAFT/REJECTED → PENDING_REVIEW)",
-					"button": "Soumettre KYC",
+					"title": "Soumettre pour revue",
+					"description": "Passer le client en attente de revue (DRAFT/REJECTED → PENDING_REVIEW)",
+					"button": "Soumettre",
 					"submitting": "Soumission...",
 					"success": "KYC soumis avec succès",
 					"error": "Erreur lors de la soumission du KYC"

@@ -313,11 +313,18 @@
 			},
 			"kyc": {
 				"title": "KYC Actions",
-				"subtitle": "Submission, verification and rejection",
+				"subtitle": "Email, profile, identity review and client status",
+				"emailReview": "Email review",
+				"profileReview": "Profile review",
+				"identityReview": "Identity review",
+				"clientStatus": "Client status",
+				"currentStatus": "Current status",
+				"approveButton": "Approve",
+				"rejectButton": "Reject",
 				"submit": {
-					"title": "Submission",
-					"description": "Submit the file for review (DRAFT/REJECTED → PENDING_REVIEW)",
-					"button": "Submit KYC",
+					"title": "Submit for review",
+					"description": "Move client to pending review (DRAFT/REJECTED → PENDING_REVIEW)",
+					"button": "Submit",
 					"submitting": "Submitting...",
 					"success": "KYC submitted successfully",
 					"error": "Error submitting KYC"

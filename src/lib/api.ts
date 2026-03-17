@@ -484,6 +484,30 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
+	async setEmailReviewStatus(id: number | string, status: "APPROVED" | "REJECTED"): Promise<Customer> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/email-review?status=${status}`, {
+			method: "PUT",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<Customer>(res);
+	},
+
+	async setProfileReviewStatus(id: number | string, status: "APPROVED" | "REJECTED"): Promise<Customer> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/profile-review?status=${status}`, {
+			method: "PUT",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<Customer>(res);
+	},
+
+	async setIdentityReviewStatus(id: number | string, status: "APPROVED" | "REJECTED"): Promise<Customer> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/identity-review?status=${status}`, {
+			method: "PUT",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<Customer>(res);
+	},
+
 	async getRelatedPersons(id: number | string): Promise<RelatedPerson[]> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/related-persons`, {
 			headers: getAuthHeaders(),

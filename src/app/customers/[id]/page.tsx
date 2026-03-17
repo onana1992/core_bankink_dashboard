@@ -75,6 +75,7 @@ export default function CustomerDetailPage() {
 	const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
 	const [kycSubmitting, setKycSubmitting] = useState<null | "submit" | "verify" | "reject">(null);
+	const [reviewStatusSubmitting, setReviewStatusSubmitting] = useState<null | "email" | "profile" | "identity">(null);
 	const [verifyRisk, setVerifyRisk] = useState<number>(20);
 	const [verifyPep, setVerifyPep] = useState<boolean>(false);
 	const [rejectionReason, setRejectionReason] = useState<string>("");
@@ -126,6 +127,20 @@ export default function CustomerDetailPage() {
 		if (score >= 70) return "danger";
 		if (score >= 40) return "warning";
 		return "success";
+	}
+
+	function reviewStatusBadgeVariant(s?: Customer["emailReviewStatus"]): "neutral" | "success" | "warning" | "danger" {
+		if (!s) return "neutral";
+		if (s === "APPROVED") return "success";
+		if (s === "REJECTED") return "danger";
+		return "warning";
+	}
+
+	function reviewStatusLabel(s?: Customer["emailReviewStatus"]): string {
+		if (!s) return "-";
+		const key = `customer.detail.profileDetail.reviewStatus.${s}`;
+		const translated = t(key);
+		return translated === key ? s : translated;
 	}
 
 	// Trouver le document selfie
@@ -473,6 +488,52 @@ export default function CustomerDetailPage() {
 			setToast({ message: errorMessage, type: "error" });
 		} finally {
 			setKycSubmitting(null);
+		}
+	}
+
+	async function doSetEmailReviewStatus(status: "APPROVED" | "REJECTED") {
+		if (!id) return;
+		setReviewStatusSubmitting("email");
+		setError(null);
+		try {
+			const c = await customersApi.setEmailReviewStatus(id, status);
+			setCustomer(c);
+			setToast({ message: status === "APPROVED" ? t("customer.detail.profileDetail.reviewStatus.APPROVED") : t("customer.detail.profileDetail.reviewStatus.REJECTED"), type: "success" });
+		} catch (e: any) {
+			setError(e?.message ?? "Erreur");
+			setToast({ message: e?.message ?? "Erreur", type: "error" });
+		} finally {
+			setReviewStatusSubmitting(null);
+		}
+	}
+	async function doSetProfileReviewStatus(status: "APPROVED" | "REJECTED") {
+		if (!id) return;
+		setReviewStatusSubmitting("profile");
+		setError(null);
+		try {
+			const c = await customersApi.setProfileReviewStatus(id, status);
+			setCustomer(c);
+			setToast({ message: status === "APPROVED" ? t("customer.detail.profileDetail.reviewStatus.APPROVED") : t("customer.detail.profileDetail.reviewStatus.REJECTED"), type: "success" });
+		} catch (e: any) {
+			setError(e?.message ?? "Erreur");
+			setToast({ message: e?.message ?? "Erreur", type: "error" });
+		} finally {
+			setReviewStatusSubmitting(null);
+		}
+	}
+	async function doSetIdentityReviewStatus(status: "APPROVED" | "REJECTED") {
+		if (!id) return;
+		setReviewStatusSubmitting("identity");
+		setError(null);
+		try {
+			const c = await customersApi.setIdentityReviewStatus(id, status);
+			setCustomer(c);
+			setToast({ message: status === "APPROVED" ? t("customer.detail.profileDetail.reviewStatus.APPROVED") : t("customer.detail.profileDetail.reviewStatus.REJECTED"), type: "success" });
+		} catch (e: any) {
+			setError(e?.message ?? "Erreur");
+			setToast({ message: e?.message ?? "Erreur", type: "error" });
+		} finally {
+			setReviewStatusSubmitting(null);
 		}
 	}
 
@@ -1128,245 +1189,172 @@ export default function CustomerDetailPage() {
 
 				{activeTab === "documents" && (
 					<div className="space-y-6">
-						{/* Carte Documents */}
-						<div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-							<div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-								<svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-								</svg>
-							</div>
-							<div>
-								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.documents.title")}</h2>
-								<p className="text-xs text-gray-500">{t("customer.detail.documents.subtitle")}</p>
+						{/* En-tête */}
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-6 py-5 border-b border-gray-100">
+								<h2 className="text-xl font-semibold text-gray-900">{t("customer.detail.documents.title")}</h2>
+								<p className="text-sm text-gray-500 mt-0.5">{t("customer.detail.documents.subtitle")}</p>
 							</div>
 						</div>
-					</div>
-					<div className="p-6 space-y-6">
-						{/* Formulaire d'upload - Pleine largeur */}
-						<div>
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">{t("customer.detail.documents.upload")}</h3>
-							<form onSubmit={submitDocument} className="space-y-4">
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-									<div>
-										<label className="block text-sm mb-1">{t("customer.detail.documents.fileType")}</label>
-										<select
-											className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-											value={docType}
-											onChange={e => setDocType(e.target.value as DocumentType)}
-										>
-											<option value="ID_CARD">ID_CARD</option>
-											<option value="PASSPORT">PASSPORT</option>
-											<option value="PROOF_OF_ADDRESS">PROOF_OF_ADDRESS</option>
-											<option value="REGISTRATION_DOC">REGISTRATION_DOC</option>
-											<option value="SELFIE">SELFIE</option>
-										</select>
-									</div>
-									<div>
-										<label className="block text-sm mb-1">{t("customer.detail.documents.file")}</label>
-										<div className="relative">
-											<input
-												type="file"
-												id="file-upload"
-												accept={docType === "SELFIE" ? "image/*" : undefined}
-												onChange={e => setDocFile(e.target.files?.[0] ?? null)}
-												className="hidden"
-											/>
+
+						{/* Carte Upload */}
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+								<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.documents.upload")}</h3>
+							</div>
+							<div className="p-6">
+								<form onSubmit={submitDocument} className="space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-1.5">{t("customer.detail.documents.fileType")}</label>
+											<select
+												className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+												value={docType}
+												onChange={e => setDocType(e.target.value as DocumentType)}
+											>
+												<option value="ID_CARD">ID_CARD</option>
+												<option value="PASSPORT">PASSPORT</option>
+												<option value="PROOF_OF_ADDRESS">PROOF_OF_ADDRESS</option>
+												<option value="REGISTRATION_DOC">REGISTRATION_DOC</option>
+												<option value="SELFIE">SELFIE</option>
+											</select>
+										</div>
+										<div>
+											<label className="block text-sm font-medium text-gray-700 mb-1.5">{t("customer.detail.documents.file")}</label>
+											<input type="file" id="file-upload" accept={docType === "SELFIE" ? "image/*" : undefined} onChange={e => setDocFile(e.target.files?.[0] ?? null)} className="hidden" />
 											<label
 												htmlFor="file-upload"
-												className="flex items-center justify-center w-full h-9 px-3 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors"
+												className="flex items-center justify-center w-full min-h-[42px] px-4 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 text-sm font-medium text-gray-600 cursor-pointer hover:border-gray-400 hover:bg-gray-100 transition-colors"
 											>
-												<svg
-													className="w-4 h-4 mr-2"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
-													xmlns="http://www.w3.org/2000/svg"
-												>
-													<path
-														strokeLinecap="round"
-														strokeLinejoin="round"
-														strokeWidth={2}
-														d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-													/>
+												<svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
 												</svg>
 												{docFile ? docFile.name : t("customer.detail.documents.chooseFile")}
 											</label>
+											{docFile && (
+												<p className="mt-1.5 text-xs text-gray-500">
+													{t("customer.detail.documents.fileSelected")}: <span className="font-medium text-gray-700">{docFile.name}</span>
+												</p>
+											)}
 										</div>
-										{docFile && (
-											<div className="mt-2 text-xs text-gray-600">
-												{t("customer.detail.documents.fileSelected")}: <span className="font-medium">{docFile.name}</span>
-											</div>
-										)}
+										<div className="flex items-end">
+											<Button type="submit" disabled={!docFile || docSubmitting} className="w-full min-h-[42px]">
+												{docSubmitting ? t("customer.detail.documents.uploading") : t("customer.detail.documents.uploadButton")}
+											</Button>
+										</div>
 									</div>
-									<div className="flex items-end">
-										<Button type="submit" disabled={!docFile || docSubmitting} className="w-full">
-											{docSubmitting ? t("customer.detail.documents.uploading") : t("customer.detail.documents.uploadButton")}
-										</Button>
-									</div>
-								</div>
-							</form>
+								</form>
+							</div>
 						</div>
 
-						{/* Liste des documents - 2 colonnes */}
-						<div>
-							<h3 className="text-sm font-semibold text-gray-700 mb-3">{t("customer.detail.documents.saved")}</h3>
-							{documents.length === 0 ? (
-								<div className="text-sm text-gray-500 py-4">{t("customer.detail.documents.none")}</div>
-							) : (
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-									{documents.map(doc => (
-									<div key={doc.id} className="bg-white rounded-lg p-4 border border-gray-200">
-										<div className="flex items-start justify-between mb-3">
-											<div className="flex items-center gap-2">
-												<Badge variant={documentStatusBadgeVariant(doc.status)}>
-													{doc.status}
-												</Badge>
-												<Badge variant="info">{doc.type}</Badge>
-											</div>
-											{doc.status === "PENDING" && (
-												<Button
-													variant="outline"
-													size="sm"
-													onClick={() => {
-														setReviewingDocId(doc.id);
-														setReviewNote("");
-													}}
-													disabled={reviewSubmitting}
-												>
-													{t("customer.detail.documents.review")}
-												</Button>
-											)}
-										</div>
-										<div className="space-y-3">
-											<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-												<div className="flex items-center gap-2 mb-2">
-													<svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-													</svg>
-													<span className="font-semibold text-gray-900">{doc.fileName || t("customer.detail.documents.noName")}</span>
-												</div>
-												<button
-													onClick={() => openDocument(doc.id)}
-													className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-												>
-													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-													</svg>
-													{t("customer.detail.documents.view")}
-												</button>
-											</div>
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-												{doc.contentType && (
-													<div className="flex items-center gap-2 text-gray-600">
-														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-														</svg>
-														<span>{t("customer.detail.documents.type")}: {doc.contentType}</span>
-													</div>
-												)}
-												{doc.uploadedAt && (
-													<div className="flex items-center gap-2 text-gray-600">
-														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-														</svg>
-														<span>{t("customer.detail.documents.uploadedAt")}: {new Date(doc.uploadedAt).toLocaleDateString("fr-FR", {
-															year: "numeric",
-															month: "short",
-															day: "numeric",
-															hour: "2-digit",
-															minute: "2-digit"
-														})}</span>
-													</div>
-												)}
-												{doc.reviewedAt && (
-													<div className="flex items-center gap-2 text-gray-600">
-														<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-														</svg>
-														<span>{t("customer.detail.documents.reviewedAt")}: {new Date(doc.reviewedAt).toLocaleDateString("fr-FR", {
-															year: "numeric",
-															month: "short",
-															day: "numeric",
-															hour: "2-digit",
-															minute: "2-digit"
-														})}</span>
-													</div>
-												)}
-											</div>
-											{doc.reviewerNote && (
-												<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-													<div className="flex items-start gap-2">
-														<svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-														</svg>
-														<div className="text-xs">
-															<div className="font-semibold text-blue-900 mb-1">{t("customer.detail.documents.reviewerNote")}</div>
-															<div className="text-blue-800">{doc.reviewerNote}</div>
+						{/* Carte Liste des documents */}
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+								<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.documents.saved")}</h3>
+							</div>
+							<div className="p-6">
+								{documents.length === 0 ? (
+									<div className="text-center py-12 text-gray-500">
+										<svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+										</svg>
+										<p className="text-sm">{t("customer.detail.documents.none")}</p>
+									</div>
+								) : (
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										{documents.map(doc => (
+											<div key={doc.id} className="rounded-xl border border-gray-200 bg-gray-50/50 overflow-hidden hover:border-gray-300 transition-colors">
+												<div className="p-4">
+													<div className="flex items-start justify-between gap-3 mb-4">
+														<div className="flex flex-wrap gap-2">
+															<Badge variant={documentStatusBadgeVariant(doc.status)}>{doc.status}</Badge>
+															<Badge variant="info">{doc.type}</Badge>
 														</div>
+														{doc.status === "PENDING" && (
+															<Button
+																variant="outline"
+																size="sm"
+																onClick={() => { setReviewingDocId(doc.id); setReviewNote(""); }}
+																disabled={reviewSubmitting}
+																className="flex-shrink-0"
+															>
+																{t("customer.detail.documents.review")}
+															</Button>
+														)}
 													</div>
+													<div className="rounded-lg bg-white border border-gray-100 p-3 mb-3">
+														<p className="font-medium text-gray-900 text-sm truncate" title={doc.fileName || undefined}>
+															{doc.fileName || t("customer.detail.documents.noName")}
+														</p>
+														<button
+															type="button"
+															onClick={() => openDocument(doc.id)}
+															className="inline-flex items-center gap-1.5 mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+														>
+															<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+															</svg>
+															{t("customer.detail.documents.view")}
+														</button>
+													</div>
+													<div className="space-y-1.5 text-xs text-gray-600">
+														{doc.contentType && (
+															<div className="flex items-center gap-2">
+																<span className="text-gray-400">{t("customer.detail.documents.type")}:</span>
+																<span>{doc.contentType}</span>
+															</div>
+														)}
+														{doc.uploadedAt && (
+															<div className="flex items-center gap-2">
+																<span className="text-gray-400">{t("customer.detail.documents.uploadedAt")}:</span>
+																<span>{new Date(doc.uploadedAt).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+															</div>
+														)}
+														{doc.reviewedAt && (
+															<div className="flex items-center gap-2">
+																<span className="text-gray-400">{t("customer.detail.documents.reviewedAt")}:</span>
+																<span>{new Date(doc.reviewedAt).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+															</div>
+														)}
+													</div>
+													{doc.reviewerNote && (
+														<div className="mt-3 rounded-lg bg-blue-50 border border-blue-100 p-3">
+															<p className="text-xs font-medium text-blue-900 mb-0.5">{t("customer.detail.documents.reviewerNote")}</p>
+															<p className="text-xs text-blue-800">{doc.reviewerNote}</p>
+														</div>
+													)}
 												</div>
-											)}
-										</div>
-										
-										{/* Interface de revue */}
-										{reviewingDocId === doc.id && (
-											<div className="mt-3 pt-3 border-t border-gray-200">
-												<div className="space-y-3">
-													<div>
-														<label className="block text-xs font-medium mb-1 text-gray-700">
-															{t("customer.detail.documents.reviewerNote")}
-														</label>
+												{reviewingDocId === doc.id && (
+													<div className="border-t border-gray-200 bg-white p-4">
+														<label className="block text-xs font-medium text-gray-700 mb-2">{t("customer.detail.documents.reviewerNote")}</label>
 														<textarea
 															value={reviewNote}
 															onChange={e => setReviewNote(e.target.value)}
 															placeholder={t("customer.detail.documents.reviewerNotePlaceholder")}
-															className="w-full rounded-md border bg-white px-2 py-1.5 text-xs resize-none"
+															className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
 															rows={3}
 														/>
+														<div className="flex flex-wrap gap-2 mt-3">
+															<Button size="sm" onClick={() => reviewDocument(doc.id, "APPROVED")} disabled={reviewSubmitting}>
+																{reviewSubmitting ? "..." : t("customer.detail.documents.approve")}
+															</Button>
+															<Button size="sm" variant="outline" onClick={() => reviewDocument(doc.id, "REJECTED")} disabled={reviewSubmitting} className="border-red-300 text-red-700 hover:bg-red-50">
+																{reviewSubmitting ? "..." : t("customer.detail.documents.reject")}
+															</Button>
+															<Button size="sm" variant="ghost" onClick={() => { setReviewingDocId(null); setReviewNote(""); }} disabled={reviewSubmitting}>
+																{t("customer.detail.generalInfo.cancel")}
+															</Button>
+														</div>
 													</div>
-													<div className="flex gap-2">
-									<Button
-										size="sm"
-										onClick={() => reviewDocument(doc.id, "APPROVED")}
-										disabled={reviewSubmitting}
-									>
-										{reviewSubmitting ? "..." : t("customer.detail.documents.approve")}
-									</Button>
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={() => reviewDocument(doc.id, "REJECTED")}
-															disabled={reviewSubmitting}
-															className="border-red-300 text-red-700 hover:bg-red-50"
-														>
-															{reviewSubmitting ? "..." : t("customer.detail.documents.reject")}
-														</Button>
-														<Button
-															size="sm"
-															variant="ghost"
-															onClick={() => {
-																setReviewingDocId(null);
-																setReviewNote("");
-															}}
-															disabled={reviewSubmitting}
-														>
-															{t("customer.detail.generalInfo.cancel")}
-														</Button>
-													</div>
-												</div>
+												)}
 											</div>
-										)}
+										))}
 									</div>
-									))}
-								</div>
-							)}
+								)}
+							</div>
 						</div>
 					</div>
-				</div>
-				</div>
 				)}
 
 				{activeTab === "addresses" && (
@@ -1885,163 +1873,151 @@ export default function CustomerDetailPage() {
 				</div>
 				)}
 
-				{activeTab === "kyc-actions" && (
+				{activeTab === "kyc-actions" && customer && (
 					<div className="space-y-6">
-						{/* Carte Actions KYC */}
-						<div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-					<div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-						<div className="flex items-center gap-3">
-							<div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-								<svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-								</svg>
-							</div>
-							<div>
-								<h2 className="text-lg font-semibold text-gray-900">{t("customer.detail.kyc.title")}</h2>
-								<p className="text-xs text-gray-500">{t("customer.detail.kyc.subtitle")}</p>
-							</div>
-						</div>
-					</div>
-					<div className="p-6 space-y-6">
-						{/* Section: Soumettre KYC */}
-						<div className="bg-white rounded-lg p-4 border border-gray-200">
-							<div className="flex items-center gap-2 mb-3">
-								<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.submit.title")}</h3>
-							</div>
-							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.submit.description")}</p>
-							<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} className="w-full md:w-auto">
-								{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
-							</Button>
-						</div>
-
-						{/* Section: Vérifier KYC */}
-						<div className="bg-white rounded-lg p-4 border border-gray-200">
-							<div className="flex items-center gap-2 mb-3">
-								<svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.verify.title")}</h3>
-							</div>
-							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.verify.description")}</p>
-							<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-								<div>
-									<label className="block text-xs font-medium mb-2 text-gray-700 flex items-center gap-1">
-										<svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-										</svg>
-										{t("customer.detail.kyc.verify.riskScore")}
-									</label>
-									<Input
-										type="number"
-										min="0"
-										max="100"
-										value={verifyRisk}
-										onChange={e => setVerifyRisk(Number(e.target.value))}
-										className="w-full"
-									/>
-								</div>
-								<div className="flex items-end">
-									<div className="flex items-center gap-2 w-full p-3 bg-gray-50 rounded-lg border border-gray-200">
-										<input
-											type="checkbox"
-											id="pep-flag"
-											checked={verifyPep}
-											onChange={e => setVerifyPep(e.target.checked)}
-											className="w-4 h-4 text-blue-600"
-										/>
-										<label htmlFor="pep-flag" className="text-xs font-medium text-gray-700 cursor-pointer">
-											{t("customer.detail.kyc.verify.pepFlag")}
-										</label>
-									</div>
-								</div>
-								<div className="flex items-end">
-									<Button 
-										onClick={doVerifyKyc} 
-										disabled={kycSubmitting !== null}
-										className="w-full"
-									>
-										{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
-									</Button>
-								</div>
+						{/* En-tête */}
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-6 py-5 border-b border-gray-100">
+								<h2 className="text-xl font-semibold text-gray-900">{t("customer.detail.kyc.title")}</h2>
+								<p className="text-sm text-gray-500 mt-0.5">{t("customer.detail.kyc.subtitle")}</p>
 							</div>
 						</div>
 
-						{/* Section: Rejeter KYC */}
-						<div className="bg-white rounded-lg p-4 border border-gray-200">
-							<div className="flex items-center gap-2 mb-3">
-								<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-								</svg>
-								<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.reject.title")}</h3>
-							</div>
-							<p className="text-xs text-gray-600 mb-4">{t("customer.detail.kyc.reject.description")}</p>
-							{!showRejectForm ? (
-								<Button 
-									variant="outline" 
-									onClick={() => setShowRejectForm(true)} 
-									disabled={kycSubmitting !== null}
-									className="border-red-300 text-red-700 hover:bg-red-50 w-full md:w-auto"
-								>
-									{t("customer.detail.kyc.reject.button")}
-								</Button>
-							) : (
-								<div className="space-y-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-									<div>
-										<label className="block text-xs font-medium mb-2 text-gray-700 flex items-center gap-1">
-											{t("customer.detail.kyc.reject.reason")} <span className="text-red-600">*</span>
-										</label>
-										<textarea
-											value={rejectionReason}
-											onChange={e => setRejectionReason(e.target.value)}
-											placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
-											className="w-full rounded-md border bg-white px-3 py-2 text-sm resize-none"
-											rows={3}
-										/>
-										<p className="text-xs text-gray-500 mt-1">{t("customer.detail.kyc.reject.reasonHint")}</p>
+						{/* Grille: Revue email, Revue profil, Revue identité */}
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+							<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+								<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+									<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.kyc.emailReview")}</h3>
+								</div>
+								<div className="p-5">
+									<div className="flex items-center justify-between mb-4">
+										<span className="text-xs text-gray-500">{t("customer.detail.kyc.currentStatus")}</span>
+										<Badge variant={reviewStatusBadgeVariant(customer.emailReviewStatus)}>{reviewStatusLabel(customer.emailReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
-										<Button 
-											onClick={doRejectKyc} 
-											disabled={kycSubmitting !== null || !rejectionReason.trim()}
-											variant="outline"
-											className="border-red-300 text-red-700 hover:bg-red-50"
-										>
-											{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
+										<Button size="sm" onClick={() => doSetEmailReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+											{reviewStatusSubmitting === "email" ? "..." : t("customer.detail.kyc.approveButton")}
 										</Button>
-										<Button 
-											variant="outline" 
-											onClick={() => {
-												setShowRejectForm(false);
-												setRejectionReason("");
-											}} 
-											disabled={kycSubmitting !== null}
-										>
-											{t("customer.detail.generalInfo.cancel")}
+										<Button size="sm" variant="outline" onClick={() => doSetEmailReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+											{t("customer.detail.kyc.rejectButton")}
 										</Button>
 									</div>
 								</div>
-							)}
-						</div>
+							</div>
 
-						{/* Affichage du motif de refus précédent */}
-						{customer?.rejectionReason && (
-							<div className="bg-white rounded-lg p-4 border border-red-200">
-								<div className="flex items-center gap-2 mb-3">
-									<svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-									</svg>
-									<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.kyc.reject.previousReason")}</h3>
+							<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+								<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+									<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.kyc.profileReview")}</h3>
 								</div>
-								<div className="text-sm text-gray-700 p-3 bg-red-50 border border-red-200 rounded-lg">
-									{customer.rejectionReason}
+								<div className="p-5">
+									<div className="flex items-center justify-between mb-4">
+										<span className="text-xs text-gray-500">{t("customer.detail.kyc.currentStatus")}</span>
+										<Badge variant={reviewStatusBadgeVariant(customer.profileReviewStatus)}>{reviewStatusLabel(customer.profileReviewStatus)}</Badge>
+									</div>
+									<div className="flex gap-2">
+										<Button size="sm" onClick={() => doSetProfileReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+											{reviewStatusSubmitting === "profile" ? "..." : t("customer.detail.kyc.approveButton")}
+										</Button>
+										<Button size="sm" variant="outline" onClick={() => doSetProfileReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+											{t("customer.detail.kyc.rejectButton")}
+										</Button>
+									</div>
 								</div>
 							</div>
+
+							<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+								<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+									<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.kyc.identityReview")}</h3>
+								</div>
+								<div className="p-5">
+									<div className="flex items-center justify-between mb-4">
+										<span className="text-xs text-gray-500">{t("customer.detail.kyc.currentStatus")}</span>
+										<Badge variant={reviewStatusBadgeVariant(customer.identityReviewStatus)}>{reviewStatusLabel(customer.identityReviewStatus)}</Badge>
+									</div>
+									<div className="flex gap-2">
+										<Button size="sm" onClick={() => doSetIdentityReviewStatus("APPROVED")} disabled={reviewStatusSubmitting !== null}>
+											{reviewStatusSubmitting === "identity" ? "..." : t("customer.detail.kyc.approveButton")}
+										</Button>
+										<Button size="sm" variant="outline" onClick={() => doSetIdentityReviewStatus("REJECTED")} disabled={reviewStatusSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+											{t("customer.detail.kyc.rejectButton")}
+										</Button>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Statut client */}
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100">
+								<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.kyc.clientStatus")}</h3>
+							</div>
+							<div className="p-6">
+								<div className="flex items-center justify-between mb-5">
+									<span className="text-sm text-gray-600">{t("customer.detail.kyc.currentStatus")}</span>
+									<Badge variant={statusBadgeVariant(customer.status)}>{customer.status}</Badge>
+								</div>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+									<div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50">
+										<h4 className="text-sm font-medium text-gray-800 mb-1">{t("customer.detail.kyc.submit.title")}</h4>
+										<p className="text-xs text-gray-500 mb-3">{t("customer.detail.kyc.submit.description")}</p>
+										<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} size="sm">
+											{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
+										</Button>
+									</div>
+									<div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50">
+										<h4 className="text-sm font-medium text-gray-800 mb-1">{t("customer.detail.kyc.verify.title")}</h4>
+										<p className="text-xs text-gray-500 mb-3">{t("customer.detail.kyc.verify.description")}</p>
+										<div className="space-y-2 mb-3">
+											<label className="flex items-center gap-2 text-xs">
+												<span>{t("customer.detail.kyc.verify.riskScore")}</span>
+												<Input type="number" min={0} max={100} value={verifyRisk} onChange={e => setVerifyRisk(Number(e.target.value))} className="w-16 h-8 text-xs" />
+											</label>
+											<label className="flex items-center gap-2 text-xs">
+												<input type="checkbox" checked={verifyPep} onChange={e => setVerifyPep(e.target.checked)} className="rounded" />
+												{t("customer.detail.kyc.verify.pepFlag")}
+											</label>
+										</div>
+										<Button onClick={doVerifyKyc} disabled={kycSubmitting !== null} size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-50">
+											{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
+										</Button>
+									</div>
+									<div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50">
+										<h4 className="text-sm font-medium text-gray-800 mb-1">{t("customer.detail.kyc.reject.title")}</h4>
+										<p className="text-xs text-gray-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
+										{!showRejectForm ? (
+											<Button variant="outline" size="sm" onClick={() => setShowRejectForm(true)} disabled={kycSubmitting !== null} className="border-red-300 text-red-700 hover:bg-red-50">
+												{t("customer.detail.kyc.reject.button")}
+											</Button>
+										) : (
+											<div className="space-y-2">
+												<textarea
+													value={rejectionReason}
+													onChange={e => setRejectionReason(e.target.value)}
+													placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
+													className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-xs resize-none"
+													rows={2}
+												/>
+												<div className="flex gap-2">
+													<Button size="sm" variant="outline" onClick={doRejectKyc} disabled={kycSubmitting !== null || !rejectionReason.trim()} className="border-red-300 text-red-700 hover:bg-red-50">
+														{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
+													</Button>
+													<Button size="sm" variant="ghost" onClick={() => { setShowRejectForm(false); setRejectionReason(""); }} disabled={kycSubmitting !== null}>
+														{t("customer.detail.generalInfo.cancel")}
+													</Button>
+												</div>
+											</div>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{customer.rejectionReason && (
+							<div className="rounded-xl border border-red-200 bg-red-50 p-4">
+								<h3 className="text-sm font-semibold text-red-900 mb-2">{t("customer.detail.kyc.reject.previousReason")}</h3>
+								<p className="text-sm text-red-800">{customer.rejectionReason}</p>
+							</div>
 						)}
-					</div>
-				</div>
 					</div>
 				)}
 
