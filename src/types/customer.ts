@@ -52,6 +52,28 @@ export interface Customer {
 	birthDate?: string | null;
 	/** Statut matrimonial (ex. SINGLE, MARRIED, DIVORCED, WIDOWED) */
 	maritalStatus?: string | null;
+	/** Nationalité ISO 3166-1 alpha-2 (ex. CM, FR) */
+	nationality?: string | null;
+	/** Personne physique : activité professionnelle */
+	professionalActivity?: string | null;
+	/** Personne physique : source de revenus */
+	incomeSource?: string | null;
+	/** Personne morale : nom commercial */
+	tradeName?: string | null;
+	legalForm?: string | null;
+	registrationNumber?: string | null;
+	incorporationDate?: string | null;
+	incorporationCountry?: string | null;
+	activityCode?: string | null;
+	activityDescription?: string | null;
+	signingAuthorityNote?: string | null;
+	websiteUrl?: string | null;
+	employeeCount?: number | null;
+	annualRevenueBand?: string | null;
+	currenciesUsed?: string | null;
+	expectedTransactionProfile?: string | null;
+	fundsSource?: string | null;
+	accountOpeningPurpose?: string | null;
 	emailReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 	profileReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 	identityReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
@@ -74,7 +96,23 @@ export interface Address {
 	updatedAt?: string;
 }
 
-export type DocumentType = "ID_CARD" | "PASSPORT" | "PROOF_OF_ADDRESS" | "REGISTRATION_DOC" | "SELFIE";
+export type DocumentType =
+	| "ID_CARD"
+	| "PASSPORT"
+	| "PROOF_OF_ADDRESS"
+	| "REGISTRATION_DOC"
+	| "SELFIE";
+
+/** Recto / verso pour les uploads `ID_CARD` (paramètre requête `idCardSide` côté API). */
+export type IdCardSide = "RECTO" | "VERSO";
+
+/** Options upload document OPS (query string + multipart fichier). */
+export interface UploadDocumentOptions {
+	idCardSide?: IdCardSide;
+	identityDocumentNumber?: string;
+	identityDocumentExpiresOn?: string;
+}
+
 export type DocumentStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface Document {
@@ -87,6 +125,8 @@ export interface Document {
 	checksum?: string | null;
 	status: DocumentStatus;
 	reviewerNote?: string | null;
+	identityDocumentNumber?: string | null;
+	identityDocumentExpiresOn?: string | null;
 	uploadedAt?: string;
 	reviewedAt?: string | null;
 }
@@ -96,7 +136,7 @@ export interface CreateCustomerRequest {
 	displayName: string;
 	firstName?: string;
 	lastName?: string;
-	email?: string;
+	email: string;
 	phone?: string;
 }
 
@@ -110,6 +150,28 @@ export interface UpdateCustomerRequest {
 	gender?: string | null;
 	birthDate?: string | null;
 	maritalStatus?: string | null;
+	/** ISO 3166-1 alpha-2 */
+	nationality?: string | null;
+	/** Personne physique : activité professionnelle */
+	professionalActivity?: string | null;
+	/** Personne physique : source de revenus */
+	incomeSource?: string | null;
+	/** BUSINESS */
+	tradeName?: string | null;
+	legalForm?: string | null;
+	registrationNumber?: string | null;
+	incorporationDate?: string | null;
+	incorporationCountry?: string | null;
+	activityCode?: string | null;
+	activityDescription?: string | null;
+	signingAuthorityNote?: string | null;
+	websiteUrl?: string | null;
+	employeeCount?: number | null;
+	annualRevenueBand?: string | null;
+	currenciesUsed?: string | null;
+	expectedTransactionProfile?: string | null;
+	fundsSource?: string | null;
+	accountOpeningPurpose?: string | null;
 }
 
 export interface AddAddressRequest {
@@ -133,6 +195,13 @@ export interface RelatedPerson {
 	lastName: string;
 	dateOfBirth?: string | null;
 	nationalId?: string | null;
+	nationality?: string | null;
+	residenceLine1?: string | null;
+	residenceCity?: string | null;
+	residencePostalCode?: string | null;
+	residenceCountry?: string | null;
+	email?: string | null;
+	phone?: string | null;
 	pepFlag: boolean;
 	ownershipPercent?: number | null;
 	createdAt?: string;
@@ -147,6 +216,13 @@ export interface AddRelatedPersonRequest {
 	nationalId?: string;
 	ownershipPercent?: number;
 	pepFlag?: boolean;
+	nationality?: string;
+	residenceLine1?: string;
+	residenceCity?: string;
+	residencePostalCode?: string;
+	residenceCountry?: string;
+	email?: string;
+	phone?: string;
 }
 
 

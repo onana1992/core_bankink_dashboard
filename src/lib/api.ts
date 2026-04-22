@@ -13,6 +13,8 @@ import type {
 	KycCheckType,
 	Document,
 	DocumentType,
+	IdCardSide,
+	UploadDocumentOptions,
 	RelatedPerson,
 	Product,
 	ProductCategory,
@@ -443,7 +445,12 @@ export const customersApi = {
 		return handleJsonResponse<Document[]>(res);
 	},
 
-	async uploadDocument(id: number | string, type: DocumentType, file: File): Promise<Document> {
+	async uploadDocument(
+		id: number | string,
+		type: DocumentType,
+		file: File,
+		options?: UploadDocumentOptions
+	): Promise<Document> {
 		const form = new FormData();
 		form.append("file", file);
 		const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -454,7 +461,17 @@ export const customersApi = {
 		if (token) {
 			headers["Authorization"] = `Bearer ${token}`;
 		}
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents?type=${encodeURIComponent(type)}`, {
+		const params = new URLSearchParams({ type });
+		if (type === "ID_CARD" && options?.idCardSide) {
+			params.set("idCardSide", options.idCardSide);
+		}
+		if ((type === "ID_CARD" || type === "PASSPORT") && options?.identityDocumentNumber != null) {
+			params.set("identityDocumentNumber", options.identityDocumentNumber);
+		}
+		if ((type === "ID_CARD" || type === "PASSPORT") && options?.identityDocumentExpiresOn) {
+			params.set("identityDocumentExpiresOn", options.identityDocumentExpiresOn);
+		}
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/documents?${params}`, {
 			method: "POST",
 			headers: headers,
 			body: form

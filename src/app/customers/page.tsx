@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
 import { customersApi } from "@/lib/api";
+import { customerDetailPath } from "@/lib/customerRoutes";
 import type { Customer } from "@/types";
 
 export default function CustomersPage() {
@@ -110,11 +111,19 @@ export default function CustomersPage() {
 						{t("common.refresh")}
 					</Button>
 					<Link href="/customers/new">
+						<Button variant="outline" className="flex items-center gap-2">
+							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+							</svg>
+							{t("customer.newPerson")}
+						</Button>
+					</Link>
+					<Link href="/customers/new/business">
 						<Button className="flex items-center gap-2">
 							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
 							</svg>
-							{t("customer.new")}
+							{t("customer.newCompany")}
 						</Button>
 					</Link>
 				</div>
@@ -298,7 +307,7 @@ export default function CustomersPage() {
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.name")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.type")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.status")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-52">{t("common.email")}</th>
+									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-52">{t("customer.table.phone")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.risk")}</th>
 									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("customer.table.actions")}</th>
 								</tr>
@@ -310,7 +319,10 @@ export default function CustomersPage() {
 											<span className="font-mono font-medium text-gray-900">{c.id}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
-											<Link href={`/customers/${c.id}`} className="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+											<Link
+												href={customerDetailPath(c.id, c.type)}
+												className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+											>
 												{c.displayName}
 											</Link>
 										</td>
@@ -320,8 +332,8 @@ export default function CustomersPage() {
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge variant={statusBadgeVariant(c.status)}>{t(`customer.statuses.${c.status}`)}</Badge>
 										</td>
-										<td className="px-6 py-4 text-gray-700 overflow-hidden max-w-[13rem]" title={[c.email, c.phone].filter(Boolean).join(" · ") || undefined}>
-											<span className="block truncate min-w-0">{[c.email, c.phone].filter(Boolean).join(" · ") || "-"}</span>
+										<td className="px-6 py-4 text-gray-700 overflow-hidden max-w-[13rem]" title={c.phone || undefined}>
+											<span className="block truncate min-w-0">{c.phone || "-"}</span>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											{typeof c.riskScore === "number" ? (
@@ -331,7 +343,7 @@ export default function CustomersPage() {
 											)}
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
-											<Link href={`/customers/${c.id}`}>
+											<Link href={customerDetailPath(c.id, c.type)}>
 												<Button variant="outline" size="sm" className="flex items-center gap-1">
 													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
