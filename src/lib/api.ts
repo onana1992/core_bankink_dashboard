@@ -5,6 +5,12 @@ import type {
 	CreateCustomerRequest,
 	UpdateCustomerRequest,
 	Customer,
+	ComplianceTask,
+	ComplianceTaskStatus,
+	ComplianceTaskType,
+	KycCheck,
+	KycCheckResult,
+	KycCheckType,
 	Document,
 	DocumentType,
 	RelatedPerson,
@@ -88,6 +94,7 @@ import type {
 	CloseDayRequest,
 	CloseMonthRequest,
 	ClosureValidationResponse,
+	BalanceSnapshot,
 	LoanScheduleItem,
 	LoanSimulationResult,
 	LoanBalanceBreakdown,
@@ -97,7 +104,33 @@ import type {
 	LoanApplication,
 	LoanApplicationStatus,
 	SubmitLoanApplicationRequest,
-	DecideLoanApplicationRequest
+	DecideLoanApplicationRequest,
+	PaymentMethod,
+	PaymentMethodOperation,
+	ProductPaymentMethod,
+	CreatePaymentMethodRequest,
+	UpdatePaymentMethodRequest,
+	CreateProductPaymentMethodRequest,
+	UpdateProductPaymentMethodRequest,
+	AmlRiskProfileDto,
+	AmlRuleDefinitionResponse,
+	AmlRuleVersionResponse,
+	CreateRuleDefinitionRequest,
+	PublishRuleVersionRequest,
+	AmlAlertResponse,
+	AmlAlertPage,
+	CreateManualAlertRequest,
+	AssignAlertRequest,
+	PatchAlertStatusRequest,
+	CloseAlertRequest,
+	AmlCaseDetailResponse,
+	AmlCaseNoteResponse,
+	CreateCaseRequest,
+	AddCaseNoteRequest,
+	PatchCaseStatusRequest,
+	CreateDeclarationResponse,
+	AmlAlertStatus,
+	AmlAlertSeverity
 } from "@/types";
 
 // Validate and set API base URL
@@ -497,6 +530,74 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
+	async listKycChecks(id: number | string): Promise<KycCheck[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/checks`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<KycCheck[]>(res);
+	},
+
+	async createKycCheck(
+		id: number | string,
+		payload: {
+			type: KycCheckType;
+			result: KycCheckResult;
+			provider?: string;
+			requestRef?: string;
+			score?: number;
+			rawJson?: string;
+		}
+	): Promise<KycCheck> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/checks`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<KycCheck>(res);
+	},
+
+	async runListScreening(id: number | string): Promise<KycCheck[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/screening/lists`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<KycCheck[]>(res);
+	},
+
+	async listComplianceTasks(id: number | string): Promise<ComplianceTask[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/compliance-tasks`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ComplianceTask[]>(res);
+	},
+
+	async createComplianceTask(
+		id: number | string,
+		payload: { taskType: ComplianceTaskType; instruction?: string }
+	): Promise<ComplianceTask> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/compliance-tasks`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ComplianceTask>(res);
+	},
+
+	async patchComplianceTask(
+		customerId: number | string,
+		taskId: number | string,
+		payload: { status: ComplianceTaskStatus; resolutionNote?: string }
+	): Promise<ComplianceTask> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${customerId}/compliance-tasks/${taskId}`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ComplianceTask>(res);
+	},
+
 	async setEmailReviewStatus(id: number | string, status: "APPROVED" | "REJECTED"): Promise<Customer> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/email-review?status=${status}`, {
 			method: "PUT",
@@ -557,6 +658,23 @@ export const customersApi = {
 			headers: getAuthHeaders()
 		});
 		await handleJsonResponse(res);
+	}
+};
+
+export type VigilanceLastRun = {
+	at: string | null;
+	clientsProcessed: number;
+	profilesUpdated: number;
+	message: string;
+};
+
+export const complianceApi = {
+	async lastVigilanceRun(): Promise<VigilanceLastRun> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/compliance/vigilance/last-run`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<VigilanceLastRun>(res);
 	}
 };
 
@@ -834,6 +952,107 @@ export const productsApi = {
 
 	async deleteEligibilityRule(id: number | string, ruleId: number | string): Promise<void> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/eligibility-rules/${ruleId}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	},
+
+	async getPaymentMethodOptions(
+		id: number | string,
+		operation: PaymentMethodOperation
+	): Promise<PaymentMethod[]> {
+		const usp = new URLSearchParams();
+		usp.set("operation", operation);
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/products/${id}/payment-method-options?${usp.toString()}`,
+			{ headers: getAuthHeaders(), cache: "no-store" }
+		);
+		return handleJsonResponse<PaymentMethod[]>(res);
+	},
+
+	async getProductPaymentMethods(id: number | string): Promise<ProductPaymentMethod[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/payment-methods`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ProductPaymentMethod[]>(res);
+	},
+
+	async addProductPaymentMethod(
+		id: number | string,
+		payload: CreateProductPaymentMethodRequest
+	): Promise<ProductPaymentMethod> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/payment-methods`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPaymentMethod>(res);
+	},
+
+	async updateProductPaymentMethod(
+		id: number | string,
+		linkId: number | string,
+		payload: UpdateProductPaymentMethodRequest
+	): Promise<ProductPaymentMethod> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/payment-methods/${linkId}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ProductPaymentMethod>(res);
+	},
+
+	async deleteProductPaymentMethod(id: number | string, linkId: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products/${id}/payment-methods/${linkId}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse(res);
+	}
+};
+
+export const paymentMethodsApi = {
+	async list(params?: { activeOnly?: boolean }): Promise<PaymentMethod[]> {
+		const usp = new URLSearchParams();
+		if (params?.activeOnly) usp.set("activeOnly", "true");
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/payment-methods${q ? `?${q}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<PaymentMethod[]>(res);
+	},
+
+	async get(id: number | string): Promise<PaymentMethod> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/payment-methods/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<PaymentMethod>(res);
+	},
+
+	async create(payload: CreatePaymentMethodRequest): Promise<PaymentMethod> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/payment-methods`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<PaymentMethod>(res);
+	},
+
+	async update(id: number | string, payload: UpdatePaymentMethodRequest): Promise<PaymentMethod> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/payment-methods/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<PaymentMethod>(res);
+	},
+
+	async delete(id: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/payment-methods/${id}`, {
 			method: "DELETE",
 			headers: getAuthHeaders()
 		});
@@ -2295,6 +2514,210 @@ export const closuresApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<ClosureValidationResponse>(res);
+	}
+};
+
+export const balanceSnapshotsApi = {
+	async listByDate(date: string): Promise<BalanceSnapshot[]> {
+		const params = new URLSearchParams({ date });
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/balance-snapshots?${params.toString()}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<BalanceSnapshot[]>(res);
+	},
+
+	async listByLedgerAccount(
+		ledgerAccountId: number | string,
+		from?: string,
+		to?: string
+	): Promise<BalanceSnapshot[]> {
+		const params = new URLSearchParams();
+		if (from) params.append("from", from);
+		if (to) params.append("to", to);
+		const q = params.toString();
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/balance-snapshots/ledger-account/${ledgerAccountId}${q ? `?${q}` : ""}`,
+			{
+				headers: getAuthHeaders(),
+				cache: "no-store"
+			}
+		);
+		return handleJsonResponse<BalanceSnapshot[]>(res);
+	}
+};
+
+const AML_BASE = `${API_BASE}/api/ops/aml`;
+
+export const amlApi = {
+	async listRiskProfiles(clientId: number | string): Promise<AmlRiskProfileDto[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/risk-profiles/clients/${clientId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlRiskProfileDto[]>(res);
+	},
+
+	async recomputeRiskProfile(clientId: number | string): Promise<AmlRiskProfileDto> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/risk-profiles/clients/${clientId}/recompute`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<AmlRiskProfileDto>(res);
+	},
+
+	async listRules(): Promise<AmlRuleDefinitionResponse[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlRuleDefinitionResponse[]>(res);
+	},
+
+	async createRule(payload: CreateRuleDefinitionRequest): Promise<AmlRuleDefinitionResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlRuleDefinitionResponse>(res);
+	},
+
+	async listRuleVersions(ruleDefinitionId: number | string): Promise<AmlRuleVersionResponse[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules/${ruleDefinitionId}/versions`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlRuleVersionResponse[]>(res);
+	},
+
+	async publishRuleVersion(
+		ruleDefinitionId: number | string,
+		payload: PublishRuleVersionRequest
+	): Promise<AmlRuleVersionResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules/${ruleDefinitionId}/versions`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlRuleVersionResponse>(res);
+	},
+
+	async patchRuleVersion(versionId: number | string, enabled: boolean): Promise<AmlRuleVersionResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rule-versions/${versionId}`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify({ enabled })
+		});
+		return handleJsonResponse<AmlRuleVersionResponse>(res);
+	},
+
+	async listAlerts(params?: {
+		clientId?: number;
+		status?: AmlAlertStatus;
+		severity?: AmlAlertSeverity;
+		page?: number;
+		size?: number;
+	}): Promise<AmlAlertPage> {
+		const usp = new URLSearchParams();
+		if (params?.clientId != null) usp.set("clientId", String(params.clientId));
+		if (params?.status) usp.set("status", params.status);
+		if (params?.severity) usp.set("severity", params.severity);
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts${q ? `?${q}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlAlertPage>(res);
+	},
+
+	async getAlert(id: number | string): Promise<AmlAlertResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlAlertResponse>(res);
+	},
+
+	async createManualAlert(payload: CreateManualAlertRequest): Promise<AmlAlertResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlAlertResponse>(res);
+	},
+
+	async assignAlert(id: number | string, payload: AssignAlertRequest): Promise<AmlAlertResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts/${id}/assign`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlAlertResponse>(res);
+	},
+
+	async patchAlertStatus(id: number | string, payload: PatchAlertStatusRequest): Promise<AmlAlertResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts/${id}/status`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlAlertResponse>(res);
+	},
+
+	async closeAlert(id: number | string, payload: CloseAlertRequest): Promise<AmlAlertResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts/${id}/close`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlAlertResponse>(res);
+	},
+
+	async createCase(payload: CreateCaseRequest): Promise<AmlCaseDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async getCase(id: number | string): Promise<AmlCaseDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async addCaseNote(caseId: number | string, payload: AddCaseNoteRequest): Promise<AmlCaseNoteResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/notes`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlCaseNoteResponse>(res);
+	},
+
+	async patchCaseStatus(caseId: number | string, payload: PatchCaseStatusRequest): Promise<AmlCaseDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/status`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async createDeclaration(caseId: number | string): Promise<CreateDeclarationResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/declarations`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<CreateDeclarationResponse>(res);
 	}
 };
 

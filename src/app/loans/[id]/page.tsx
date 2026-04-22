@@ -34,6 +34,9 @@ export default function LoanDetailPage() {
 	const [repayLoading, setRepayLoading] = useState(false);
 	const [repayAccounts, setRepayAccounts] = useState<Account[]>([]);
 	const [loadingRepayAccounts, setLoadingRepayAccounts] = useState(false);
+	const [repayPaymentMethods, setRepayPaymentMethods] = useState<PaymentMethod[]>([]);
+	const [repayPaymentMethodId, setRepayPaymentMethodId] = useState<number | "">("");
+	const [loadingRepayPaymentMethods, setLoadingRepayPaymentMethods] = useState(false);
 
 	async function load() {
 		if (!accountId) return;
@@ -142,7 +145,10 @@ export default function LoanDetailPage() {
 		setRepayLoading(true);
 		setError(null);
 		try {
-			const result = await loansApi.repay(accountId, { sourceAccountId: repaySourceAccountId as number, amount });
+			const result = await loansApi.repay(accountId, {
+				sourceAccountId: repaySourceAccountId as number,
+				amount
+			});
 			const penaltyPart = Number(result.penaltyAllocation ?? 0);
 			if (penaltyPart > 0) {
 				showToast(
@@ -501,7 +507,13 @@ export default function LoanDetailPage() {
 							</Button>
 							<Button
 								onClick={handleRepay}
-								disabled={repayLoading || repaySourceAccountId === "" || !repayAmount || repayAccounts.length === 0 || Number(repayAmount) <= 0}
+								disabled={
+									repayLoading ||
+									repaySourceAccountId === "" ||
+									!repayAmount ||
+									repayAccounts.length === 0 ||
+									Number(repayAmount) <= 0
+								}
 							>
 								{repayLoading ? t("loan.detail.repayLoading") : t("loan.detail.repayConfirm")}
 							</Button>

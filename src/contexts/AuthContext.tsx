@@ -2,7 +2,30 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { authApi } from "@/lib/api";
-import type { LoginResponse, User } from "@/types";
+import type { LoginResponse } from "@/types";
+
+/** Décode la partie payload d'un JWT (base64url). */
+function base64UrlToJson(payloadB64: string): Record<string, unknown> {
+	let base64 = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+	const pad = base64.length % 4;
+	if (pad) base64 += "=".repeat(4 - pad);
+	const json = atob(base64);
+	return JSON.parse(json) as Record<string, unknown>;
+}
+
+/** true si le token est absent, mal formé, ou expiré (avec marge `skewSeconds`). */
+function isAccessTokenExpired(token: string, skewSeconds: number): boolean {
+	try {
+		const parts = token.split(".");
+		if (parts.length !== 3) return true;
+		const payload = base64UrlToJson(parts[1]);
+		const exp = payload.exp;
+		if (typeof exp !== "number") return false;
+		return Date.now() / 1000 >= exp - skewSeconds;
+	} catch {
+		return true;
+	}
+}
 
 interface AuthContextType {
 	user: LoginResponse["user"] | null;
@@ -21,14 +44,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
 	useEffect(() => {
-		// Vérifier si l'utilisateur est déjà authentifié
-		const token = authApi.getAccessToken();
-		if (token) {
-			setIsAuthenticated(true);
-			// Optionnel: charger les infos utilisateur depuis le token ou une API
-			// Pour l'instant, on garde juste le token
-		}
-		setLoading(false);
+		const bootstrap = async () => {
+			const token = authApi.getAccessToken();
+			const refresh = authApi.getRefreshToken();
+
+			if (!token) {
+				setIsAuthenticated(false);
+				setLoading(false);
+				return;
+			}
+
+			// Ne pas considérer la session valide tant qu'on n'a pas un access token utilisable,
+			// sinon les pages OPS appellent l'API en 401 avant que fetchWithAutoRefresh ne finisse.
+			if (!isAccessTokenExpired(token, 60)) {
+				setIsAuthenticated(true);
+				setLoading(false);
+				return;
+			}
+
+			if (refresh) {
+				try {
+					await authApi.refreshToken({ refreshToken: refresh });
+					setIsAuthenticated(true);
+				} catch {
+					if (typeof window !== "undefined") {
+						localStorage.removeItem("accessToken");
+						localStorage.removeItem("refreshToken");
+					}
+					setIsAuthenticated(false);
+				}
+			} else {
+				if (typeof window !== "undefined") {
+					localStorage.removeItem("accessToken");
+				}
+				setIsAuthenticated(false);
+			}
+			setLoading(false);
+		};
+
+		void bootstrap();
 	}, []);
 
 	const login = async (username: string, password: string) => {

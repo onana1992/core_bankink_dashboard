@@ -1,6 +1,34 @@
 export type CustomerType = "PERSON" | "BUSINESS";
 export type CustomerStatus = "DRAFT" | "PENDING_REVIEW" | "VERIFIED" | "REJECTED" | "BLOCKED";
 
+export type KycCheckType = "ID_VERIFICATION" | "SANCTIONS_SCREENING" | "PEP_SCREENING" | "ADDRESS_VALIDATION";
+export type KycCheckResult = "PASS" | "FAIL" | "REVIEW";
+
+export interface KycCheck {
+	id: number;
+	type: KycCheckType;
+	provider?: string | null;
+	requestRef?: string | null;
+	result: KycCheckResult;
+	score?: number | null;
+	rawJson?: string | null;
+	checkedAt?: string;
+}
+
+export type ComplianceTaskType = "EDD_REVIEW" | "AML_REKYC_FOLLOWUP";
+export type ComplianceTaskStatus = "OPEN" | "DONE" | "CANCELLED";
+
+export interface ComplianceTask {
+	id: number;
+	taskType: ComplianceTaskType;
+	status: ComplianceTaskStatus;
+	instruction?: string | null;
+	resolutionNote?: string | null;
+	createdAt?: string;
+	resolvedAt?: string | null;
+	resolvedByUserId?: number | null;
+}
+
 export interface Customer {
 	id: number;
 	type: CustomerType;
@@ -13,6 +41,9 @@ export interface Customer {
 	riskScore?: number | null;
 	pepFlag?: boolean | null;
 	rejectionReason?: string | null;
+	/** Motif re-KYC demandé par le flux AML (si applicable) */
+	rekycPendingReason?: string | null;
+	lastAmlRekycRequestedAt?: string | null;
 	createdAt?: string;
 	updatedAt?: string;
 	/** Sexe / genre (ex. MALE, FEMALE, OTHER) */
@@ -21,6 +52,9 @@ export interface Customer {
 	birthDate?: string | null;
 	/** Statut matrimonial (ex. SINGLE, MARRIED, DIVORCED, WIDOWED) */
 	maritalStatus?: string | null;
+	emailReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+	profileReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+	identityReviewStatus?: "PENDING" | "PENDING_REVIEW" | "APPROVED" | "REJECTED";
 }
 
 export type AddressType = "RESIDENTIAL" | "BUSINESS" | "MAILING";

@@ -8,6 +8,7 @@
 		"kycChecks": "KYC Verification",
 		"productCatalog": "Product Catalog",
 		"products": "Products",
+		"paymentMethodsCatalog": "Payment methods",
 		"pricingRules": "Pricing Rules",
 		"fees": "Fees",
 		"interestSchemes": "Interest Schemes",
@@ -38,9 +39,18 @@
 		"riskCompliance": "Risk & Compliance",
 		"limits": "Limits",
 		"sanctionsWatchlists": "Sanctions & Watchlists",
+		"amlMenu": "AML / CFT",
+		"amlAlerts": "Alerts",
+		"amlNewAlert": "New alert",
+		"amlRules": "Rules",
+		"amlCases": "Cases",
+		"amlNewCase": "New case",
+		"amlRiskProfiles": "Risk profiles",
+		"complianceVigilance": "Compliance vigilance",
 		"reconciliationClosure": "Reconciliation & Closure",
 		"reconciliation": "Reconciliation",
 		"closures": "Closures",
+		"balanceSnapshots": "GL snapshots",
 		"dailyClosure": "Daily Closure",
 		"monthlyClosure": "Monthly Closure",
 		"governance": "Governance",
@@ -106,6 +116,17 @@
 		"errors": {
 			"loadError": "Error loading dashboard"
 		}
+	},
+	"complianceVigilancePage": {
+		"title": "Periodic AML vigilance",
+		"subtitle": "Last batch run (in-memory until API restart). Enable aml.vigilance.enabled and cron on the backend.",
+		"lastAt": "Last run (UTC)",
+		"processed": "Clients processed",
+		"updated": "Profiles updated",
+		"message": "Status",
+		"refresh": "Refresh",
+		"never": "No run recorded yet.",
+		"loadError": "Could not load status."
 	},
 	"common": {
 		"users": "Users",
@@ -200,6 +221,7 @@
 				"addresses": "Addresses",
 				"relatedPersons": "Related Persons",
 				"kycActions": "KYC Actions",
+				"compliance": "Compliance",
 				"accounts": "Accounts"
 			},
 			"photo": {
@@ -227,6 +249,13 @@
 				"save": "Save",
 				"saving": "Saving...",
 				"cancel": "Cancel"
+			},
+			"aml": {
+				"title": "AML / CFT",
+				"subtitle": "Shortcuts to compliance screens for this customer.",
+				"riskProfiles": "AML risk profiles",
+				"alerts": "AML alerts",
+				"newCase": "New AML case"
 			},
 			"profile": {
 				"title": "Personal information",
@@ -585,7 +614,35 @@
 				"periods": "Periods",
 				"penalties": "Penalties",
 				"eligibility": "Eligibility",
+				"paymentMethods": "Payment methods",
 				"glMappings": "General ledger"
+			},
+			"paymentMethods": {
+				"loading": "Loading payment methods…",
+				"title": "Payment methods ({{count}})",
+				"add": "Add method",
+				"formTitle": "Link a payment method",
+				"cancel": "Cancel",
+				"selectMethod": "Payment method",
+				"selectPlaceholder": "Select…",
+				"flagDeposit": "Deposit",
+				"flagWithdrawal": "Withdrawal",
+				"flagLoanRepay": "Loan repayment",
+				"displayOrder": "Display order",
+				"save": "Save",
+				"saving": "Saving…",
+				"empty": "No payment method configured",
+				"colMethod": "Method",
+				"colDeposit": "Deposit",
+				"colWithdrawal": "Withdrawal",
+				"colLoan": "Loan repay",
+				"colActions": "Actions",
+				"remove": "Remove",
+				"confirmDelete": "Remove this payment method from the product?",
+				"flagsError": "At least one of deposit, withdrawal, or loan repayment must be enabled.",
+				"addError": "Could not add payment method",
+				"deleteError": "Could not remove link",
+				"updateError": "Could not update flags"
 			},
 			"categories": {
 				"CURRENT_ACCOUNT": "Current Account",
@@ -1519,7 +1576,8 @@
 				"selectCurrency": "Please select a currency",
 				"createError": "Error creating transaction",
 				"loadCustomers": "Error loading customers",
-				"loadAccounts": "Error loading accounts"
+				"loadAccounts": "Error loading accounts",
+				"paymentMethodRequired": "Please select a payment method"
 			}
 		},
 		"detail": {
@@ -2201,6 +2259,10 @@
 			"repaySourceAccount": "Source account",
 			"repaySelectAccount": "Select an account",
 			"repayAmount": "Amount",
+			"repayPaymentMethod": "Payment method",
+			"repaySelectPaymentMethod": "Select payment method",
+			"repayPaymentMethodLoading": "Loading payment methods…",
+			"repayPaymentMethodNone": "No method is allowed for both the source account and this loan product. Configure product payment methods.",
 			"repayConfirm": "Repay",
 			"repayLoading": "Repaying...",
 			"repaySuccess": "Repayment recorded successfully.",
@@ -2279,6 +2341,205 @@
 			"detailNotFound": "Application not found.",
 			"detailApproveError": "Error approving application.",
 			"detailRejectError": "Error rejecting application."
+		}
+	},
+	"paymentMethodsCatalogPage": {
+		"title": "Payment methods",
+		"subtitle": "Catalog used when linking channels to products (mobile money, etc.)",
+		"refresh": "Refresh",
+		"stats": {
+			"total": "Total",
+			"active": "Active",
+			"inactive": "Inactive"
+		},
+		"filters": {
+			"title": "Filters",
+			"search": "Search",
+			"searchPlaceholder": "Code or name…",
+			"status": "Status",
+			"statusAll": "All",
+			"statusActive": "Active only",
+			"statusInactive": "Inactive only"
+		},
+		"empty": {
+			"title": "No payment methods yet",
+			"message": "Create your first method to link it to products.",
+			"filteredTitle": "No results",
+			"filteredMessage": "Try adjusting your search or filters."
+		},
+		"listCount": "{{shown}} of {{total}} shown",
+		"loading": "Loading…",
+		"add": "Add",
+		"code": "Code",
+		"name": "Name",
+		"active": "Active",
+		"inactive": "Inactive",
+		"formCode": "Code *",
+		"formName": "Name *",
+		"formActive": "Active",
+		"cancel": "Cancel",
+		"save": "Save",
+		"saving": "Saving…",
+		"createError": "Could not create",
+		"updateError": "Could not update",
+		"deleteError": "Could not delete",
+		"deleteConfirm": "Delete this payment method? Product links must be removed first.",
+		"edit": "Edit"
+	},
+	"aml": {
+		"loading": "Loading…",
+		"empty": "No data",
+		"saving": "Saving…",
+		"actions": {
+			"search": "Search",
+			"open": "Open",
+			"cancel": "Cancel"
+		},
+		"filters": {
+			"title": "Filters",
+			"clientId": "Client (ID)",
+			"status": "Status",
+			"severity": "Severity",
+			"all": "All"
+		},
+		"stats": {
+			"total": "Total",
+			"new": "New",
+			"inProgress": "In progress",
+			"closed": "Closed",
+			"highSeverity": "High / critical",
+			"pageHint": "Counts (except Total) reflect the current page. Total is the server-side filtered result set."
+		},
+		"table": {
+			"ref": "Reference",
+			"title": "Title",
+			"severity": "Severity",
+			"status": "Status",
+			"client": "Client",
+			"created": "Created",
+			"actions": "Actions"
+		},
+		"alerts": {
+			"title": "AML alerts",
+			"subtitle": "Transactional and manual alerts — filter and triage.",
+			"manualNew": "New manual alert",
+			"backToList": "Back to alerts",
+			"resultsLabel": "alerts"
+		},
+		"manualAlert": {
+			"title": "Create manual alert",
+			"subtitle": "Client is required; account and transaction are optional if consistent with the client.",
+			"clientId": "Client ID",
+			"accountId": "Account ID (optional)",
+			"transactionId": "Transaction ID (optional)",
+			"factsJson": "Facts (JSON)",
+			"submit": "Create alert",
+			"invalidJson": "Invalid facts JSON.",
+			"clientRequired": "Invalid client ID.",
+			"titleRequired": "Title is required."
+		},
+		"alertDetail": {
+			"openCase": "Open case",
+			"actions": "Actions",
+			"assignToUserId": "Assign to (user ID)",
+			"assign": "Assign",
+			"updateStatus": "Update status",
+			"closure": "Closure",
+			"closureComment": "Comment",
+			"closeAlert": "Close",
+			"closureOtherComment": "Reason OTHER: comment is required."
+		},
+		"detail": {
+			"client": "Client",
+			"account": "Account",
+			"transaction": "Transaction",
+			"assigned": "Assigned (user ID)",
+			"ruleVersion": "Rule / version",
+			"idempotency": "Idempotency key",
+			"facts": "Facts (JSON)"
+		},
+		"rules": {
+			"title": "AML rules",
+			"subtitle": "Rule definitions catalog and published versions.",
+			"stats": {
+				"total": "Definitions",
+				"categories": "Categories",
+				"amount": "Amount rules",
+				"custom": "Custom rules"
+			},
+			"createDefinition": "New definition",
+			"code": "Code",
+			"name": "Name",
+			"category": "Category",
+			"description": "Description",
+			"submitCreate": "Create",
+			"versions": "Versions",
+			"hideVersions": "Hide",
+			"newVersion": "New version",
+			"publishVersion": "Publish version",
+			"effectiveFrom": "Effective from",
+			"enabled": "Enabled",
+			"publish": "Publish",
+			"on": "on",
+			"off": "off",
+			"enable": "Enable",
+			"disable": "Disable"
+		},
+		"cases": {
+			"indexTitle": "AML cases",
+			"indexSubtitle": "Enter an existing case ID or create a new case.",
+			"caseId": "Case ID",
+			"open": "Open",
+			"createNew": "Create a new case",
+			"back": "Back to cases",
+			"newTitle": "New case",
+			"newSubtitle": "Link one or more alerts to a client.",
+			"alertIds": "Alert IDs",
+			"alertIdsHint": "Comma- or space-separated.",
+			"ownerUserId": "Owner (user ID, optional)",
+			"submit": "Create case",
+			"clientRequired": "Invalid client.",
+			"alertsRequired": "At least one alert is required.",
+			"linkedAlerts": "Linked alerts",
+			"notes": "Notes",
+			"author": "Author",
+			"notePlaceholder": "Enter a note…",
+			"addNote": "Add note",
+			"statusSection": "Case status",
+			"statusComment": "Comment (history)",
+			"outcomeCode": "Outcome code (optional)",
+			"outcomeCodeHint": "Use REKYC_REQUIRED to send the client back to KYC review (after case closure).",
+			"updateStatus": "Update",
+			"declarationSection": "Internal declaration",
+			"declarationHint": "Creates a draft record linked to the case (internal register).",
+			"createDeclaration": "Record declaration",
+			"declarationCreated": "Declaration created"
+		},
+		"risk": {
+			"title": "AML risk profiles",
+			"subtitle": "Score history and recompute for a given client.",
+			"stats": {
+				"total": "Rows loaded",
+				"active": "Active (in list)",
+				"high": "HIGH level",
+				"enhanced": "Enhanced diligence"
+			},
+			"loadHistory": "Load history",
+			"recompute": "Recompute",
+			"openCustomers": "Customer list",
+			"clientRequired": "Enter a valid client ID.",
+			"recomputeDone": "Profile recomputed.",
+			"empty": "No profiles — load history or recompute.",
+			"computedAt": "Computed at",
+			"level": "Level",
+			"score": "Score",
+			"diligence": "Diligence",
+			"active": "Active",
+			"yes": "yes",
+			"no": "no",
+			"by": "By",
+			"factors": "Factors",
+			"statsHint": "Indicators reflect the loaded history for the current client."
 		}
 	},
 	"login": {

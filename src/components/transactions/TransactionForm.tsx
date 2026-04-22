@@ -4,7 +4,14 @@ import { useState, useEffect, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { accountsApi, customersApi, transactionsApi } from "@/lib/api";
 import { generateIdempotencyKey } from "@/lib/idempotency";
-import type { Account, CreateTransactionRequest, Customer, TransactionType } from "@/types";
+import type {
+	Account,
+	CreateTransactionRequest,
+	Customer,
+	PaymentMethod,
+	PaymentMethodOperation,
+	TransactionType
+} from "@/types";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Toast from "@/components/ui/Toast";

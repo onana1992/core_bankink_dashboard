@@ -8,6 +8,7 @@
 		"kycChecks": "Vérification KYC",
 		"productCatalog": "Catalogue de produits",
 		"products": "Produits",
+		"paymentMethodsCatalog": "Moyens de paiement",
 		"pricingRules": "Règles de tarification",
 		"fees": "Frais",
 		"interestSchemes": "Schémas d'intérêt",
@@ -38,9 +39,18 @@
 		"riskCompliance": "Risque & Conformité",
 		"limits": "Limites",
 		"sanctionsWatchlists": "Sanctions & Listes de surveillance",
+		"amlMenu": "AML / LBC-FT",
+		"amlAlerts": "Alertes",
+		"amlNewAlert": "Nouvelle alerte",
+		"amlRules": "Règles",
+		"amlCases": "Dossiers",
+		"amlNewCase": "Nouveau dossier",
+		"amlRiskProfiles": "Profils risque",
+		"complianceVigilance": "Vigilance conformité",
 		"reconciliationClosure": "Réconciliation & Clôture",
 		"reconciliation": "Réconciliation",
 		"closures": "Clôtures",
+		"balanceSnapshots": "Snapshots GL",
 		"dailyClosure": "Clôture quotidienne",
 		"monthlyClosure": "Clôture mensuelle",
 		"governance": "Gouvernance",
@@ -106,6 +116,17 @@
 		"errors": {
 			"loadError": "Erreur lors du chargement du dashboard"
 		}
+	},
+	"complianceVigilancePage": {
+		"title": "Vigilance AML périodique",
+		"subtitle": "Dernière exécution du lot (mémoire processus jusqu'au redémarrage API). Activer aml.vigilance.enabled et le cron côté backend.",
+		"lastAt": "Dernière exécution (UTC)",
+		"processed": "Clients traités",
+		"updated": "Profils mis à jour",
+		"message": "Statut",
+		"refresh": "Actualiser",
+		"never": "Aucune exécution enregistrée.",
+		"loadError": "Impossible de charger le statut."
 	},
 	"common": {
 		"users": "Utilisateurs",
@@ -200,6 +221,7 @@
 				"addresses": "Adresses",
 				"relatedPersons": "Personnes liées",
 				"kycActions": "Actions KYC",
+				"compliance": "Conformité",
 				"accounts": "Comptes"
 			},
 			"photo": {
@@ -227,6 +249,36 @@
 				"save": "Enregistrer",
 				"saving": "Sauvegarde...",
 				"cancel": "Annuler"
+			},
+			"aml": {
+				"title": "AML / LBC-FT",
+				"subtitle": "Raccourcis vers les écrans conformité pour ce client.",
+				"riskProfiles": "Profils de risque AML",
+				"alerts": "Alertes AML",
+				"newCase": "Nouveau dossier AML"
+			},
+			"compliance": {
+				"title": "Screening & tâches conformité",
+				"subtitle": "Contrôles KYC, stub listes, workflow EDD.",
+				"rekycBanner": "Contexte re-KYC AML",
+				"checksTitle": "Contrôles KYC",
+				"tasksTitle": "Tâches conformité",
+				"runScreening": "Lancer screening listes (stub)",
+				"refresh": "Actualiser",
+				"createEdd": "Ouvrir tâche EDD",
+				"instruction": "Consigne",
+				"markDone": "Marquer terminée",
+				"cancel": "Annuler la tâche",
+				"type": "Type",
+				"status": "Statut",
+				"result": "Résultat",
+				"at": "Date du contrôle",
+				"emptyChecks": "Aucun contrôle enregistré.",
+				"emptyTasks": "Aucune tâche.",
+				"resolution": "Note de résolution (optionnel)",
+				"screeningDone": "Contrôles listes enregistrés.",
+				"eddCreated": "Tâche EDD créée.",
+				"taskUpdated": "Tâche mise à jour."
 			},
 			"profile": {
 				"title": "Informations personnelles",
@@ -585,7 +637,35 @@
 				"periods": "Périodes",
 				"penalties": "Pénalités",
 				"eligibility": "Éligibilité",
+				"paymentMethods": "Moyens de paiement",
 				"glMappings": "Grand livre"
+			},
+			"paymentMethods": {
+				"loading": "Chargement des moyens de paiement…",
+				"title": "Moyens de paiement ({{count}})",
+				"add": "Ajouter un moyen",
+				"formTitle": "Associer un moyen de paiement",
+				"cancel": "Annuler",
+				"selectMethod": "Moyen de paiement",
+				"selectPlaceholder": "Sélectionner…",
+				"flagDeposit": "Dépôt",
+				"flagWithdrawal": "Retrait",
+				"flagLoanRepay": "Remboursement prêt",
+				"displayOrder": "Ordre d'affichage",
+				"save": "Enregistrer",
+				"saving": "Enregistrement…",
+				"empty": "Aucun moyen de paiement configuré",
+				"colMethod": "Moyen",
+				"colDeposit": "Dépôt",
+				"colWithdrawal": "Retrait",
+				"colLoan": "Remb. prêt",
+				"colActions": "Actions",
+				"remove": "Retirer",
+				"confirmDelete": "Retirer ce moyen de paiement du produit ?",
+				"flagsError": "Au moins une option parmi dépôt, retrait ou remboursement prêt doit être activée.",
+				"addError": "Impossible d'ajouter le moyen de paiement",
+				"deleteError": "Impossible de supprimer le lien",
+				"updateError": "Impossible de mettre à jour les options"
 			},
 			"categories": {
 				"CURRENT_ACCOUNT": "Compte courant",
@@ -1466,6 +1546,13 @@
 	},
 	"transaction": {
 		"form": {
+			"paymentMethod": {
+				"label": "Moyen de paiement",
+				"required": "*",
+				"placeholder": "Sélectionner un moyen de paiement",
+				"loading": "Chargement des moyens…",
+				"noneForProduct": "Aucun moyen disponible pour le produit de ce compte. Configurez-les sur le produit ou créez des entrées dans le catalogue."
+			},
 			"client": {
 				"label": "Client",
 				"required": "*",
@@ -1519,7 +1606,8 @@
 				"selectCurrency": "Veuillez sélectionner une devise",
 				"createError": "Erreur lors de la création de la transaction",
 				"loadCustomers": "Erreur lors du chargement des clients",
-				"loadAccounts": "Erreur lors du chargement des comptes"
+				"loadAccounts": "Erreur lors du chargement des comptes",
+				"paymentMethodRequired": "Veuillez sélectionner un moyen de paiement"
 			}
 		},
 		"detail": {
@@ -2223,6 +2311,10 @@
 			"repaySourceAccount": "Compte source",
 			"repaySelectAccount": "Sélectionner un compte",
 			"repayAmount": "Montant",
+			"repayPaymentMethod": "Moyen de paiement",
+			"repaySelectPaymentMethod": "Sélectionner un moyen de paiement",
+			"repayPaymentMethodLoading": "Chargement des moyens de paiement…",
+			"repayPaymentMethodNone": "Aucun moyen n'est autorisé à la fois sur le compte source et sur le produit prêt. Configurez les moyens de paiement des produits.",
 			"repayConfirm": "Rembourser",
 			"repayLoading": "Remboursement en cours...",
 			"repaySuccess": "Remboursement enregistré avec succès.",
@@ -2301,6 +2393,205 @@
 			"detailNotFound": "Demande non trouvée.",
 			"detailApproveError": "Erreur lors de l'approbation.",
 			"detailRejectError": "Erreur lors du rejet."
+		}
+	},
+	"paymentMethodsCatalogPage": {
+		"title": "Moyens de paiement",
+		"subtitle": "Catalogue utilisé pour associer les canaux aux produits (mobile money, etc.)",
+		"refresh": "Actualiser",
+		"stats": {
+			"total": "Total",
+			"active": "Actifs",
+			"inactive": "Inactifs"
+		},
+		"filters": {
+			"title": "Filtres",
+			"search": "Recherche",
+			"searchPlaceholder": "Code ou nom…",
+			"status": "Statut",
+			"statusAll": "Tous",
+			"statusActive": "Actifs uniquement",
+			"statusInactive": "Inactifs uniquement"
+		},
+		"empty": {
+			"title": "Aucun moyen de paiement",
+			"message": "Créez un premier moyen pour l'associer aux produits.",
+			"filteredTitle": "Aucun résultat",
+			"filteredMessage": "Modifiez la recherche ou les filtres."
+		},
+		"listCount": "{{shown}} sur {{total}} affichés",
+		"loading": "Chargement…",
+		"add": "Ajouter",
+		"code": "Code",
+		"name": "Nom",
+		"active": "Actif",
+		"inactive": "Inactif",
+		"formCode": "Code *",
+		"formName": "Nom *",
+		"formActive": "Actif",
+		"cancel": "Annuler",
+		"save": "Enregistrer",
+		"saving": "Enregistrement…",
+		"createError": "Impossible de créer",
+		"updateError": "Impossible de mettre à jour",
+		"deleteError": "Impossible de supprimer",
+		"deleteConfirm": "Supprimer ce moyen de paiement ? Les liens produits doivent être retirés d'abord.",
+		"edit": "Modifier"
+	},
+	"aml": {
+		"loading": "Chargement…",
+		"empty": "Aucune donnée",
+		"saving": "Enregistrement…",
+		"actions": {
+			"search": "Rechercher",
+			"open": "Ouvrir",
+			"cancel": "Annuler"
+		},
+		"filters": {
+			"title": "Filtres",
+			"clientId": "Client (ID)",
+			"status": "Statut",
+			"severity": "Gravité",
+			"all": "Tous"
+		},
+		"stats": {
+			"total": "Total",
+			"new": "Nouvelles",
+			"inProgress": "En cours",
+			"closed": "Clôturées",
+			"highSeverity": "Haute / critique",
+			"pageHint": "Les compteurs (sauf Total) portent sur les alertes de la page courante. Le total correspond au résultat filtré côté serveur."
+		},
+		"table": {
+			"ref": "Référence",
+			"title": "Titre",
+			"severity": "Gravité",
+			"status": "Statut",
+			"client": "Client",
+			"created": "Création",
+			"actions": "Actions"
+		},
+		"alerts": {
+			"title": "Alertes AML",
+			"subtitle": "Suivi des alertes transactionnelles et manuelles — filtrage et traitement.",
+			"manualNew": "Nouvelle alerte manuelle",
+			"backToList": "Retour aux alertes",
+			"resultsLabel": "alertes"
+		},
+		"manualAlert": {
+			"title": "Créer une alerte manuelle",
+			"subtitle": "Client obligatoire ; compte et transaction optionnels s’ils sont cohérents avec le client.",
+			"clientId": "ID client",
+			"accountId": "ID compte (optionnel)",
+			"transactionId": "ID transaction (optionnel)",
+			"factsJson": "Faits (JSON)",
+			"submit": "Créer l’alerte",
+			"invalidJson": "JSON des faits invalide.",
+			"clientRequired": "ID client invalide.",
+			"titleRequired": "Le titre est obligatoire."
+		},
+		"alertDetail": {
+			"openCase": "Ouvrir un dossier",
+			"actions": "Actions",
+			"assignToUserId": "Assigner à (ID utilisateur)",
+			"assign": "Assigner",
+			"updateStatus": "Mettre à jour le statut",
+			"closure": "Clôture",
+			"closureComment": "Commentaire",
+			"closeAlert": "Clôturer",
+			"closureOtherComment": "Motif OTHER : le commentaire est obligatoire."
+		},
+		"detail": {
+			"client": "Client",
+			"account": "Compte",
+			"transaction": "Transaction",
+			"assigned": "Assigné (user ID)",
+			"ruleVersion": "Règle / version",
+			"idempotency": "Clé d’idempotence",
+			"facts": "Faits (JSON)"
+		},
+		"rules": {
+			"title": "Règles AML",
+			"subtitle": "Catalogue des définitions et gestion des versions publiées.",
+			"stats": {
+				"total": "Définitions",
+				"categories": "Catégories",
+				"amount": "Règles « montant »",
+				"custom": "Règles sur mesure"
+			},
+			"createDefinition": "Nouvelle définition",
+			"code": "Code",
+			"name": "Nom",
+			"category": "Catégorie",
+			"description": "Description",
+			"submitCreate": "Créer",
+			"versions": "Versions",
+			"hideVersions": "Masquer",
+			"newVersion": "Nouvelle version",
+			"publishVersion": "Publier une version",
+			"effectiveFrom": "Effet à partir du",
+			"enabled": "Activée",
+			"publish": "Publier",
+			"on": "active",
+			"off": "inactive",
+			"enable": "Activer",
+			"disable": "Désactiver"
+		},
+		"cases": {
+			"indexTitle": "Dossiers AML",
+			"indexSubtitle": "Saisir l’identifiant d’un dossier existant ou en créer un nouveau.",
+			"caseId": "ID dossier",
+			"open": "Ouvrir",
+			"createNew": "Créer un nouveau dossier",
+			"back": "Retour dossiers",
+			"newTitle": "Nouveau dossier",
+			"newSubtitle": "Rattacher une ou plusieurs alertes à un client.",
+			"alertIds": "IDs des alertes",
+			"alertIdsHint": "Séparés par des virgules ou des espaces.",
+			"ownerUserId": "Responsable (ID utilisateur, optionnel)",
+			"submit": "Créer le dossier",
+			"clientRequired": "Client invalide.",
+			"alertsRequired": "Au moins une alerte est requise.",
+			"linkedAlerts": "Alertes liées",
+			"notes": "Notes",
+			"author": "Auteur",
+			"notePlaceholder": "Saisir une note…",
+			"addNote": "Ajouter la note",
+			"statusSection": "Statut du dossier",
+			"statusComment": "Commentaire (historique)",
+			"outcomeCode": "Code issue (optionnel)",
+			"outcomeCodeHint": "Utiliser REKYC_REQUIRED pour renvoyer le client en revue KYC (après clôture du dossier).",
+			"updateStatus": "Mettre à jour",
+			"declarationSection": "Déclaration interne",
+			"declarationHint": "Crée un enregistrement brouillon lié au dossier (registre interne).",
+			"createDeclaration": "Enregistrer une déclaration",
+			"declarationCreated": "Déclaration créée"
+		},
+		"risk": {
+			"title": "Profils de risque AML",
+			"subtitle": "Historique des scores et recalcul pour un client donné.",
+			"stats": {
+				"total": "Entrées chargées",
+				"active": "Actif (liste)",
+				"high": "Niveau HIGH",
+				"enhanced": "Diligence renforcée"
+			},
+			"loadHistory": "Charger l’historique",
+			"recompute": "Recalculer",
+			"openCustomers": "Liste des clients",
+			"clientRequired": "Saisissez un ID client valide.",
+			"recomputeDone": "Profil recalculé.",
+			"empty": "Aucun profil — chargez l’historique ou recalculez.",
+			"computedAt": "Calculé le",
+			"level": "Niveau",
+			"score": "Score",
+			"diligence": "Diligence",
+			"active": "Actif",
+			"yes": "oui",
+			"no": "non",
+			"by": "Par",
+			"factors": "Facteurs",
+			"statsHint": "Les indicateurs reflètent l’historique chargé pour le client courant."
 		}
 	},
 	"login": {

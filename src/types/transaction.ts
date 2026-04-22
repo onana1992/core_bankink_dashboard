@@ -1,4 +1,12 @@
-export type TransactionType = "DEPOSIT" | "WITHDRAWAL" | "TRANSFER" | "FEE" | "INTEREST" | "ADJUSTMENT" | "REVERSAL";
+export type TransactionType =
+	| "DEPOSIT"
+	| "WITHDRAWAL"
+	| "TRANSFER"
+	| "FEE"
+	| "INTEREST"
+	| "ADJUSTMENT"
+	| "REVERSAL"
+	| "LOAN_REPAYMENT";
 export type TransactionStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "REVERSED";
 export type EntryType = "DEBIT" | "CREDIT";
 export type HoldStatus = "PENDING" | "RELEASED" | "APPLIED" | "EXPIRED";

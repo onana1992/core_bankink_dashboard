@@ -40,7 +40,10 @@ import {
 	PlusCircle,
 	Calculator,
 	ClipboardList,
-	Server
+	Server,
+	CreditCard,
+	Layers,
+	Scale
 } from "lucide-react";
 
 function Chevron() {
@@ -53,16 +56,21 @@ function NavLink({
 	href,
 	label,
 	icon: Icon,
-	collapsed
+	collapsed,
+	activeMatch = "exact"
 }: {
 	href: string;
 	label: string;
 	icon: React.ElementType;
 	collapsed?: boolean;
+	/** `prefix` : actif pour les sous-routes (ex. /aml/alerts/42), sauf /new si le lien parent est la liste. */
+	activeMatch?: "exact" | "prefix";
 }) {
 	const pathname = usePathname();
-	// Un seul menu/sous-menu actif à la fois : correspondance exacte du path
-	const active = pathname === href;
+	const active =
+		activeMatch === "prefix"
+			? pathname === href || (pathname.startsWith(href + "/") && !pathname.startsWith(href + "/new"))
+			: pathname === href;
 	return (
 		<Link
 			href={href}
@@ -94,7 +102,39 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 
 					<NavLink href="/customers" label={t("sidebar.clientsKyc")} icon={Users} collapsed={collapsed} />
 
+					<details className="group rounded-md">
+						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
+							<span className="flex items-center gap-2">
+								<Scale className="h-4 w-4 text-gray-700" />
+								<span className={labelClass}>{t("sidebar.amlMenu")}</span>
+							</span>
+							{!collapsed && <Chevron />}
+						</summary>
+						<div className="mt-1 space-y-1 pl-3">
+							<NavLink
+								href="/aml/alerts"
+								label={t("sidebar.amlAlerts")}
+								icon={ShieldAlert}
+								collapsed={collapsed}
+								activeMatch="prefix"
+							/>
+							<NavLink href="/aml/alerts/new" label={t("sidebar.amlNewAlert")} icon={PlusCircle} collapsed={collapsed} />
+							<NavLink href="/aml/rules" label={t("sidebar.amlRules")} icon={ScrollText} collapsed={collapsed} />
+							<NavLink
+								href="/aml/cases"
+								label={t("sidebar.amlCases")}
+								icon={FileText}
+								collapsed={collapsed}
+								activeMatch="prefix"
+							/>
+							<NavLink href="/aml/cases/new" label={t("sidebar.amlNewCase")} icon={PlusCircle} collapsed={collapsed} />
+							<NavLink href="/aml/risk-profiles" label={t("sidebar.amlRiskProfiles")} icon={ShieldCheck} collapsed={collapsed} />
+							<NavLink href="/compliance/vigilance" label={t("sidebar.complianceVigilance")} icon={RefreshCcw} collapsed={collapsed} />
+						</div>
+					</details>
+
 					<NavLink href="/products" label={t("sidebar.productCatalog")} icon={Package} collapsed={collapsed} />
+					<NavLink href="/payment-methods" label={t("sidebar.paymentMethodsCatalog")} icon={CreditCard} collapsed={collapsed} />
 
 					<details className="group rounded-md">
 						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
@@ -216,6 +256,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						<div className="mt-1 space-y-1 pl-3">
 							<NavLink href="/reconciliation" label={t("sidebar.reconciliation")} icon={RefreshCcw} collapsed={collapsed} />
 							<NavLink href="/closures" label={t("sidebar.closures")} icon={CalendarCheck} collapsed={collapsed} />
+							<NavLink href="/balance-snapshots" label={t("sidebar.balanceSnapshots")} icon={Layers} collapsed={collapsed} />
 						</div>
 					</details>
 

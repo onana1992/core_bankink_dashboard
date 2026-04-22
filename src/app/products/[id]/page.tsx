@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import { productsApi, productGLMappingsApi } from "@/lib/api";
 import { showToast } from "@/lib/toast";
+import ProductPaymentMethodsTab from "@/components/products/ProductPaymentMethodsTab";
 import {
 	Edit2,
 	Package,
@@ -54,7 +55,8 @@ import type {
 	PenaltyCalculationBase,
 	EligibilityRuleType,
 	EligibilityOperator,
-	EligibilityDataType
+	EligibilityDataType,
+	ProductPaymentMethod
 } from "@/types";
 
 export default function ProductDetailPage() {
@@ -66,7 +68,9 @@ export default function ProductDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [product, setProduct] = useState<Product | null>(null);
-	const [activeTab, setActiveTab] = useState<"overview" | "rates" | "fees" | "limits" | "periods" | "penalties" | "eligibility" | "gl-mappings">("overview");
+	const [activeTab, setActiveTab] = useState<
+		"overview" | "rates" | "fees" | "limits" | "periods" | "penalties" | "eligibility" | "payment-methods" | "gl-mappings"
+	>("overview");
 
 	// Data states
 	const [interestRates, setInterestRates] = useState<ProductInterestRate[]>([]);
@@ -76,6 +80,7 @@ export default function ProductDetailPage() {
 	const [penalties, setPenalties] = useState<ProductPenalty[]>([]);
 	const [eligibilityRules, setEligibilityRules] = useState<ProductEligibilityRule[]>([]);
 	const [glMappings, setGlMappings] = useState<import("@/types").ProductGLMapping[]>([]);
+	const [productPaymentMethods, setProductPaymentMethods] = useState<ProductPaymentMethod[]>([]);
 	const [loadingConfigs, setLoadingConfigs] = useState(false);
 
 	// Form states
@@ -105,7 +110,7 @@ export default function ProductDetailPage() {
 		setLoadingConfigs(true);
 		try {
 			console.log("Chargement des configurations pour le produit:", id);
-			const [ratesData, feesData, limitsData, periodsData, penaltiesData, rulesData, mappingsData] = await Promise.all([
+			const [ratesData, feesData, limitsData, periodsData, penaltiesData, rulesData, mappingsData, pmData] = await Promise.all([
 				productsApi.getInterestRates(id).catch(e => {
 					console.error("Erreur lors du chargement des taux d'intérêt:", e);
 					return [];
@@ -133,6 +138,10 @@ export default function ProductDetailPage() {
 				productGLMappingsApi.list(id).catch(e => {
 					console.error("Erreur lors du chargement des mappings GL:", e);
 					return [];
+				}),
+				productsApi.getProductPaymentMethods(id).catch(e => {
+					console.error("Erreur lors du chargement des moyens de paiement:", e);
+					return [];
 				})
 			]);
 			console.log("Données chargées:", {
@@ -150,6 +159,7 @@ export default function ProductDetailPage() {
 			setPenalties(penaltiesData || []);
 			setEligibilityRules(rulesData || []);
 			setGlMappings(mappingsData || []);
+			setProductPaymentMethods(pmData || []);
 		} catch (e: any) {
 			console.error("Erreur lors du chargement des configurations:", e);
 			// S'assurer que les états sont initialisés même en cas d'erreur
@@ -160,6 +170,7 @@ export default function ProductDetailPage() {
 			setPenalties([]);
 			setEligibilityRules([]);
 			setGlMappings([]);
+			setProductPaymentMethods([]);
 		} finally {
 			setLoadingConfigs(false);
 		}
@@ -351,6 +362,7 @@ export default function ProductDetailPage() {
 		{ id: "periods" as const, label: `${t("product.detail.tabs.periods")} (${periods.length})` },
 		{ id: "penalties" as const, label: `${t("product.detail.tabs.penalties")} (${penalties.length})` },
 		{ id: "eligibility" as const, label: `${t("product.detail.tabs.eligibility")} (${eligibilityRules.length})` },
+		{ id: "payment-methods" as const, label: `${t("product.detail.tabs.paymentMethods")} (${productPaymentMethods.length})` },
 		{ id: "gl-mappings" as const, label: `${t("product.detail.tabs.glMappings")} (${glMappings.length})` }
 	];
 
@@ -525,6 +537,15 @@ export default function ProductDetailPage() {
 						onRefresh={loadAllConfigurations}
 						showForm={showRuleForm}
 						onCloseForm={() => setShowRuleForm(false)}
+					/>
+				)}
+
+				{activeTab === "payment-methods" && (
+					<ProductPaymentMethodsTab
+						productId={id}
+						links={productPaymentMethods}
+						loading={loadingConfigs}
+						onRefresh={loadAllConfigurations}
 					/>
 				)}
 

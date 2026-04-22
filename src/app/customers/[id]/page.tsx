@@ -14,9 +14,12 @@ import type {
 	AddAddressRequest,
 	AddRelatedPersonRequest,
 	Address,
+	ComplianceTask,
+	ComplianceTaskStatus,
 	Customer,
 	Document,
 	DocumentType,
+	KycCheck,
 	RelatedPerson,
 	RelatedPersonRole,
 	Account
@@ -122,8 +125,36 @@ export default function CustomerDetailPage() {
 		{ id: "addresses", label: t("customer.detail.tabs.addresses") },
 		...(customer?.type === "BUSINESS" ? [{ id: "related-persons", label: t("customer.detail.tabs.relatedPersons") }] : []),
 		{ id: "kyc-actions", label: t("customer.detail.tabs.kycActions") },
+		{ id: "compliance", label: t("customer.detail.tabs.compliance") },
 		{ id: "accounts", label: t("customer.detail.tabs.accounts") }
 	];
+
+	const [kycChecks, setKycChecks] = useState<KycCheck[]>([]);
+	const [complianceTasks, setComplianceTasks] = useState<ComplianceTask[]>([]);
+	const [complianceLoading, setComplianceLoading] = useState(false);
+	const [complianceAction, setComplianceAction] = useState<string | null>(null);
+	const [eddInstruction, setEddInstruction] = useState("");
+	const [taskResolution, setTaskResolution] = useState<Record<number, string>>({});
+
+	const loadComplianceData = async () => {
+		if (!id) return;
+		setComplianceLoading(true);
+		try {
+			const [checks, tasks] = await Promise.all([customersApi.listKycChecks(id), customersApi.listComplianceTasks(id)]);
+			setKycChecks(checks);
+			setComplianceTasks(tasks);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : String(e));
+		} finally {
+			setComplianceLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		if (activeTab === "compliance" && id) {
+			void loadComplianceData();
+		}
+	}, [activeTab, id]);
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -1226,6 +1257,28 @@ export default function CustomerDetailPage() {
 												</div>
 											</div>
 
+											<div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-2">
+												<h3 className="text-sm font-semibold text-gray-900">{t("customer.detail.aml.title")}</h3>
+												<p className="text-xs text-gray-600">{t("customer.detail.aml.subtitle")}</p>
+												<div className="flex flex-col gap-1.5 text-sm">
+													<Link
+														className="text-blue-600 hover:underline"
+														href={`/aml/risk-profiles?clientId=${customer.id}`}
+													>
+														{t("customer.detail.aml.riskProfiles")}
+													</Link>
+													<Link className="text-blue-600 hover:underline" href={`/aml/alerts?clientId=${customer.id}`}>
+														{t("customer.detail.aml.alerts")}
+													</Link>
+													<Link
+														className="text-blue-600 hover:underline"
+														href={`/aml/cases/new?clientId=${customer.id}`}
+													>
+														{t("customer.detail.aml.newCase")}
+													</Link>
+												</div>
+											</div>
+
 											{/* Métadonnées */}
 											{(customer.createdAt || customer.updatedAt) && (
 												<div className="space-y-3 pt-3 border-t border-gray-200">
@@ -2185,6 +2238,194 @@ export default function CustomerDetailPage() {
 								<p className="text-sm text-red-800">{customer.rejectionReason}</p>
 							</div>
 						)}
+					</div>
+				)}
+
+				{activeTab === "compliance" && customer && (
+					<div className="space-y-6">
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-6 py-5 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+								<div>
+									<h2 className="text-xl font-semibold text-gray-900">{t("customer.detail.compliance.title")}</h2>
+									<p className="text-sm text-gray-500 mt-0.5">{t("customer.detail.compliance.subtitle")}</p>
+								</div>
+								<div className="flex gap-2">
+									<Button
+										size="sm"
+										variant="outline"
+										disabled={complianceLoading || complianceAction !== null}
+										onClick={async () => {
+											setComplianceAction("screen");
+											try {
+												await customersApi.runListScreening(id);
+												await loadComplianceData();
+												setToast({ message: t("customer.detail.compliance.screeningDone"), type: "success" });
+											} catch (e) {
+												setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+											} finally {
+												setComplianceAction(null);
+											}
+										}}
+									>
+										{complianceAction === "screen" ? "…" : t("customer.detail.compliance.runScreening")}
+									</Button>
+									<Button size="sm" variant="outline" disabled={complianceLoading} onClick={() => void loadComplianceData()}>
+										{t("customer.detail.compliance.refresh")}
+									</Button>
+								</div>
+							</div>
+						</div>
+
+						{(customer.rekycPendingReason || customer.lastAmlRekycRequestedAt) && (
+							<div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+								<h3 className="text-sm font-semibold text-amber-900 mb-1">{t("customer.detail.compliance.rekycBanner")}</h3>
+								{customer.lastAmlRekycRequestedAt && (
+									<p className="text-xs text-amber-800 mb-1">
+										{new Date(customer.lastAmlRekycRequestedAt).toLocaleString(locale)}
+									</p>
+								)}
+								{customer.rekycPendingReason && <p className="text-sm text-amber-900">{customer.rekycPendingReason}</p>}
+							</div>
+						)}
+
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
+								<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.compliance.checksTitle")}</h3>
+							</div>
+							<div className="p-4 overflow-x-auto">
+								{complianceLoading ? (
+									<p className="text-sm text-gray-500">{t("customer.detail.loading")}</p>
+								) : kycChecks.length === 0 ? (
+									<p className="text-sm text-gray-500">{t("customer.detail.compliance.emptyChecks")}</p>
+								) : (
+									<table className="min-w-full text-sm">
+										<thead>
+											<tr className="text-left text-gray-600 border-b">
+												<th className="py-2 pr-4">{t("customer.detail.compliance.type")}</th>
+												<th className="py-2 pr-4">{t("customer.detail.compliance.result")}</th>
+												<th className="py-2 pr-4">{t("customer.detail.compliance.at")}</th>
+											</tr>
+										</thead>
+										<tbody>
+											{kycChecks.map(c => (
+												<tr key={c.id} className="border-b border-gray-100">
+													<td className="py-2 pr-4 font-medium">{c.type}</td>
+													<td className="py-2 pr-4">{c.result}</td>
+													<td className="py-2 pr-4 text-gray-600">
+														{c.checkedAt ? new Date(c.checkedAt).toLocaleString(locale) : "—"}
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								)}
+							</div>
+						</div>
+
+						<div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+							<div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+								<h3 className="text-sm font-semibold text-gray-800">{t("customer.detail.compliance.tasksTitle")}</h3>
+								<div className="flex flex-wrap items-end gap-2">
+									<Input
+										className="w-56 h-9 text-xs"
+										placeholder={t("customer.detail.compliance.instruction")}
+										value={eddInstruction}
+										onChange={e => setEddInstruction(e.target.value)}
+									/>
+									<Button
+										size="sm"
+										disabled={complianceAction !== null || !eddInstruction.trim()}
+										onClick={async () => {
+											setComplianceAction("edd");
+											try {
+												await customersApi.createComplianceTask(id, { taskType: "EDD_REVIEW", instruction: eddInstruction.trim() });
+												setEddInstruction("");
+												await loadComplianceData();
+												setToast({ message: t("customer.detail.compliance.eddCreated"), type: "success" });
+											} catch (e) {
+												setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+											} finally {
+												setComplianceAction(null);
+											}
+										}}
+									>
+										{complianceAction === "edd" ? "…" : t("customer.detail.compliance.createEdd")}
+									</Button>
+								</div>
+							</div>
+							<div className="p-4 space-y-3">
+								{complianceLoading ? (
+									<p className="text-sm text-gray-500">{t("customer.detail.loading")}</p>
+								) : complianceTasks.length === 0 ? (
+									<p className="text-sm text-gray-500">{t("customer.detail.compliance.emptyTasks")}</p>
+								) : (
+									complianceTasks.map(task => (
+										<div key={task.id} className="rounded-lg border border-gray-200 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+											<div>
+												<div className="flex items-center gap-2">
+													<Badge variant={task.status === "OPEN" ? "warning" : "success"}>{task.taskType}</Badge>
+													<span className="text-xs text-gray-500">{task.status}</span>
+												</div>
+												{task.instruction && <p className="text-sm text-gray-700 mt-1">{task.instruction}</p>}
+											</div>
+											{task.status === "OPEN" && (
+												<div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+													<Input
+														className="w-full sm:w-48 h-9 text-xs"
+														placeholder={t("customer.detail.compliance.resolution")}
+														value={taskResolution[task.id] ?? ""}
+														onChange={e => setTaskResolution(prev => ({ ...prev, [task.id]: e.target.value }))}
+													/>
+													<Button
+														size="sm"
+														disabled={complianceAction !== null}
+														onClick={async () => {
+															setComplianceAction("done-" + task.id);
+															try {
+																await customersApi.patchComplianceTask(id, task.id, {
+																	status: "DONE" as ComplianceTaskStatus,
+																	resolutionNote: taskResolution[task.id]?.trim() || undefined
+																});
+																await loadComplianceData();
+																setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
+															} catch (e) {
+																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+															} finally {
+																setComplianceAction(null);
+															}
+														}}
+													>
+														{t("customer.detail.compliance.markDone")}
+													</Button>
+													<Button
+														size="sm"
+														variant="outline"
+														disabled={complianceAction !== null}
+														onClick={async () => {
+															setComplianceAction("cx-" + task.id);
+															try {
+																await customersApi.patchComplianceTask(id, task.id, {
+																	status: "CANCELLED" as ComplianceTaskStatus,
+																	resolutionNote: taskResolution[task.id]?.trim() || undefined
+																});
+																await loadComplianceData();
+																setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
+															} catch (e) {
+																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+															} finally {
+																setComplianceAction(null);
+															}
+														}}
+													>
+														{t("customer.detail.compliance.cancel")}
+													</Button>
+												</div>
+											)}
+										</div>
+									))
+								)}
+							</div>
+						</div>
 					</div>
 				)}
 
