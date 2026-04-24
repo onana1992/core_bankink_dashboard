@@ -8,7 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { customersApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
-import { getNationalitySelectOptions } from "@/lib/nationalityOptions";
+import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
 import { ANNUAL_REVENUE_BAND_OPTIONS, LEGAL_FORM_OPTIONS } from "@/data/legalFormOptions";
 import type { AddAddressRequest, AddRelatedPersonRequest, CreateCustomerRequest, UpdateCustomerRequest } from "@/types";
 
@@ -67,6 +67,8 @@ export default function NewBusinessCustomerPage() {
 		registrationNumber: "",
 		incorporationDate: "",
 		incorporationCountry: "CM",
+		taxResidenceCountry: "",
+		taxIdentificationNumber: "",
 		activityDescription: "",
 		signingAuthorityNote: ""
 	});
@@ -133,6 +135,9 @@ export default function NewBusinessCustomerPage() {
 			if (!entity.registrationNumber.trim()) return t("customer.wizard.business.validation.registrationRequired");
 			if (!entity.incorporationDate) return t("customer.wizard.business.validation.incorporationDateRequired");
 			if (!validateCountry(entity.incorporationCountry)) return t("customer.wizard.validation.countryInvalid");
+			if (!entity.taxResidenceCountry?.trim()) return t("customer.detail.profile.taxResidenceRequired");
+			if (!validateCountry(entity.taxResidenceCountry)) return t("customer.detail.profile.taxResidenceInvalid");
+			if (entity.taxIdentificationNumber.trim().length > 64) return t("customer.detail.profile.taxIdTooLong");
 			if (!entity.activityDescription.trim()) return t("customer.wizard.business.validation.activityDescriptionRequired");
 			if (entity.activityDescription.trim().length > 1000) return t("customer.wizard.business.validation.textTooLong");
 		}
@@ -261,6 +266,8 @@ export default function NewBusinessCustomerPage() {
 			registrationNumber: entity.registrationNumber.trim(),
 			incorporationDate: entity.incorporationDate || null,
 			incorporationCountry: entity.incorporationCountry.trim().toUpperCase().slice(0, 2),
+			taxResidenceCountry: entity.taxResidenceCountry.trim().toUpperCase().slice(0, 2),
+			taxIdentificationNumber: entity.taxIdentificationNumber.trim() ? entity.taxIdentificationNumber.trim() : null,
 			activityDescription: entity.activityDescription.trim(),
 			signingAuthorityNote: entity.signingAuthorityNote.trim() || null,
 			websiteUrl,
@@ -462,6 +469,31 @@ export default function NewBusinessCustomerPage() {
 									</option>
 								))}
 							</select>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">
+								{t("customer.wizard.business.entity.taxResidence")} *
+							</label>
+							<select
+								className="w-full px-3 py-2 border border-gray-300 rounded-md"
+								value={entity.taxResidenceCountry}
+								onChange={e => setEntity(x => ({ ...x, taxResidenceCountry: e.target.value }))}
+							>
+								<option value="">{t("customer.wizard.profile.nationalityPlaceholder")}</option>
+								{nationalityOptions.map(opt => (
+									<option key={opt.code} value={opt.code}>
+										{opt.label} ({opt.code})
+									</option>
+								))}
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.entity.taxIdentification")}</label>
+							<Input
+								value={entity.taxIdentificationNumber}
+								onChange={e => setEntity(x => ({ ...x, taxIdentificationNumber: e.target.value }))}
+								maxLength={64}
+							/>
 						</div>
 						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.entity.activityDescription")} *</label>
@@ -840,6 +872,15 @@ export default function NewBusinessCustomerPage() {
 							<RecapRow label={t("customer.wizard.business.entity.legalForm")} value={entity.legalForm} />
 							<RecapRow label={t("customer.wizard.business.entity.registrationNumber")} value={entity.registrationNumber} />
 							<RecapRow label={t("customer.wizard.business.entity.incorporationDate")} value={entity.incorporationDate} />
+							<RecapRow
+								label={t("customer.wizard.business.entity.incorporationCountry")}
+								value={formatNationalityLabel(entity.incorporationCountry, i18n.language)}
+							/>
+							<RecapRow
+								label={t("customer.wizard.business.entity.taxResidence")}
+								value={formatNationalityLabel(entity.taxResidenceCountry, i18n.language)}
+							/>
+							<RecapRow label={t("customer.wizard.business.entity.taxIdentification")} value={entity.taxIdentificationNumber.trim() || "—"} />
 							<RecapRow label={t("customer.wizard.business.entity.activityDescription")} value={entity.activityDescription} />
 						</dl>
 					</section>

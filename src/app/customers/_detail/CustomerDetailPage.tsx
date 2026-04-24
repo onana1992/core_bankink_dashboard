@@ -37,6 +37,8 @@ type BusinessProfileFormData = {
 	registrationNumber: string;
 	incorporationDate: string;
 	incorporationCountry: string;
+	taxResidenceCountry: string;
+	taxIdentificationNumber: string;
 	activityDescription: string;
 	signingAuthorityNote: string;
 	websiteUrl: string;
@@ -55,6 +57,8 @@ function emptyBusinessProfileForm(): BusinessProfileFormData {
 		registrationNumber: "",
 		incorporationDate: "",
 		incorporationCountry: "",
+		taxResidenceCountry: "",
+		taxIdentificationNumber: "",
 		activityDescription: "",
 		signingAuthorityNote: "",
 		websiteUrl: "",
@@ -79,6 +83,8 @@ function customerToBusinessProfileForm(c: Customer): BusinessProfileFormData {
 		registrationNumber: c.registrationNumber ?? "",
 		incorporationDate: c.incorporationDate ? c.incorporationDate.slice(0, 10) : "",
 		incorporationCountry: c.incorporationCountry ?? "",
+		taxResidenceCountry: c.taxResidenceCountry ?? "",
+		taxIdentificationNumber: c.taxIdentificationNumber ?? "",
 		activityDescription: c.activityDescription ?? "",
 		signingAuthorityNote: c.signingAuthorityNote ?? "",
 		websiteUrl: stripScheme(c.websiteUrl),
@@ -180,6 +186,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		birthDate: string;
 		maritalStatus: string;
 		nationality: string;
+		taxResidenceCountry: string;
+		taxIdentificationNumber: string;
 		professionalActivity: string;
 		incomeSource: string;
 	}>({
@@ -189,6 +197,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		birthDate: "",
 		maritalStatus: "",
 		nationality: "",
+		taxResidenceCountry: "",
+		taxIdentificationNumber: "",
 		professionalActivity: "",
 		incomeSource: ""
 	});
@@ -346,6 +356,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				birthDate: customerData.birthDate ? customerData.birthDate.slice(0, 10) : "",
 				maritalStatus: customerData.maritalStatus ?? "",
 				nationality: customerData.nationality ?? "",
+				taxResidenceCountry: customerData.taxResidenceCountry ?? "",
+				taxIdentificationNumber: customerData.taxIdentificationNumber ?? "",
 				professionalActivity: customerData.professionalActivity ?? "",
 				incomeSource: customerData.incomeSource ?? ""
 			});
@@ -411,6 +423,19 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				setToast({ message: t("customer.detail.profile.incomeSourceTooLong"), type: "error" });
 				return;
 			}
+			const pTax = profileFormData.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
+			if (!pTax) {
+				setToast({ message: t("customer.detail.profile.taxResidenceRequired"), type: "error" });
+				return;
+			}
+			if (!/^[A-Z]{2}$/.test(pTax) || !nationalityOptions.some(o => o.code === pTax)) {
+				setToast({ message: t("customer.detail.profile.taxResidenceInvalid"), type: "error" });
+				return;
+			}
+			if (profileFormData.taxIdentificationNumber.trim().length > 64) {
+				setToast({ message: t("customer.detail.profile.taxIdTooLong"), type: "error" });
+				return;
+			}
 			setSavingProfile(true);
 			setError(null);
 			try {
@@ -421,6 +446,10 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					birthDate: profileFormData.birthDate || null,
 					maritalStatus: profileFormData.maritalStatus || null,
 					nationality: profileFormData.nationality?.trim() ? profileFormData.nationality.trim().toUpperCase() : null,
+					taxResidenceCountry: pTax,
+					taxIdentificationNumber: profileFormData.taxIdentificationNumber?.trim()
+						? profileFormData.taxIdentificationNumber.trim()
+						: null,
 					professionalActivity: profileFormData.professionalActivity.trim(),
 					incomeSource: profileFormData.incomeSource.trim() ? profileFormData.incomeSource.trim() : null
 				});
@@ -455,6 +484,19 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		const incCountry = b.incorporationCountry.trim().toUpperCase().slice(0, 2);
 		if (!/^[A-Z]{2}$/.test(incCountry) || !nationalityOptions.some(o => o.code === incCountry)) {
 			setToast({ message: t("customer.wizard.validation.countryInvalid"), type: "error" });
+			return;
+		}
+		const taxCountry = b.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
+		if (!taxCountry) {
+			setToast({ message: t("customer.detail.profile.taxResidenceRequired"), type: "error" });
+			return;
+		}
+		if (!/^[A-Z]{2}$/.test(taxCountry) || !nationalityOptions.some(o => o.code === taxCountry)) {
+			setToast({ message: t("customer.detail.profile.taxResidenceInvalid"), type: "error" });
+			return;
+		}
+		if (b.taxIdentificationNumber.trim().length > 64) {
+			setToast({ message: t("customer.detail.profile.taxIdTooLong"), type: "error" });
 			return;
 		}
 		if (!b.activityDescription.trim()) {
@@ -523,6 +565,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				registrationNumber: b.registrationNumber.trim(),
 				incorporationDate: b.incorporationDate.trim(),
 				incorporationCountry: incCountry,
+				taxResidenceCountry: taxCountry,
+				taxIdentificationNumber: b.taxIdentificationNumber.trim() ? b.taxIdentificationNumber.trim() : null,
 				activityDescription: b.activityDescription.trim(),
 				signingAuthorityNote: b.signingAuthorityNote.trim(),
 				websiteUrl,
@@ -556,6 +600,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				birthDate: customer.birthDate ? customer.birthDate.slice(0, 10) : "",
 				maritalStatus: customer.maritalStatus ?? "",
 				nationality: customer.nationality ?? "",
+				taxResidenceCountry: customer.taxResidenceCountry ?? "",
+				taxIdentificationNumber: customer.taxIdentificationNumber ?? "",
 				professionalActivity: customer.professionalActivity ?? "",
 				incomeSource: customer.incomeSource ?? ""
 			});
@@ -1355,6 +1401,24 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																: "—"}
 														</dd>
 													</div>
+													<div>
+														<dt className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+															{t("customer.detail.profile.taxResidence")}
+														</dt>
+														<dd className="mt-1.5 text-sm font-medium leading-relaxed text-slate-800">
+															{customer.taxResidenceCountry
+																? `${formatNationalityLabel(customer.taxResidenceCountry, i18n.language)} (${customer.taxResidenceCountry})`
+																: "—"}
+														</dd>
+													</div>
+													<div>
+														<dt className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+															{t("customer.detail.profile.taxIdentification")}
+														</dt>
+														<dd className="mt-1.5 text-sm font-medium leading-relaxed text-slate-800">
+															{customer.taxIdentificationNumber?.trim() || "—"}
+														</dd>
+													</div>
 												</dl>
 											</section>
 											<section className="border-t border-slate-100 pt-8">
@@ -1472,6 +1536,37 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																))}
 															</select>
 														</div>
+														<div className="sm:col-span-2 lg:col-span-3">
+															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+																{t("customer.detail.profile.taxResidence")} <span className="text-red-500">*</span>
+															</label>
+															<select
+																value={profileFormData.taxResidenceCountry}
+																onChange={e =>
+																	setProfileFormData(prev => ({ ...prev, taxResidenceCountry: e.target.value }))
+																}
+																className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+															>
+																<option value="">{t("customer.detail.profile.nationalityPlaceholder")}</option>
+																{nationalityOptions.map(opt => (
+																	<option key={opt.code} value={opt.code}>
+																		{opt.label} ({opt.code})
+																	</option>
+																))}
+															</select>
+														</div>
+														<div className="sm:col-span-2 lg:col-span-3">
+															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
+																{t("customer.detail.profile.taxIdentification")}
+															</label>
+															<Input
+																value={profileFormData.taxIdentificationNumber}
+																onChange={e =>
+																	setProfileFormData(prev => ({ ...prev, taxIdentificationNumber: e.target.value }))
+																}
+																maxLength={64}
+															/>
+														</div>
 													</div>
 												</section>
 												<section className="border-t border-slate-100 pt-8">
@@ -1577,6 +1672,24 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															{customer.incorporationCountry
 																? `${formatNationalityLabel(customer.incorporationCountry, i18n.language)} (${customer.incorporationCountry})`
 																: "—"}
+														</dd>
+													</div>
+													<div>
+														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+															{t("customer.detail.profile.taxResidence")}
+														</dt>
+														<dd className="mt-1.5 text-sm font-normal leading-relaxed text-slate-800">
+															{customer.taxResidenceCountry
+																? `${formatNationalityLabel(customer.taxResidenceCountry, i18n.language)} (${customer.taxResidenceCountry})`
+																: "—"}
+														</dd>
+													</div>
+													<div>
+														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+															{t("customer.detail.profile.taxIdentification")}
+														</dt>
+														<dd className="mt-1.5 text-sm font-normal leading-relaxed text-slate-800">
+															{customer.taxIdentificationNumber?.trim() || "—"}
 														</dd>
 													</div>
 													<div>
@@ -1822,6 +1935,43 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																	</option>
 																))}
 															</select>
+														</div>
+														<div>
+															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
+																{t("customer.detail.profile.taxResidence")} <span className="text-red-500">*</span>
+															</label>
+															<select
+																value={businessProfileFormData.taxResidenceCountry}
+																onChange={e =>
+																	setBusinessProfileFormData(prev => ({
+																		...prev,
+																		taxResidenceCountry: e.target.value
+																	}))
+																}
+																className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+															>
+																<option value="">{t("customer.detail.profile.nationalityPlaceholder")}</option>
+																{nationalityOptions.map(opt => (
+																	<option key={opt.code} value={opt.code}>
+																		{opt.label} ({opt.code})
+																	</option>
+																))}
+															</select>
+														</div>
+														<div>
+															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
+																{t("customer.detail.profile.taxIdentification")}
+															</label>
+															<Input
+																value={businessProfileFormData.taxIdentificationNumber}
+																onChange={e =>
+																	setBusinessProfileFormData(prev => ({
+																		...prev,
+																		taxIdentificationNumber: e.target.value
+																	}))
+																}
+																maxLength={64}
+															/>
 														</div>
 														<div>
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
@@ -2317,6 +2467,24 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																		{customer.incorporationCountry
 																			? `${formatNationalityLabel(customer.incorporationCountry, i18n.language)} (${customer.incorporationCountry})`
 																			: "—"}
+																	</dd>
+																</div>
+																<div>
+																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+																		{t("customer.detail.profile.taxResidence")}
+																	</dt>
+																	<dd className="mt-1 text-sm font-normal leading-relaxed text-slate-800">
+																		{customer.taxResidenceCountry
+																			? `${formatNationalityLabel(customer.taxResidenceCountry, i18n.language)} (${customer.taxResidenceCountry})`
+																			: "—"}
+																	</dd>
+																</div>
+																<div>
+																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+																		{t("customer.detail.profile.taxIdentification")}
+																	</dt>
+																	<dd className="mt-1 text-sm font-normal leading-relaxed text-slate-800">
+																		{customer.taxIdentificationNumber?.trim() || "—"}
 																	</dd>
 																</div>
 															</dl>

@@ -90,6 +90,8 @@ export default function NewCustomerPage() {
 		birthDate: "",
 		maritalStatus: "",
 		nationality: "",
+		taxResidenceCountry: "",
+		taxIdentificationNumber: "",
 		professionalActivity: "",
 		incomeSource: ""
 	});
@@ -143,6 +145,14 @@ export default function NewCustomerPage() {
 		if (!profile.birthDate) return t("customer.wizard.validation.birthDateRequired");
 		if (!profile.maritalStatus) return t("customer.wizard.validation.maritalStatusRequired");
 		if (!profile.nationality?.trim()) return t("customer.wizard.validation.nationalityRequired");
+		const tax = profile.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
+		if (!tax) return t("customer.detail.profile.taxResidenceRequired");
+		if (!/^[A-Z]{2}$/.test(tax) || !nationalityOptions.some(o => o.code === tax)) {
+			return t("customer.detail.profile.taxResidenceInvalid");
+		}
+		if (profile.taxIdentificationNumber.trim().length > 64) {
+			return t("customer.detail.profile.taxIdTooLong");
+		}
 		if (!profile.professionalActivity?.trim()) return t("customer.wizard.validation.professionalActivityRequired");
 		if (profile.professionalActivity.trim().length > 255) {
 			return t("customer.wizard.validation.professionalActivityTooLong");
@@ -200,11 +210,14 @@ export default function NewCustomerPage() {
 		});
 		const id = created.id;
 
+		const taxCc = profile.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
 		const updatePayload: UpdateCustomerRequest = {
 			gender: profile.gender,
 			birthDate: profile.birthDate,
 			maritalStatus: profile.maritalStatus,
 			nationality: profile.nationality.trim().toUpperCase(),
+			taxResidenceCountry: taxCc,
+			taxIdentificationNumber: profile.taxIdentificationNumber.trim() ? profile.taxIdentificationNumber.trim() : null,
 			professionalActivity: profile.professionalActivity.trim(),
 			incomeSource: profile.incomeSource.trim() ? profile.incomeSource.trim() : null
 		};
@@ -463,6 +476,31 @@ export default function NewCustomerPage() {
 						</div>
 						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">
+								{t("customer.detail.profile.taxResidence")} <span className="text-red-500">*</span>
+							</label>
+							<select
+								className="w-full px-3 py-2 border border-gray-300 rounded-md"
+								value={profile.taxResidenceCountry}
+								onChange={e => setProfile(p => ({ ...p, taxResidenceCountry: e.target.value }))}
+							>
+								<option value="">{t("customer.wizard.profile.nationalityPlaceholder")}</option>
+								{nationalityOptions.map(opt => (
+									<option key={opt.code} value={opt.code}>
+										{opt.label} ({opt.code})
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="md:col-span-2">
+							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.detail.profile.taxIdentification")}</label>
+							<Input
+								value={profile.taxIdentificationNumber}
+								onChange={e => setProfile(p => ({ ...p, taxIdentificationNumber: e.target.value }))}
+								maxLength={64}
+							/>
+						</div>
+						<div className="md:col-span-2">
+							<label className="block text-sm font-medium text-gray-700 mb-2">
 								{t("customer.wizard.profile.professionalActivity")} <span className="text-red-500">*</span>
 							</label>
 							<Input
@@ -714,6 +752,11 @@ export default function NewCustomerPage() {
 								label={t("customer.wizard.recap.nationality")}
 								value={formatNationalityLabel(profile.nationality, i18n.language)}
 							/>
+							<RecapRow
+								label={t("customer.wizard.recap.taxResidence")}
+								value={formatNationalityLabel(profile.taxResidenceCountry, i18n.language)}
+							/>
+							<RecapRow label={t("customer.wizard.recap.taxIdentification")} value={profile.taxIdentificationNumber.trim() || "—"} />
 							<RecapRow label={t("customer.wizard.recap.professionalActivity")} value={profile.professionalActivity.trim()} />
 							<RecapRow label={t("customer.wizard.recap.incomeSource")} value={profile.incomeSource.trim()} />
 						</dl>

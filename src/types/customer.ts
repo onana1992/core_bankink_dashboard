@@ -54,6 +54,10 @@ export interface Customer {
 	maritalStatus?: string | null;
 	/** Nationalité ISO 3166-1 alpha-2 (ex. CM, FR) */
 	nationality?: string | null;
+	/** Résidence fiscale (ISO-3166-1 alpha-2) */
+	taxResidenceCountry?: string | null;
+	/** NIF / TIN (optionnel) */
+	taxIdentificationNumber?: string | null;
 	/** Personne physique : activité professionnelle */
 	professionalActivity?: string | null;
 	/** Personne physique : source de revenus */
@@ -152,6 +156,8 @@ export interface UpdateCustomerRequest {
 	maritalStatus?: string | null;
 	/** ISO 3166-1 alpha-2 */
 	nationality?: string | null;
+	taxResidenceCountry?: string | null;
+	taxIdentificationNumber?: string | null;
 	/** Personne physique : activité professionnelle */
 	professionalActivity?: string | null;
 	/** Personne physique : source de revenus */
