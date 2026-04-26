@@ -112,6 +112,7 @@ export default function NewBusinessCustomerPage() {
 
 	const [statutesFile, setStatutesFile] = useState<File | null>(null);
 	const [kbisFile, setKbisFile] = useState<File | null>(null);
+	const [poaFile, setPoaFile] = useState<File | null>(null);
 	const [idDocType, setIdDocType] = useState<"ID_CARD" | "PASSPORT">("ID_CARD");
 	const [identityDocumentNumber, setIdentityDocumentNumber] = useState("");
 	const [identityDocumentExpiresOn, setIdentityDocumentExpiresOn] = useState("");
@@ -195,6 +196,7 @@ export default function NewBusinessCustomerPage() {
 			if (!identityDocumentExpiresOn.trim()) return t("customer.wizard.validation.identityDocumentExpiresRequired");
 			if (Number.isNaN(Date.parse(identityDocumentExpiresOn))) return t("customer.wizard.validation.identityDocumentExpiresInvalid");
 			if (!statutesFile) return t("customer.wizard.business.validation.statutesRequired");
+			if (!poaFile) return t("customer.wizard.validation.proofOfAddressFileRequired");
 			if (idDocType === "ID_CARD") {
 				if (!idRectoFile || !isImageFile(idRectoFile)) return t("customer.wizard.validation.idRectoRequired");
 				if (idVersoFile && !isImageFile(idVersoFile)) return t("customer.wizard.validation.idCardImageRequired");
@@ -315,6 +317,7 @@ export default function NewBusinessCustomerPage() {
 		if (kbisFile) {
 			await customersApi.uploadDocument(id, "REGISTRATION_DOC", kbisFile);
 		}
+		await customersApi.uploadDocument(id, "PROOF_OF_ADDRESS", poaFile!);
 
 		const idMeta = {
 			identityDocumentNumber: identityDocumentNumber.trim(),
@@ -822,6 +825,12 @@ export default function NewBusinessCustomerPage() {
 						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.documents.kbisOptional")}</label>
 						<input type="file" className="text-sm w-full" onChange={e => setKbisFile(e.target.files?.[0] ?? null)} />
 					</div>
+					<div>
+						<label className="block text-sm font-medium text-gray-700 mb-2">
+							{t("customer.wizard.business.documents.proofOfSeat")} <span className="text-red-500">*</span>
+						</label>
+						<input type="file" className="text-sm w-full" onChange={e => setPoaFile(e.target.files?.[0] ?? null)} />
+					</div>
 					<div className="border-t border-gray-100 pt-4 space-y-3">
 						<label className="block text-sm font-medium text-gray-700">{t("customer.wizard.business.documents.repId")} *</label>
 						<div className="flex flex-wrap gap-3">
@@ -897,6 +906,7 @@ export default function NewBusinessCustomerPage() {
 						<dl className="rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2">
 							<RecapRow label={t("customer.wizard.business.documents.statutes")} value={statutesFile?.name ?? ""} />
 							<RecapRow label={t("customer.wizard.business.documents.kbisOptional")} value={kbisFile?.name ?? ""} />
+							<RecapRow label={t("customer.wizard.business.documents.proofOfSeat")} value={poaFile?.name ?? ""} />
 							<RecapRow label={t("customer.wizard.recap.idDocumentType")} value={idDocType} />
 						</dl>
 					</section>

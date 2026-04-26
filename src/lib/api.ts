@@ -11,6 +11,8 @@ import type {
 	KycCheck,
 	KycCheckResult,
 	KycCheckType,
+	KycGeographyRiskResponse,
+	KycOnboardingRiskAssessmentResponse,
 	Document,
 	DocumentType,
 	IdCardSide,
@@ -521,13 +523,46 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
+	async getKycGeographyRisk(id: number | string): Promise<KycGeographyRiskResponse> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/geography-risk`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<KycGeographyRiskResponse>(res);
+	},
+
+	async getKycRiskAssessment(
+		id: number | string,
+		params: { pep?: boolean } = {}
+	): Promise<KycOnboardingRiskAssessmentResponse> {
+		const usp = new URLSearchParams();
+		if (typeof params.pep === "boolean") usp.set("pep", String(params.pep));
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/customers/${id}/kyc/risk-assessment${q ? `?${q}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" }
+		);
+		return handleJsonResponse<KycOnboardingRiskAssessmentResponse>(res);
+	},
+
 	async verifyKyc(
 		id: number | string,
-		params: { riskScore?: number; pep?: boolean } = {}
+		params: {
+			riskScore?: number;
+			pep?: boolean;
+			riskScoreOverrideReason?: string;
+			/** Si true, le backend applique uniquement le score moteur (paramètre riskScore omis). */
+			useEngineRiskScore?: boolean;
+		} = {}
 	): Promise<Customer> {
 		const usp = new URLSearchParams();
-		if (typeof params.riskScore === "number") usp.set("riskScore", String(params.riskScore));
+		if (!params.useEngineRiskScore && typeof params.riskScore === "number") {
+			usp.set("riskScore", String(params.riskScore));
+		}
 		if (typeof params.pep === "boolean") usp.set("pep", String(params.pep));
+		if (params.riskScoreOverrideReason && params.riskScoreOverrideReason.trim()) {
+			usp.set("riskScoreOverrideReason", params.riskScoreOverrideReason.trim());
+		}
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/verify?${usp.toString()}`, {
 			method: "POST",
 			headers: getAuthHeaders()

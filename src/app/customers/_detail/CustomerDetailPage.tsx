@@ -13,6 +13,14 @@ import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
 import { ANNUAL_REVENUE_BAND_OPTIONS, LEGAL_FORM_OPTIONS } from "@/data/legalFormOptions";
+import { NACE_ACTIVITY_CODE_SUGGESTIONS } from "@/data/naceActivitySuggestions";
+import { isValidNaceClassCode, normalizeNaceClassCode } from "@/lib/naceActivityCode";
+import {
+	isPersonIncomeSourceValue,
+	isPersonProfessionValue,
+	PERSON_INCOME_SOURCE_VALUES,
+	PERSON_PROFESSION_VALUES
+} from "@/types/personProfileOptions";
 import type {
 	AddAddressRequest,
 	AddRelatedPersonRequest,
@@ -24,6 +32,8 @@ import type {
 	DocumentType,
 	IdCardSide,
 	KycCheck,
+	KycGeographyRiskResponse,
+	KycOnboardingRiskAssessmentResponse,
 	RelatedPerson,
 	RelatedPersonRole,
 	Account,
@@ -39,6 +49,7 @@ type BusinessProfileFormData = {
 	incorporationCountry: string;
 	taxResidenceCountry: string;
 	taxIdentificationNumber: string;
+	activityCode: string;
 	activityDescription: string;
 	signingAuthorityNote: string;
 	websiteUrl: string;
@@ -59,6 +70,7 @@ function emptyBusinessProfileForm(): BusinessProfileFormData {
 		incorporationCountry: "",
 		taxResidenceCountry: "",
 		taxIdentificationNumber: "",
+		activityCode: "",
 		activityDescription: "",
 		signingAuthorityNote: "",
 		websiteUrl: "",
@@ -85,6 +97,7 @@ function customerToBusinessProfileForm(c: Customer): BusinessProfileFormData {
 		incorporationCountry: c.incorporationCountry ?? "",
 		taxResidenceCountry: c.taxResidenceCountry ?? "",
 		taxIdentificationNumber: c.taxIdentificationNumber ?? "",
+		activityCode: c.activityCode ?? "",
 		activityDescription: c.activityDescription ?? "",
 		signingAuthorityNote: c.signingAuthorityNote ?? "",
 		websiteUrl: stripScheme(c.websiteUrl),
@@ -157,8 +170,49 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [reviewStatusSubmitting, setReviewStatusSubmitting] = useState<null | "email" | "profile" | "identity">(null);
 	const [verifyRisk, setVerifyRisk] = useState<number>(20);
 	const [verifyPep, setVerifyPep] = useState<boolean>(false);
+	const [verifyRiskOverrideReason, setVerifyRiskOverrideReason] = useState<string>("");
+	const [kycGeographyRisk, setKycGeographyRisk] = useState<KycGeographyRiskResponse | null>(null);
+	const [kycOnboardingRisk, setKycOnboardingRisk] = useState<KycOnboardingRiskAssessmentResponse | null>(null);
 	const [rejectionReason, setRejectionReason] = useState<string>("");
 	const [showRejectForm, setShowRejectForm] = useState<boolean>(false);
+
+	const kycAllLineReviewsApproved = useMemo(
+		() =>
+			customer != null &&
+			customer.emailReviewStatus === "APPROVED" &&
+			customer.profileReviewStatus === "APPROVED" &&
+			customer.identityReviewStatus === "APPROVED",
+		[customer]
+	);
+	/** Même règle que l’API : vérification ou rejet KYC final uniquement si les 3 revues sont APPROVED. */
+	const canFinalizeKyc = customer != null && customer.status === "PENDING_REVIEW" && kycAllLineReviewsApproved;
+
+	const kycRiskDeviationExceedsThreshold = useMemo(() => {
+		if (kycOnboardingRisk == null) return false;
+		return Math.abs(verifyRisk - kycOnboardingRisk.proposedRiskScore) > 10;
+	}, [kycOnboardingRisk, verifyRisk]);
+
+	useEffect(() => {
+		if (!id || customer?.status !== "PENDING_REVIEW") {
+			setKycOnboardingRisk(null);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			try {
+				const a = await customersApi.getKycRiskAssessment(id, { pep: verifyPep });
+				if (!cancelled) {
+					setKycOnboardingRisk(a);
+					setVerifyRisk(a.proposedRiskScore);
+				}
+			} catch {
+				if (!cancelled) setKycOnboardingRisk(null);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [id, customer?.status, verifyPep]);
 
 	// RelatedPerson states
 	const [rpForm, setRpForm] = useState<AddRelatedPersonRequest>({
@@ -306,6 +360,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		setError(null);
 		setSelfieError(false);
 		setSelfieUrl(null);
+		setKycGeographyRisk(null);
 		try {
 			const [customerData, addressesData, documentsData] = await Promise.all([
 				customersApi.get(id),
@@ -315,6 +370,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setCustomer(customerData);
 			setAddresses(addressesData);
 			setDocuments(documentsData);
+			try {
+				const geo = await customersApi.getKycGeographyRisk(id);
+				setKycGeographyRisk(geo);
+			} catch {
+				setKycGeographyRisk(null);
+			}
 			
 			// Charger l'image du selfie si disponible
 			const selfieDoc = documentsData.find(doc => doc.type === "SELFIE");
@@ -419,6 +480,18 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				setToast({ message: t("customer.detail.profile.professionalActivityTooLong"), type: "error" });
 				return;
 			}
+			if (!isPersonProfessionValue(profileFormData.professionalActivity.trim())) {
+				setToast({ message: t("customer.detail.profile.professionalActivityInvalid"), type: "error" });
+				return;
+			}
+			if (!profileFormData.incomeSource.trim()) {
+				setToast({ message: t("customer.detail.profile.incomeSourceRequired"), type: "error" });
+				return;
+			}
+			if (!isPersonIncomeSourceValue(profileFormData.incomeSource.trim())) {
+				setToast({ message: t("customer.detail.profile.incomeSourceInvalid"), type: "error" });
+				return;
+			}
 			if (profileFormData.incomeSource.length > 500) {
 				setToast({ message: t("customer.detail.profile.incomeSourceTooLong"), type: "error" });
 				return;
@@ -451,7 +524,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						? profileFormData.taxIdentificationNumber.trim()
 						: null,
 					professionalActivity: profileFormData.professionalActivity.trim(),
-					incomeSource: profileFormData.incomeSource.trim() ? profileFormData.incomeSource.trim() : null
+					incomeSource: profileFormData.incomeSource.trim()
 				});
 				setCustomer(updated);
 				setIsEditingProfile(false);
@@ -497,6 +570,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		}
 		if (b.taxIdentificationNumber.trim().length > 64) {
 			setToast({ message: t("customer.detail.profile.taxIdTooLong"), type: "error" });
+			return;
+		}
+		if (!b.activityCode.trim()) {
+			setToast({ message: t("customer.wizard.business.validation.activityNaceCodeRequired"), type: "error" });
+			return;
+		}
+		if (!isValidNaceClassCode(b.activityCode)) {
+			setToast({ message: t("customer.wizard.business.validation.activityNaceCodeInvalid"), type: "error" });
 			return;
 		}
 		if (!b.activityDescription.trim()) {
@@ -845,13 +926,28 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setKycSubmitting(null);
 		}
 	}
-	async function doVerifyKyc() {
+	async function doVerifyKyc(options?: { useEngineRiskScore?: boolean }) {
 		if (!id) return;
 		setKycSubmitting("verify");
 		setError(null);
 		try {
-			const c = await customersApi.verifyKyc(id, { riskScore: verifyRisk, pep: verifyPep });
+			if (
+				!options?.useEngineRiskScore &&
+				kycRiskDeviationExceedsThreshold &&
+				verifyRiskOverrideReason.trim().length < 4
+			) {
+				setError(t("customer.detail.kyc.verify.overrideReasonRequired"));
+				return;
+			}
+			const c = await customersApi.verifyKyc(id, {
+				...(options?.useEngineRiskScore ? { useEngineRiskScore: true } : { riskScore: verifyRisk }),
+				pep: verifyPep,
+				...(!options?.useEngineRiskScore && kycRiskDeviationExceedsThreshold
+					? { riskScoreOverrideReason: verifyRiskOverrideReason.trim() }
+					: {})
+			});
 			setCustomer(c);
+			setVerifyRiskOverrideReason("");
 		} catch (e: any) {
 			const errorMessage = e?.message ?? t("customer.detail.kyc.verify.error");
 			setError(errorMessage);
@@ -1164,6 +1260,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					onClose={() => setToast(null)}
 				/>
 			)}
+			<datalist id="nace-suggestions-customer-detail">
+				{NACE_ACTIVITY_CODE_SUGGESTIONS.map(code => (
+					<option key={code} value={code} />
+				))}
+			</datalist>
 
 			{/* En-tête */}
 			<div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-md shadow-slate-200/50 sm:p-7">
@@ -1431,7 +1532,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															{t("customer.detail.profile.professionalActivity")}
 														</dt>
 														<dd className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-															{customer.professionalActivity?.trim() || "—"}
+															{(() => {
+																const v = customer.professionalActivity?.trim() ?? "";
+																if (!v) return "—";
+																return isPersonProfessionValue(v)
+																	? t(`customer.wizard.profile.profession.${v}`)
+																	: v;
+															})()}
 														</dd>
 													</div>
 													<div className="sm:col-span-2 lg:col-span-3">
@@ -1439,7 +1546,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															{t("customer.detail.profile.incomeSource")}
 														</dt>
 														<dd className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
-															{customer.incomeSource?.trim() || "—"}
+															{(() => {
+																const v = customer.incomeSource?.trim() ?? "";
+																if (!v) return "—";
+																return isPersonIncomeSourceValue(v)
+																	? t(`customer.wizard.profile.incomeSourceOption.${v}`)
+																	: v;
+															})()}
 														</dd>
 													</div>
 												</dl>
@@ -1578,23 +1691,37 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
 																{t("customer.detail.profile.professionalActivity")} <span className="text-red-500">*</span>
 															</label>
-															<Input
+															<select
 																value={profileFormData.professionalActivity}
 																onChange={e =>
 																	setProfileFormData(prev => ({ ...prev, professionalActivity: e.target.value }))
 																}
-																maxLength={255}
-															/>
+																className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+															>
+																<option value="">{t("customer.wizard.profile.selectFromList")}</option>
+																{PERSON_PROFESSION_VALUES.map(code => (
+																	<option key={code} value={code}>
+																		{t(`customer.wizard.profile.profession.${code}`)}
+																	</option>
+																))}
+															</select>
 														</div>
 														<div className="sm:col-span-2 lg:col-span-3">
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">
-																{t("customer.detail.profile.incomeSource")}
+																{t("customer.detail.profile.incomeSource")} <span className="text-red-500">*</span>
 															</label>
-															<Input
+															<select
 																value={profileFormData.incomeSource}
 																onChange={e => setProfileFormData(prev => ({ ...prev, incomeSource: e.target.value }))}
-																maxLength={500}
-															/>
+																className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+															>
+																<option value="">{t("customer.wizard.profile.selectFromList")}</option>
+																{PERSON_INCOME_SOURCE_VALUES.map(code => (
+																	<option key={code} value={code}>
+																		{t(`customer.wizard.profile.incomeSourceOption.${code}`)}
+																	</option>
+																))}
+															</select>
 														</div>
 													</div>
 												</section>
@@ -1735,6 +1862,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											</div>
 											<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
 												<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
+													<div>
+														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+															{t("customer.detail.business.fields.activityCode")}
+														</dt>
+														<dd className="mt-1.5 text-sm font-medium leading-relaxed text-slate-800">
+															{customer.activityCode?.trim() || "—"}
+														</dd>
+													</div>
 													<div className="sm:col-span-2 lg:col-span-3">
 														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
 															{t("customer.detail.business.fields.activityDescription")}
@@ -2007,6 +2142,24 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</div>
 												<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
 													<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
+														<div>
+															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
+																{t("customer.detail.business.fields.activityCode")} <span className="text-red-500">*</span>
+															</label>
+															<Input
+																value={businessProfileFormData.activityCode}
+																onChange={e =>
+																	setBusinessProfileFormData(prev => ({
+																		...prev,
+																		activityCode: e.target.value
+																	}))
+																}
+																list="nace-suggestions-customer-detail"
+																maxLength={32}
+																placeholder="62.01"
+																autoComplete="off"
+															/>
+														</div>
 														<div className="sm:col-span-2 lg:col-span-3">
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
 																{t("customer.detail.business.fields.activityDescription")} <span className="text-red-500">*</span>
@@ -2509,6 +2662,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														</div>
 														<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
 															<dl className="grid grid-cols-1 gap-4">
+																<div>
+																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
+																		{t("customer.detail.business.fields.activityCode")}
+																	</dt>
+																	<dd className="mt-1 text-sm font-medium leading-relaxed text-slate-800">
+																		{customer.activityCode?.trim() || "—"}
+																	</dd>
+																</div>
 																<div>
 																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
 																		{t("customer.detail.business.fields.activityDescription")}
@@ -3648,6 +3809,92 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									<span className="text-sm text-slate-600">{t("customer.detail.kyc.currentStatus")}</span>
 									<Badge variant={statusBadgeVariant(customer.status)}>{customer.status}</Badge>
 								</div>
+								{kycGeographyRisk && (
+									<div
+										className={`mb-5 rounded-lg border px-4 py-3 text-sm ${
+											kycGeographyRisk.geographyRiskPoints > 0
+												? "border-amber-200 bg-amber-50 text-amber-950"
+												: "border-slate-200 bg-slate-50 text-slate-700"
+										}`}
+									>
+										<h4 className="font-medium text-black mb-1">{t("customer.detail.kyc.geographyRisk.title")}</h4>
+										{kycGeographyRisk.geographyRiskPoints === 0 ? (
+											<p className="text-xs text-slate-600">{t("customer.detail.kyc.geographyRisk.standardHint")}</p>
+										) : (
+											<>
+												<p className="text-xs mb-2">
+													{t("customer.detail.kyc.geographyRisk.points")}: {kycGeographyRisk.geographyRiskPoints} —{" "}
+													{t("customer.detail.kyc.geographyRisk.floor")}: {kycGeographyRisk.suggestedRiskScoreFloor}/100
+												</p>
+												<ul className="text-xs space-y-0.5 mb-2 list-disc pl-4">
+													{kycGeographyRisk.contributions.map((c, i) => (
+														<li key={`${c.source}-${c.countryCode}-${i}`}>
+															{t("customer.detail.kyc.geographyRisk.line", {
+																source: c.source,
+																country: c.countryCode,
+																tier: c.tier,
+																points: c.points
+															})}
+														</li>
+													))}
+												</ul>
+												<Button
+													type="button"
+													size="sm"
+													variant="outline"
+													className="text-xs h-7"
+													onClick={() => setVerifyRisk(kycGeographyRisk.suggestedRiskScoreFloor)}
+												>
+													{t("customer.detail.kyc.geographyRisk.apply")}
+												</Button>
+											</>
+										)}
+									</div>
+								)}
+								{customer.status === "PENDING_REVIEW" && kycOnboardingRisk && (
+									<div className="mb-5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
+										<h4 className="font-medium text-black mb-2">{t("customer.detail.kyc.onboardingRisk.title")}</h4>
+										<p className="text-xs text-slate-600 mb-2">
+											{t("customer.detail.kyc.onboardingRisk.proposed")}:{" "}
+											<strong>{kycOnboardingRisk.proposedRiskScore}</strong>/100 — {t("customer.detail.kyc.onboardingRisk.band")}:{" "}
+											<strong>{kycOnboardingRisk.riskBand}</strong> — {t("customer.detail.kyc.onboardingRisk.algorithm")}:{" "}
+											<code className="text-[11px] bg-slate-100 px-1 rounded">{kycOnboardingRisk.algorithmVersion}</code>
+										</p>
+										<ul className="text-xs space-y-0.5 mb-2 list-disc pl-4 text-slate-700">
+											{kycOnboardingRisk.components.map((c, i) => (
+												<li key={`${c.code}-${i}`}>
+													{t("customer.detail.kyc.onboardingRisk.componentLine", {
+														code: c.code,
+														label: c.label,
+														floor: c.floorAfterComponent,
+														detail: c.detail
+													})}
+												</li>
+											))}
+										</ul>
+										<div className="flex flex-wrap gap-2">
+											<Button
+												type="button"
+												size="sm"
+												variant="outline"
+												className="text-xs h-7"
+												onClick={() => setVerifyRisk(kycOnboardingRisk.proposedRiskScore)}
+											>
+												{t("customer.detail.kyc.onboardingRisk.applyProposed")}
+											</Button>
+											<Button
+												type="button"
+												size="sm"
+												variant="outline"
+												className="text-xs h-7 border-blue-200 text-blue-800"
+												disabled={kycSubmitting !== null || !canFinalizeKyc}
+												onClick={() => void doVerifyKyc({ useEngineRiskScore: true })}
+											>
+												{t("customer.detail.kyc.onboardingRisk.verifyWithEngine")}
+											</Button>
+										</div>
+									</div>
+								)}
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
 									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
 										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.submit.title")}</h4>
@@ -3659,6 +3906,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
 										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.verify.title")}</h4>
 										<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.description")}</p>
+										{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved && (
+											<p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-md px-2 py-1.5 mb-3">
+												{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+											</p>
+										)}
 										<div className="space-y-2 mb-3">
 											<label className="flex items-center gap-2 text-xs">
 												<span>{t("customer.detail.kyc.verify.riskScore")}</span>
@@ -3668,16 +3920,45 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												<input type="checkbox" checked={verifyPep} onChange={e => setVerifyPep(e.target.checked)} className="rounded" />
 												{t("customer.detail.kyc.verify.pepFlag")}
 											</label>
+											{kycRiskDeviationExceedsThreshold && (
+												<label className="flex flex-col gap-1 text-xs">
+													<span className="text-amber-900">{t("customer.detail.kyc.verify.overrideReason")}</span>
+													<textarea
+														value={verifyRiskOverrideReason}
+														onChange={e => setVerifyRiskOverrideReason(e.target.value)}
+														placeholder={t("customer.detail.kyc.verify.overrideReasonPlaceholder")}
+														className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs resize-none min-h-[56px]"
+														rows={2}
+													/>
+												</label>
+											)}
 										</div>
-										<Button onClick={doVerifyKyc} disabled={kycSubmitting !== null || customer.status === "VERIFIED"} size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-50">
+										<Button
+											onClick={() => void doVerifyKyc()}
+											disabled={kycSubmitting !== null || !canFinalizeKyc}
+											size="sm"
+											variant="outline"
+											className="border-green-300 text-green-700 hover:bg-green-50"
+										>
 											{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
 										</Button>
 									</div>
 									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
 										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.reject.title")}</h4>
 										<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
+										{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved && (
+											<p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-md px-2 py-1.5 mb-3">
+												{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+											</p>
+										)}
 										{!showRejectForm ? (
-											<Button variant="outline" size="sm" onClick={() => setShowRejectForm(true)} disabled={kycSubmitting !== null || customer.status === "VERIFIED"} className="border-red-300 text-red-700 hover:bg-red-50">
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setShowRejectForm(true)}
+												disabled={kycSubmitting !== null || !canFinalizeKyc}
+												className="border-red-300 text-red-700 hover:bg-red-50"
+											>
 												{t("customer.detail.kyc.reject.button")}
 											</Button>
 										) : (
@@ -3690,7 +3971,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													rows={2}
 												/>
 												<div className="flex gap-2">
-													<Button size="sm" variant="outline" onClick={doRejectKyc} disabled={kycSubmitting !== null || !rejectionReason.trim() || customer.status === "VERIFIED"} className="border-red-300 text-red-700 hover:bg-red-50">
+													<Button
+														size="sm"
+														variant="outline"
+														onClick={doRejectKyc}
+														disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
+														className="border-red-300 text-red-700 hover:bg-red-50"
+													>
 														{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
 													</Button>
 													<Button size="sm" variant="ghost" onClick={() => { setShowRejectForm(false); setRejectionReason(""); }} disabled={kycSubmitting !== null}>

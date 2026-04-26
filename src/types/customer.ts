@@ -29,6 +29,35 @@ export interface ComplianceTask {
 	resolvedByUserId?: number | null;
 }
 
+/** Contribution pays (référentiel) pour le plancher de score risque KYC. */
+export interface KycGeographyRiskLine {
+	source: string;
+	countryCode: string;
+	tier: string;
+	points: number;
+}
+
+export interface KycGeographyRiskResponse {
+	geographyRiskPoints: number;
+	suggestedRiskScoreFloor: number;
+	contributions: KycGeographyRiskLine[];
+}
+
+/** Pilier ou sous-règle du moteur de score onboarding (phase 2). */
+export interface KycOnboardingRiskComponent {
+	code: string;
+	label: string;
+	floorAfterComponent: number;
+	detail: string;
+}
+
+export interface KycOnboardingRiskAssessmentResponse {
+	proposedRiskScore: number;
+	riskBand: string;
+	algorithmVersion: string;
+	components: KycOnboardingRiskComponent[];
+}
+
 export interface Customer {
 	id: number;
 	type: CustomerType;
