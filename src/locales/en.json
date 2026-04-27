@@ -609,14 +609,17 @@
 			"wrongRouteOpenButton": "Open the correct record",
 			"notFound": "Customer not found",
 			"tabs": {
-				"profile": "Profile details",
 				"overview": "Overview",
+				"dossier": "Customer file",
+				"pieces": "Documents and identity",
+				"kycReview": "KYC review and decision",
+				"compliance": "Compliance and monitoring",
+				"accounts": "Accounts",
+				"profile": "Profile details",
 				"documents": "Documents",
 				"addresses": "Addresses",
-				"relatedPersons": "Related Persons",
-				"kycActions": "KYC Actions",
-				"compliance": "Compliance",
-				"accounts": "Accounts"
+				"relatedPersons": "Related persons",
+				"kycActions": "KYC actions"
 			},
 			"photo": {
 				"title": "Customer Photo",
@@ -833,6 +836,26 @@
 				"profileReview": "Profile review",
 				"identityReview": "Identity review",
 				"clientStatus": "Client status",
+				"decisionPanel": {
+					"title": "KYC decision",
+					"subtitle": "Recommended flow: line reviews → risk → verify or reject."
+				},
+				"workflow": {
+					"stepA": {
+						"title": "Line reviews",
+						"description": "Approve or reject each item before the final decision.",
+						"badgeOk": "Ready for next step"
+					},
+					"stepB": {
+						"title": "Risk assessment",
+						"description": "Review the onboarding risk engine proposal and apply the score if needed.",
+						"engineWhenPending": "Engine and proposed score are available when the file is pending review."
+					},
+					"stepC": {
+						"title": "Final decision",
+						"description": "Only when all three line reviews are approved and the file is pending review."
+					}
+				},
 				"currentStatus": "Current status",
 				"approveButton": "Approve",
 				"rejectButton": "Reject",
@@ -844,20 +867,20 @@
 					"success": "KYC submitted successfully",
 					"error": "Error submitting KYC"
 				},
-				"geographyRisk": {
-					"title": "Geographic risk (internal referential)",
-					"standardHint": "No elevated country exposure under the loaded referential.",
-					"points": "Country contribution (max.)",
-					"floor": "Suggested minimum risk score",
-					"apply": "Apply to score",
-					"line": "{{source}} — {{country}} ({{tier}}, +{{points}})"
-				},
 				"onboardingRisk": {
-					"title": "Onboarding risk engine (phase 2)",
+					"title": "Onboarding risk engine",
+					"phasePill": "Phase 2",
+					"subtitle": "Score from country referential, latest KYC checks (sanctions, PEP lists, identity), and analyst PEP flag.",
 					"proposed": "Proposed score",
-					"band": "Band",
+					"band": "Risk band",
+					"bandValue": {
+						"LOW": "Low",
+						"MEDIUM": "Medium",
+						"HIGH": "High"
+					},
 					"algorithm": "Algorithm version",
-					"components": "Score components",
+					"components": "Step-by-step breakdown",
+					"floorShort": "Floor {{n}}",
 					"componentLine": "{{code}} — {{label}}: floor {{floor}} ({{detail}})",
 					"applyProposed": "Apply proposed score",
 					"verifyWithEngine": "Verify with engine score only"

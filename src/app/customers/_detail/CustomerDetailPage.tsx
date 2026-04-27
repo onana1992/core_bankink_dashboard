@@ -32,7 +32,6 @@ import type {
 	DocumentType,
 	IdCardSide,
 	KycCheck,
-	KycGeographyRiskResponse,
 	KycOnboardingRiskAssessmentResponse,
 	RelatedPerson,
 	RelatedPersonRole,
@@ -171,7 +170,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [verifyRisk, setVerifyRisk] = useState<number>(20);
 	const [verifyPep, setVerifyPep] = useState<boolean>(false);
 	const [verifyRiskOverrideReason, setVerifyRiskOverrideReason] = useState<string>("");
-	const [kycGeographyRisk, setKycGeographyRisk] = useState<KycGeographyRiskResponse | null>(null);
 	const [kycOnboardingRisk, setKycOnboardingRisk] = useState<KycOnboardingRiskAssessmentResponse | null>(null);
 	const [rejectionReason, setRejectionReason] = useState<string>("");
 	const [showRejectForm, setShowRejectForm] = useState<boolean>(false);
@@ -261,11 +259,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 	const tabs = [
 		{ id: "overview", label: t("customer.detail.tabs.overview") },
-		{ id: "profil", label: t("customer.detail.tabs.profile") },
-		{ id: "documents", label: t("customer.detail.tabs.documents") },
-		{ id: "addresses", label: t("customer.detail.tabs.addresses") },
-		...(expectedType === "BUSINESS" ? [{ id: "related-persons", label: t("customer.detail.tabs.relatedPersons") }] : []),
-		{ id: "kyc-actions", label: t("customer.detail.tabs.kycActions") },
+		{ id: "dossier", label: t("customer.detail.tabs.dossier") },
+		{ id: "pieces", label: t("customer.detail.tabs.pieces") },
+		{ id: "kycReview", label: t("customer.detail.tabs.kycReview") },
 		{ id: "compliance", label: t("customer.detail.tabs.compliance") },
 		{ id: "accounts", label: t("customer.detail.tabs.accounts") }
 	];
@@ -319,6 +315,21 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		return "success";
 	}
 
+	function onboardingRiskBandBadgeVariant(band: string): "neutral" | "success" | "warning" | "danger" {
+		const b = band?.trim().toUpperCase();
+		if (b === "HIGH") return "danger";
+		if (b === "MEDIUM") return "warning";
+		if (b === "LOW") return "success";
+		return "neutral";
+	}
+
+	function onboardingRiskBandLabel(band: string): string {
+		const b = band?.trim().toUpperCase();
+		const key = `customer.detail.kyc.onboardingRisk.bandValue.${b}`;
+		const translated = t(key);
+		return translated === key ? band : translated;
+	}
+
 	function reviewStatusBadgeVariant(s?: Customer["emailReviewStatus"]): "neutral" | "success" | "warning" | "danger" {
 		if (!s) return "neutral";
 		if (s === "APPROVED") return "success";
@@ -360,7 +371,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		setError(null);
 		setSelfieError(false);
 		setSelfieUrl(null);
-		setKycGeographyRisk(null);
 		try {
 			const [customerData, addressesData, documentsData] = await Promise.all([
 				customersApi.get(id),
@@ -370,13 +380,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setCustomer(customerData);
 			setAddresses(addressesData);
 			setDocuments(documentsData);
-			try {
-				const geo = await customersApi.getKycGeographyRisk(id);
-				setKycGeographyRisk(geo);
-			} catch {
-				setKycGeographyRisk(null);
-			}
-			
+
 			// Charger l'image du selfie si disponible
 			const selfieDoc = documentsData.find(doc => doc.type === "SELFIE");
 			if (selfieDoc) {
@@ -1368,7 +1372,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				</nav>
 
 				<div className="min-h-[280px] bg-gradient-to-b from-white via-white to-slate-50/40 p-6 sm:p-8">
-				{activeTab === "profil" && customer && (
+				{activeTab === "dossier" && customer && (
+					<div className="space-y-10">
 					<div className="space-y-6">
 						<div
 							className={
@@ -2332,10 +2337,536 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 						</div>
 					</div>
+
+					<div className="space-y-6">
+						<div className="grid gap-6 md:grid-cols-2">
+							{/* Carte Adresses */}
+							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+									<div className="flex items-center gap-3">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
+											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+											</svg>
+										</div>
+										<div>
+											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.title")}</h2>
+											<p className="text-xs text-slate-500">{t("customer.detail.addresses.subtitle")}</p>
+										</div>
+									</div>
+								</div>
+								<div className="p-6">
+									{addresses.length === 0 ? (
+										<div className="text-sm text-slate-500 py-4">{t("customer.detail.addresses.none")}</div>
+									) : (
+										<div className="space-y-3">
+											{addresses.map(addr => (
+												<div key={addr.id} className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm">
+													{editingAddressId === addr.id && editAddr ? (
+														<form onSubmit={submitEditAddress} className="space-y-3">
+															<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+																<div>
+																	<label className="block text-xs mb-1">{t("common.type")}</label>
+																	<select
+																		className="w-full rounded-md border bg-white px-2 py-1.5 text-xs"
+																		value={editAddr.type}
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, type: e.target.value as AddAddressRequest["type"] }) : null)}
+																	>
+																		<option value="RESIDENTIAL">RESIDENTIAL</option>
+																		<option value="BUSINESS">BUSINESS</option>
+																		<option value="MAILING">MAILING</option>
+																	</select>
+																</div>
+																<div className="md:col-span-2">
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line1")} *</label>
+																	<Input 
+																		value={editAddr.line1} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line1: e.target.value }) : null)}
+																		required
+																		className="text-xs"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line2")}</label>
+																	<Input 
+																		value={editAddr.line2} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line2: e.target.value }) : null)}
+																		className="text-xs"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.city")} *</label>
+																	<Input 
+																		value={editAddr.city} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, city: e.target.value }) : null)}
+																		required
+																		className="text-xs"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.state")}</label>
+																	<Input 
+																		value={editAddr.state} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, state: e.target.value }) : null)}
+																		className="text-xs"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.postalCode")}</label>
+																	<Input 
+																		value={editAddr.postalCode} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, postalCode: e.target.value }) : null)}
+																		className="text-xs"
+																	/>
+																</div>
+																<div>
+																	<label className="block text-xs mb-1">{t("customer.detail.addresses.country")} *</label>
+																	<Input 
+																		value={editAddr.country} 
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, country: e.target.value }) : null)}
+																		required
+																		className="text-xs"
+																	/>
+																</div>
+																<div className="flex items-center gap-2">
+																	<input
+																		type="checkbox"
+																		checked={Boolean(editAddr.primaryAddress)}
+																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, primaryAddress: e.target.checked }) : null)}
+																	/>
+																	<label className="text-xs">{t("customer.detail.addresses.primaryAddress")}</label>
+																</div>
+															</div>
+															<div className="flex gap-2 pt-2">
+																<Button type="submit" size="sm" disabled={addrSubmitting}>
+																	{addrSubmitting ? t("customer.detail.addresses.saving") : t("customer.detail.addresses.save")}
+																</Button>
+																<Button type="button" variant="outline" size="sm" onClick={cancelEditAddress} disabled={addrSubmitting}>
+																	{t("customer.detail.generalInfo.cancel")}
+																</Button>
+															</div>
+														</form>
+													) : (
+														<>
+															<div className="flex items-start justify-between mb-3">
+																<div className="flex items-center gap-2">
+																	<Badge variant={addr.primaryAddress ? "success" : "neutral"}>
+																		{addr.type}
+																	</Badge>
+																	{addr.primaryAddress && (
+																		<Badge variant="info">{t("customer.detail.addresses.primary")}</Badge>
+																	)}
+																</div>
+																<Button variant="outline" size="sm" onClick={() => startEditAddress(addr)}>
+																	{t("customer.detail.addresses.edit")}
+																</Button>
+															</div>
+															<div className="bg-white rounded-lg p-4 border border-slate-200 space-y-2">
+																<div className="flex items-center gap-2">
+																	<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+																	</svg>
+																	<span className="font-semibold text-slate-900">{addr.line1}</span>
+																</div>
+																{addr.line2 && (
+																	<div className="text-sm text-slate-600 pl-6">{addr.line2}</div>
+																)}
+																<div className="text-sm text-slate-600 pl-6">
+																	{addr.city}
+																	{addr.state && `, ${addr.state}`}
+																	{addr.postalCode && ` ${addr.postalCode}`}
+																</div>
+																<div className="flex items-center gap-2 pl-6">
+																	<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+																	</svg>
+																	<span className="text-xs font-medium text-slate-500">{addr.country}</span>
+																</div>
+															</div>
+														</>
+													)}
+												</div>
+											))}
+										</div>
+									)}
+								</div>
+							</div>
+
+							{/* Formulaire Ajouter une adresse */}
+							<form onSubmit={submitAddress} className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+									<div className="flex items-center gap-3">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
+											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+											</svg>
+										</div>
+										<div>
+											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.add")}</h2>
+											<p className="text-xs text-slate-500">{t("customer.detail.addresses.addSubtitle")}</p>
+										</div>
+									</div>
+								</div>
+								<div className="p-6 space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<label className="block text-sm mb-1">{t("common.type")}</label>
+											<select
+												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+												value={addr.type}
+												onChange={e => setAddr(prev => ({ ...prev, type: e.target.value as AddAddressRequest["type"] }))}
+											>
+												<option value="RESIDENTIAL">RESIDENTIAL</option>
+												<option value="BUSINESS">BUSINESS</option>
+												<option value="MAILING">MAILING</option>
+											</select>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.line1")} *</label>
+											<Input 
+												value={addr.line1} 
+												onChange={e => setAddr(prev => ({ ...prev, line1: e.target.value }))}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.line2")}</label>
+											<Input value={addr.line2} onChange={e => setAddr(prev => ({ ...prev, line2: e.target.value }))} />
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.city")} *</label>
+											<Input 
+												value={addr.city} 
+												onChange={e => setAddr(prev => ({ ...prev, city: e.target.value }))}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.state")}</label>
+											<Input 
+												value={addr.state} 
+												onChange={e => setAddr(prev => ({ ...prev, state: e.target.value }))}
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.postalCode")}</label>
+											<Input 
+												value={addr.postalCode} 
+												onChange={e => setAddr(prev => ({ ...prev, postalCode: e.target.value }))}
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.addresses.country")} *</label>
+											<Input 
+												value={addr.country} 
+												onChange={e => setAddr(prev => ({ ...prev, country: e.target.value }))}
+												placeholder="CM"
+												required
+											/>
+										</div>
+										<div className="flex items-center gap-2">
+											<input
+												id="primaryAddress"
+												type="checkbox"
+												checked={Boolean(addr.primaryAddress)}
+												onChange={e => setAddr(prev => ({ ...prev, primaryAddress: e.target.checked }))}
+											/>
+											<label htmlFor="primaryAddress" className="text-sm">{t("customer.detail.addresses.primaryAddress")}</label>
+										</div>
+									</div>
+									<div className="flex gap-2">
+										<Button type="submit" disabled={addrSubmitting}>
+											{addrSubmitting ? t("customer.detail.addresses.adding") : t("customer.detail.addresses.addButton")}
+										</Button>
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+
+					{expectedType === "BUSINESS" && (
+					<div className="space-y-6">
+						{/* Section Related Persons */}
+						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+								<div className="flex items-center gap-3">
+									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
+										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+										</svg>
+									</div>
+									<div>
+										<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.relatedPersons.title")}</h2>
+										<p className="text-xs text-slate-500">{t("customer.detail.relatedPersons.subtitle")}</p>
+									</div>
+								</div>
+							</div>
+							<div className="p-6">
+								{/* Formulaire d'ajout */}
+								<div className="border-b border-slate-200 pb-4 mb-4">
+									<h3 className="text-sm font-semibold text-slate-600 mb-3">
+										{editingRpId ? t("customer.detail.relatedPersons.edit") : t("customer.detail.relatedPersons.add")}
+									</h3>
+							{editingRpId && editRpForm ? (
+								<form onSubmit={submitEditRelatedPerson} className="space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
+											<select
+												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+												value={editRpForm.role}
+												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, role: e.target.value as RelatedPersonRole }) : null)}
+												required
+											>
+												<option value="UBO">UBO</option>
+												<option value="DIRECTOR">DIRECTOR</option>
+												<option value="SIGNATORY">SIGNATORY</option>
+											</select>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
+											<Input
+												value={editRpForm.firstName}
+												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, firstName: e.target.value }) : null)}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
+											<Input
+												value={editRpForm.lastName}
+												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, lastName: e.target.value }) : null)}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
+											<Input
+												type="date"
+												value={editRpForm.dateOfBirth}
+												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, dateOfBirth: e.target.value }) : null)}
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
+											<Input
+												value={editRpForm.nationalId || ""}
+												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, nationalId: e.target.value }) : null)}
+											/>
+										</div>
+										{editRpForm.role === "UBO" && (
+											<div>
+												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
+												<Input
+													type="number"
+													min="0"
+													max="100"
+													step="0.01"
+													value={editRpForm.ownershipPercent || ""}
+													onChange={e => setEditRpForm(prev => prev ? ({ ...prev, ownershipPercent: e.target.value ? parseFloat(e.target.value) : undefined }) : null)}
+													required
+												/>
+											</div>
+										)}
+										<div>
+											<label className="flex items-center gap-2 text-sm">
+												<input
+													type="checkbox"
+													checked={editRpForm.pepFlag || false}
+													onChange={e => setEditRpForm(prev => prev ? ({ ...prev, pepFlag: e.target.checked }) : null)}
+												/>
+												{t("customer.detail.relatedPersons.pepFlag")}
+											</label>
+										</div>
+									</div>
+									<div className="flex gap-2">
+										<Button type="submit" disabled={rpSubmitting}>
+											{rpSubmitting ? t("customer.detail.relatedPersons.saving") : t("customer.detail.relatedPersons.save")}
+										</Button>
+										<Button type="button" variant="outline" onClick={cancelEditRelatedPerson} disabled={rpSubmitting}>
+											{t("customer.detail.generalInfo.cancel")}
+										</Button>
+									</div>
+								</form>
+							) : (
+								<form onSubmit={submitRelatedPerson} className="space-y-4">
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
+											<select
+												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+												value={rpForm.role}
+												onChange={e => setRpForm(prev => ({ ...prev, role: e.target.value as RelatedPersonRole }))}
+												required
+											>
+												<option value="UBO">UBO</option>
+												<option value="DIRECTOR">DIRECTOR</option>
+												<option value="SIGNATORY">SIGNATORY</option>
+											</select>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
+											<Input
+												value={rpForm.firstName}
+												onChange={e => setRpForm(prev => ({ ...prev, firstName: e.target.value }))}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
+											<Input
+												value={rpForm.lastName}
+												onChange={e => setRpForm(prev => ({ ...prev, lastName: e.target.value }))}
+												required
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
+											<Input
+												type="date"
+												value={rpForm.dateOfBirth}
+												onChange={e => setRpForm(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+											/>
+										</div>
+										<div>
+											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
+											<Input
+												value={rpForm.nationalId}
+												onChange={e => setRpForm(prev => ({ ...prev, nationalId: e.target.value }))}
+											/>
+										</div>
+										{rpForm.role === "UBO" && (
+											<div>
+												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
+												<Input
+													type="number"
+													min="0"
+													max="100"
+													step="0.01"
+													value={rpForm.ownershipPercent || ""}
+													onChange={e => setRpForm(prev => ({ ...prev, ownershipPercent: e.target.value ? parseFloat(e.target.value) : undefined }))}
+													required
+												/>
+											</div>
+										)}
+										<div>
+											<label className="flex items-center gap-2 text-sm">
+												<input
+													type="checkbox"
+													checked={rpForm.pepFlag || false}
+													onChange={e => setRpForm(prev => ({ ...prev, pepFlag: e.target.checked }))}
+												/>
+												{t("customer.detail.relatedPersons.pepFlag")}
+											</label>
+										</div>
+									</div>
+									<div className="flex gap-2">
+										<Button type="submit" disabled={rpSubmitting}>
+											{rpSubmitting ? t("customer.detail.relatedPersons.adding") : t("customer.detail.relatedPersons.addButton")}
+										</Button>
+									</div>
+								</form>
+							)}
+							</div>
+
+							{/* Liste des personnes liées */}
+							<div>
+								<h3 className="text-sm font-semibold text-slate-600 mb-3">{t("customer.detail.relatedPersons.saved")}</h3>
+								{relatedPersons.length === 0 ? (
+									<div className="text-sm text-slate-500 py-4">{t("customer.detail.relatedPersons.none")}</div>
+								) : (
+									<div className="space-y-3">
+										{relatedPersons.map(rp => (
+											<div key={rp.id} className="bg-white rounded-lg p-4 border border-slate-200">
+												<div className="flex items-start justify-between mb-3">
+													<div className="flex items-center gap-2">
+														<Badge variant="info">{rp.role}</Badge>
+														<span className="text-sm font-semibold text-slate-900">
+															{rp.firstName} {rp.lastName}
+														</span>
+													</div>
+													<div className="flex gap-2">
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => startEditRelatedPerson(rp)}
+															disabled={rpSubmitting || editingRpId !== null}
+														>
+															{t("customer.detail.relatedPersons.edit")}
+														</Button>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => deleteRelatedPerson(rp.id)}
+															disabled={rpSubmitting}
+															className="border-red-300 text-red-700 hover:bg-red-50"
+														>
+															{t("customer.detail.relatedPersons.delete")}
+														</Button>
+													</div>
+												</div>
+												<div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
+													{rp.dateOfBirth && (
+														<div className="flex items-center gap-2 text-xs text-slate-600">
+															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+															</svg>
+															<span>{t("customer.detail.relatedPersons.dateOfBirth")}: {new Date(rp.dateOfBirth).toLocaleDateString("fr-FR")}</span>
+														</div>
+													)}
+													{rp.nationalId && (
+														<div className="flex items-center gap-2 text-xs text-slate-600">
+															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+															</svg>
+															<span>{t("customer.detail.relatedPersons.nationalId")}: {rp.nationalId}</span>
+														</div>
+													)}
+													{rp.ownershipPercent !== null && rp.ownershipPercent !== undefined && (
+														<div className="flex items-center gap-2 text-xs text-slate-600">
+															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+															</svg>
+															<span>{t("customer.detail.relatedPersons.ownershipPercent")}: <span className="font-semibold">{rp.ownershipPercent}%</span></span>
+														</div>
+													)}
+													<div className="flex items-center gap-2 text-xs">
+														<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+														</svg>
+														<span className="text-slate-600">PEP: </span>
+														<Badge variant={rp.pepFlag ? "danger" : "success"} className="text-xs">
+															{rp.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
+														</Badge>
+													</div>
+												</div>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						</div>
+					</div>
+				</div>
+				)}
+
+
+					</div>
 				)}
 
 				{activeTab === "overview" && (
 					<div className="space-y-6">
+						{customer && customer.status !== "VERIFIED" && customer.status !== "PENDING_REVIEW" && (
+							<div className="overflow-hidden rounded-xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/50 via-white to-white p-5 shadow-sm ring-1 ring-indigo-900/[0.06]">
+								<h2 className="text-base font-semibold tracking-tight text-slate-900 mb-1">{t("customer.detail.kyc.submit.title")}</h2>
+								<p className="text-xs text-slate-600 mb-4">{t("customer.detail.kyc.submit.description")}</p>
+								<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} size="sm">
+									{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
+								</Button>
+							</div>
+						)}
 						{/* Carte Selfie améliorée */}
 			{customer && (
 				<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
@@ -2956,7 +3487,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
-				{activeTab === "documents" && (
+				{activeTab === "pieces" && (
 					<div className="space-y-6">
 						{/* En-tête */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
@@ -3210,523 +3741,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
-				{activeTab === "addresses" && (
-					<div className="space-y-6">
-						<div className="grid gap-6 md:grid-cols-2">
-							{/* Carte Adresses */}
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-											</svg>
-										</div>
-										<div>
-											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.title")}</h2>
-											<p className="text-xs text-slate-500">{t("customer.detail.addresses.subtitle")}</p>
-										</div>
-									</div>
-								</div>
-								<div className="p-6">
-									{addresses.length === 0 ? (
-										<div className="text-sm text-slate-500 py-4">{t("customer.detail.addresses.none")}</div>
-									) : (
-										<div className="space-y-3">
-											{addresses.map(addr => (
-												<div key={addr.id} className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 shadow-sm">
-													{editingAddressId === addr.id && editAddr ? (
-														<form onSubmit={submitEditAddress} className="space-y-3">
-															<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-																<div>
-																	<label className="block text-xs mb-1">{t("common.type")}</label>
-																	<select
-																		className="w-full rounded-md border bg-white px-2 py-1.5 text-xs"
-																		value={editAddr.type}
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, type: e.target.value as AddAddressRequest["type"] }) : null)}
-																	>
-																		<option value="RESIDENTIAL">RESIDENTIAL</option>
-																		<option value="BUSINESS">BUSINESS</option>
-																		<option value="MAILING">MAILING</option>
-																	</select>
-																</div>
-																<div className="md:col-span-2">
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line1")} *</label>
-																	<Input 
-																		value={editAddr.line1} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line1: e.target.value }) : null)}
-																		required
-																		className="text-xs"
-																	/>
-																</div>
-																<div>
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.line2")}</label>
-																	<Input 
-																		value={editAddr.line2} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, line2: e.target.value }) : null)}
-																		className="text-xs"
-																	/>
-																</div>
-																<div>
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.city")} *</label>
-																	<Input 
-																		value={editAddr.city} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, city: e.target.value }) : null)}
-																		required
-																		className="text-xs"
-																	/>
-																</div>
-																<div>
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.state")}</label>
-																	<Input 
-																		value={editAddr.state} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, state: e.target.value }) : null)}
-																		className="text-xs"
-																	/>
-																</div>
-																<div>
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.postalCode")}</label>
-																	<Input 
-																		value={editAddr.postalCode} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, postalCode: e.target.value }) : null)}
-																		className="text-xs"
-																	/>
-																</div>
-																<div>
-																	<label className="block text-xs mb-1">{t("customer.detail.addresses.country")} *</label>
-																	<Input 
-																		value={editAddr.country} 
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, country: e.target.value }) : null)}
-																		required
-																		className="text-xs"
-																	/>
-																</div>
-																<div className="flex items-center gap-2">
-																	<input
-																		type="checkbox"
-																		checked={Boolean(editAddr.primaryAddress)}
-																		onChange={e => setEditAddr(prev => prev ? ({ ...prev, primaryAddress: e.target.checked }) : null)}
-																	/>
-																	<label className="text-xs">{t("customer.detail.addresses.primaryAddress")}</label>
-																</div>
-															</div>
-															<div className="flex gap-2 pt-2">
-																<Button type="submit" size="sm" disabled={addrSubmitting}>
-																	{addrSubmitting ? t("customer.detail.addresses.saving") : t("customer.detail.addresses.save")}
-																</Button>
-																<Button type="button" variant="outline" size="sm" onClick={cancelEditAddress} disabled={addrSubmitting}>
-																	{t("customer.detail.generalInfo.cancel")}
-																</Button>
-															</div>
-														</form>
-													) : (
-														<>
-															<div className="flex items-start justify-between mb-3">
-																<div className="flex items-center gap-2">
-																	<Badge variant={addr.primaryAddress ? "success" : "neutral"}>
-																		{addr.type}
-																	</Badge>
-																	{addr.primaryAddress && (
-																		<Badge variant="info">{t("customer.detail.addresses.primary")}</Badge>
-																	)}
-																</div>
-																<Button variant="outline" size="sm" onClick={() => startEditAddress(addr)}>
-																	{t("customer.detail.addresses.edit")}
-																</Button>
-															</div>
-															<div className="bg-white rounded-lg p-4 border border-slate-200 space-y-2">
-																<div className="flex items-center gap-2">
-																	<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-																	</svg>
-																	<span className="font-semibold text-slate-900">{addr.line1}</span>
-																</div>
-																{addr.line2 && (
-																	<div className="text-sm text-slate-600 pl-6">{addr.line2}</div>
-																)}
-																<div className="text-sm text-slate-600 pl-6">
-																	{addr.city}
-																	{addr.state && `, ${addr.state}`}
-																	{addr.postalCode && ` ${addr.postalCode}`}
-																</div>
-																<div className="flex items-center gap-2 pl-6">
-																	<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																		<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-																	</svg>
-																	<span className="text-xs font-medium text-slate-500">{addr.country}</span>
-																</div>
-															</div>
-														</>
-													)}
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Formulaire Ajouter une adresse */}
-							<form onSubmit={submitAddress} className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-											</svg>
-										</div>
-										<div>
-											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.add")}</h2>
-											<p className="text-xs text-slate-500">{t("customer.detail.addresses.addSubtitle")}</p>
-										</div>
-									</div>
-								</div>
-								<div className="p-6 space-y-4">
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<div>
-											<label className="block text-sm mb-1">{t("common.type")}</label>
-											<select
-												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-												value={addr.type}
-												onChange={e => setAddr(prev => ({ ...prev, type: e.target.value as AddAddressRequest["type"] }))}
-											>
-												<option value="RESIDENTIAL">RESIDENTIAL</option>
-												<option value="BUSINESS">BUSINESS</option>
-												<option value="MAILING">MAILING</option>
-											</select>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.line1")} *</label>
-											<Input 
-												value={addr.line1} 
-												onChange={e => setAddr(prev => ({ ...prev, line1: e.target.value }))}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.line2")}</label>
-											<Input value={addr.line2} onChange={e => setAddr(prev => ({ ...prev, line2: e.target.value }))} />
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.city")} *</label>
-											<Input 
-												value={addr.city} 
-												onChange={e => setAddr(prev => ({ ...prev, city: e.target.value }))}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.state")}</label>
-											<Input 
-												value={addr.state} 
-												onChange={e => setAddr(prev => ({ ...prev, state: e.target.value }))}
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.postalCode")}</label>
-											<Input 
-												value={addr.postalCode} 
-												onChange={e => setAddr(prev => ({ ...prev, postalCode: e.target.value }))}
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.addresses.country")} *</label>
-											<Input 
-												value={addr.country} 
-												onChange={e => setAddr(prev => ({ ...prev, country: e.target.value }))}
-												placeholder="CM"
-												required
-											/>
-										</div>
-										<div className="flex items-center gap-2">
-											<input
-												id="primaryAddress"
-												type="checkbox"
-												checked={Boolean(addr.primaryAddress)}
-												onChange={e => setAddr(prev => ({ ...prev, primaryAddress: e.target.checked }))}
-											/>
-											<label htmlFor="primaryAddress" className="text-sm">{t("customer.detail.addresses.primaryAddress")}</label>
-										</div>
-									</div>
-									<div className="flex gap-2">
-										<Button type="submit" disabled={addrSubmitting}>
-											{addrSubmitting ? t("customer.detail.addresses.adding") : t("customer.detail.addresses.addButton")}
-										</Button>
-									</div>
-								</div>
-							</form>
-						</div>
-					</div>
-				)}
-
-				{activeTab === "related-persons" && customer && expectedType === "BUSINESS" && (
-					<div className="space-y-6">
-						{/* Section Related Persons */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
-								<div className="flex items-center gap-3">
-									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-										</svg>
-									</div>
-									<div>
-										<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.relatedPersons.title")}</h2>
-										<p className="text-xs text-slate-500">{t("customer.detail.relatedPersons.subtitle")}</p>
-									</div>
-								</div>
-							</div>
-							<div className="p-6">
-								{/* Formulaire d'ajout */}
-								<div className="border-b border-slate-200 pb-4 mb-4">
-									<h3 className="text-sm font-semibold text-slate-600 mb-3">
-										{editingRpId ? t("customer.detail.relatedPersons.edit") : t("customer.detail.relatedPersons.add")}
-									</h3>
-							{editingRpId && editRpForm ? (
-								<form onSubmit={submitEditRelatedPerson} className="space-y-4">
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
-											<select
-												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-												value={editRpForm.role}
-												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, role: e.target.value as RelatedPersonRole }) : null)}
-												required
-											>
-												<option value="UBO">UBO</option>
-												<option value="DIRECTOR">DIRECTOR</option>
-												<option value="SIGNATORY">SIGNATORY</option>
-											</select>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
-											<Input
-												value={editRpForm.firstName}
-												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, firstName: e.target.value }) : null)}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
-											<Input
-												value={editRpForm.lastName}
-												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, lastName: e.target.value }) : null)}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
-											<Input
-												type="date"
-												value={editRpForm.dateOfBirth}
-												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, dateOfBirth: e.target.value }) : null)}
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
-											<Input
-												value={editRpForm.nationalId || ""}
-												onChange={e => setEditRpForm(prev => prev ? ({ ...prev, nationalId: e.target.value }) : null)}
-											/>
-										</div>
-										{editRpForm.role === "UBO" && (
-											<div>
-												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
-												<Input
-													type="number"
-													min="0"
-													max="100"
-													step="0.01"
-													value={editRpForm.ownershipPercent || ""}
-													onChange={e => setEditRpForm(prev => prev ? ({ ...prev, ownershipPercent: e.target.value ? parseFloat(e.target.value) : undefined }) : null)}
-													required
-												/>
-											</div>
-										)}
-										<div>
-											<label className="flex items-center gap-2 text-sm">
-												<input
-													type="checkbox"
-													checked={editRpForm.pepFlag || false}
-													onChange={e => setEditRpForm(prev => prev ? ({ ...prev, pepFlag: e.target.checked }) : null)}
-												/>
-												{t("customer.detail.relatedPersons.pepFlag")}
-											</label>
-										</div>
-									</div>
-									<div className="flex gap-2">
-										<Button type="submit" disabled={rpSubmitting}>
-											{rpSubmitting ? t("customer.detail.relatedPersons.saving") : t("customer.detail.relatedPersons.save")}
-										</Button>
-										<Button type="button" variant="outline" onClick={cancelEditRelatedPerson} disabled={rpSubmitting}>
-											{t("customer.detail.generalInfo.cancel")}
-										</Button>
-									</div>
-								</form>
-							) : (
-								<form onSubmit={submitRelatedPerson} className="space-y-4">
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.role")} *</label>
-											<select
-												className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-												value={rpForm.role}
-												onChange={e => setRpForm(prev => ({ ...prev, role: e.target.value as RelatedPersonRole }))}
-												required
-											>
-												<option value="UBO">UBO</option>
-												<option value="DIRECTOR">DIRECTOR</option>
-												<option value="SIGNATORY">SIGNATORY</option>
-											</select>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.firstName")} *</label>
-											<Input
-												value={rpForm.firstName}
-												onChange={e => setRpForm(prev => ({ ...prev, firstName: e.target.value }))}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.lastName")} *</label>
-											<Input
-												value={rpForm.lastName}
-												onChange={e => setRpForm(prev => ({ ...prev, lastName: e.target.value }))}
-												required
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.dateOfBirth")}</label>
-											<Input
-												type="date"
-												value={rpForm.dateOfBirth}
-												onChange={e => setRpForm(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-											/>
-										</div>
-										<div>
-											<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.nationalId")}</label>
-											<Input
-												value={rpForm.nationalId}
-												onChange={e => setRpForm(prev => ({ ...prev, nationalId: e.target.value }))}
-											/>
-										</div>
-										{rpForm.role === "UBO" && (
-											<div>
-												<label className="block text-sm mb-1">{t("customer.detail.relatedPersons.ownershipPercent")} *</label>
-												<Input
-													type="number"
-													min="0"
-													max="100"
-													step="0.01"
-													value={rpForm.ownershipPercent || ""}
-													onChange={e => setRpForm(prev => ({ ...prev, ownershipPercent: e.target.value ? parseFloat(e.target.value) : undefined }))}
-													required
-												/>
-											</div>
-										)}
-										<div>
-											<label className="flex items-center gap-2 text-sm">
-												<input
-													type="checkbox"
-													checked={rpForm.pepFlag || false}
-													onChange={e => setRpForm(prev => ({ ...prev, pepFlag: e.target.checked }))}
-												/>
-												{t("customer.detail.relatedPersons.pepFlag")}
-											</label>
-										</div>
-									</div>
-									<div className="flex gap-2">
-										<Button type="submit" disabled={rpSubmitting}>
-											{rpSubmitting ? t("customer.detail.relatedPersons.adding") : t("customer.detail.relatedPersons.addButton")}
-										</Button>
-									</div>
-								</form>
-							)}
-							</div>
-
-							{/* Liste des personnes liées */}
-							<div>
-								<h3 className="text-sm font-semibold text-slate-600 mb-3">{t("customer.detail.relatedPersons.saved")}</h3>
-								{relatedPersons.length === 0 ? (
-									<div className="text-sm text-slate-500 py-4">{t("customer.detail.relatedPersons.none")}</div>
-								) : (
-									<div className="space-y-3">
-										{relatedPersons.map(rp => (
-											<div key={rp.id} className="bg-white rounded-lg p-4 border border-slate-200">
-												<div className="flex items-start justify-between mb-3">
-													<div className="flex items-center gap-2">
-														<Badge variant="info">{rp.role}</Badge>
-														<span className="text-sm font-semibold text-slate-900">
-															{rp.firstName} {rp.lastName}
-														</span>
-													</div>
-													<div className="flex gap-2">
-														<Button
-															variant="outline"
-															size="sm"
-															onClick={() => startEditRelatedPerson(rp)}
-															disabled={rpSubmitting || editingRpId !== null}
-														>
-															{t("customer.detail.relatedPersons.edit")}
-														</Button>
-														<Button
-															variant="outline"
-															size="sm"
-															onClick={() => deleteRelatedPerson(rp.id)}
-															disabled={rpSubmitting}
-															className="border-red-300 text-red-700 hover:bg-red-50"
-														>
-															{t("customer.detail.relatedPersons.delete")}
-														</Button>
-													</div>
-												</div>
-												<div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2">
-													{rp.dateOfBirth && (
-														<div className="flex items-center gap-2 text-xs text-slate-600">
-															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-															</svg>
-															<span>{t("customer.detail.relatedPersons.dateOfBirth")}: {new Date(rp.dateOfBirth).toLocaleDateString("fr-FR")}</span>
-														</div>
-													)}
-													{rp.nationalId && (
-														<div className="flex items-center gap-2 text-xs text-slate-600">
-															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-															</svg>
-															<span>{t("customer.detail.relatedPersons.nationalId")}: {rp.nationalId}</span>
-														</div>
-													)}
-													{rp.ownershipPercent !== null && rp.ownershipPercent !== undefined && (
-														<div className="flex items-center gap-2 text-xs text-slate-600">
-															<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-															</svg>
-															<span>{t("customer.detail.relatedPersons.ownershipPercent")}: <span className="font-semibold">{rp.ownershipPercent}%</span></span>
-														</div>
-													)}
-													<div className="flex items-center gap-2 text-xs">
-														<svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-														</svg>
-														<span className="text-slate-600">PEP: </span>
-														<Badge variant={rp.pepFlag ? "danger" : "success"} className="text-xs">
-															{rp.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
-														</Badge>
-													</div>
-												</div>
-											</div>
-										))}
-									</div>
-								)}
-							</div>
-						</div>
-					</div>
-				</div>
-				)}
-
-				{activeTab === "kyc-actions" && customer && (
+				{activeTab === "kycReview" && customer && (
 					<div className="space-y-6">
 						{/* En-tête */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
@@ -3799,195 +3814,306 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 						</div>
 
-						{/* Statut client */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
-								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.clientStatus")}</h3>
+						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
+						<div className="overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-white via-slate-50/40 to-indigo-50/[0.35] shadow-sm ring-1 ring-slate-900/[0.05]">
+							<div className="border-b border-indigo-100/90 bg-gradient-to-r from-indigo-50/90 via-white to-white px-5 py-4 md:px-6">
+								<h3 className="text-base font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.decisionPanel.title")}</h3>
+								<p className="text-xs text-slate-600 mt-1 max-w-3xl">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
 							</div>
-							<div className="p-6">
-								<div className="flex items-center justify-between mb-5">
-									<span className="text-sm text-slate-600">{t("customer.detail.kyc.currentStatus")}</span>
-									<Badge variant={statusBadgeVariant(customer.status)}>{customer.status}</Badge>
-								</div>
-								{kycGeographyRisk && (
-									<div
-										className={`mb-5 rounded-lg border px-4 py-3 text-sm ${
-											kycGeographyRisk.geographyRiskPoints > 0
-												? "border-amber-200 bg-amber-50 text-amber-950"
-												: "border-slate-200 bg-slate-50 text-slate-700"
-										}`}
-									>
-										<h4 className="font-medium text-black mb-1">{t("customer.detail.kyc.geographyRisk.title")}</h4>
-										{kycGeographyRisk.geographyRiskPoints === 0 ? (
-											<p className="text-xs text-slate-600">{t("customer.detail.kyc.geographyRisk.standardHint")}</p>
-										) : (
-											<>
-												<p className="text-xs mb-2">
-													{t("customer.detail.kyc.geographyRisk.points")}: {kycGeographyRisk.geographyRiskPoints} —{" "}
-													{t("customer.detail.kyc.geographyRisk.floor")}: {kycGeographyRisk.suggestedRiskScoreFloor}/100
-												</p>
-												<ul className="text-xs space-y-0.5 mb-2 list-disc pl-4">
-													{kycGeographyRisk.contributions.map((c, i) => (
-														<li key={`${c.source}-${c.countryCode}-${i}`}>
-															{t("customer.detail.kyc.geographyRisk.line", {
-																source: c.source,
-																country: c.countryCode,
-																tier: c.tier,
-																points: c.points
-															})}
-														</li>
-													))}
-												</ul>
-												<Button
-													type="button"
-													size="sm"
-													variant="outline"
-													className="text-xs h-7"
-													onClick={() => setVerifyRisk(kycGeographyRisk.suggestedRiskScoreFloor)}
-												>
-													{t("customer.detail.kyc.geographyRisk.apply")}
-												</Button>
-											</>
-										)}
-									</div>
-								)}
-								{customer.status === "PENDING_REVIEW" && kycOnboardingRisk && (
-									<div className="mb-5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm">
-										<h4 className="font-medium text-black mb-2">{t("customer.detail.kyc.onboardingRisk.title")}</h4>
-										<p className="text-xs text-slate-600 mb-2">
-											{t("customer.detail.kyc.onboardingRisk.proposed")}:{" "}
-											<strong>{kycOnboardingRisk.proposedRiskScore}</strong>/100 — {t("customer.detail.kyc.onboardingRisk.band")}:{" "}
-											<strong>{kycOnboardingRisk.riskBand}</strong> — {t("customer.detail.kyc.onboardingRisk.algorithm")}:{" "}
-											<code className="text-[11px] bg-slate-100 px-1 rounded">{kycOnboardingRisk.algorithmVersion}</code>
-										</p>
-										<ul className="text-xs space-y-0.5 mb-2 list-disc pl-4 text-slate-700">
-											{kycOnboardingRisk.components.map((c, i) => (
-												<li key={`${c.code}-${i}`}>
-													{t("customer.detail.kyc.onboardingRisk.componentLine", {
-														code: c.code,
-														label: c.label,
-														floor: c.floorAfterComponent,
-														detail: c.detail
-													})}
-												</li>
-											))}
-										</ul>
-										<div className="flex flex-wrap gap-2">
-											<Button
-												type="button"
-												size="sm"
-												variant="outline"
-												className="text-xs h-7"
-												onClick={() => setVerifyRisk(kycOnboardingRisk.proposedRiskScore)}
-											>
-												{t("customer.detail.kyc.onboardingRisk.applyProposed")}
-											</Button>
-											<Button
-												type="button"
-												size="sm"
-												variant="outline"
-												className="text-xs h-7 border-blue-200 text-blue-800"
-												disabled={kycSubmitting !== null || !canFinalizeKyc}
-												onClick={() => void doVerifyKyc({ useEngineRiskScore: true })}
-											>
-												{t("customer.detail.kyc.onboardingRisk.verifyWithEngine")}
-											</Button>
-										</div>
-									</div>
-								)}
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
-										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.submit.title")}</h4>
-										<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.submit.description")}</p>
-										<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null || customer.status === "VERIFIED" || customer.status === "PENDING_REVIEW"} size="sm">
-											{kycSubmitting === "submit" ? t("customer.detail.kyc.submit.submitting") : t("customer.detail.kyc.submit.button")}
-										</Button>
-									</div>
-									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
-										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.verify.title")}</h4>
-										<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.description")}</p>
-										{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved && (
-											<p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-md px-2 py-1.5 mb-3">
-												{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+							<div className="p-5 md:p-6 space-y-8">
+								{/* Synthèse statut dossier */}
+								<section className="rounded-xl border border-slate-200/90 bg-white px-4 py-4 shadow-sm">
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+										<div>
+											<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("customer.detail.kyc.currentStatus")}</p>
+											<p className="text-lg font-semibold text-slate-900 mt-1">
+												{t(`customer.statuses.${customer.status}`)}
 											</p>
-										)}
-										<div className="space-y-2 mb-3">
-											<label className="flex items-center gap-2 text-xs">
-												<span>{t("customer.detail.kyc.verify.riskScore")}</span>
-												<Input type="number" min={0} max={100} value={verifyRisk} onChange={e => setVerifyRisk(Number(e.target.value))} className="w-16 h-8 text-xs" />
-											</label>
-											<label className="flex items-center gap-2 text-xs">
-												<input type="checkbox" checked={verifyPep} onChange={e => setVerifyPep(e.target.checked)} className="rounded" />
-												{t("customer.detail.kyc.verify.pepFlag")}
-											</label>
-											{kycRiskDeviationExceedsThreshold && (
-												<label className="flex flex-col gap-1 text-xs">
-													<span className="text-amber-900">{t("customer.detail.kyc.verify.overrideReason")}</span>
-													<textarea
-														value={verifyRiskOverrideReason}
-														onChange={e => setVerifyRiskOverrideReason(e.target.value)}
-														placeholder={t("customer.detail.kyc.verify.overrideReasonPlaceholder")}
-														className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs resize-none min-h-[56px]"
-														rows={2}
-													/>
-												</label>
-											)}
 										</div>
-										<Button
-											onClick={() => void doVerifyKyc()}
-											disabled={kycSubmitting !== null || !canFinalizeKyc}
-											size="sm"
-											variant="outline"
-											className="border-green-300 text-green-700 hover:bg-green-50"
-										>
-											{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
-										</Button>
+										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 text-xs font-medium px-3 py-1">
+											{customer.status}
+										</Badge>
 									</div>
-									<div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 shadow-sm">
-										<h4 className="text-sm font-medium text-black mb-1">{t("customer.detail.kyc.reject.title")}</h4>
-										<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
-										{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved && (
-											<p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/80 rounded-md px-2 py-1.5 mb-3">
-												{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
-											</p>
-										)}
-										{!showRejectForm ? (
-											<Button
-												variant="outline"
-												size="sm"
-												onClick={() => setShowRejectForm(true)}
-												disabled={kycSubmitting !== null || !canFinalizeKyc}
-												className="border-red-300 text-red-700 hover:bg-red-50"
-											>
-												{t("customer.detail.kyc.reject.button")}
-											</Button>
-										) : (
-											<div className="space-y-2">
-												<textarea
-													value={rejectionReason}
-													onChange={e => setRejectionReason(e.target.value)}
-													placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
-													className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-xs resize-none"
-													rows={2}
-												/>
-												<div className="flex gap-2">
-													<Button
-														size="sm"
-														variant="outline"
-														onClick={doRejectKyc}
-														disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
-														className="border-red-300 text-red-700 hover:bg-red-50"
+								</section>
+
+								{/* Étape 1 — Revues ligne (résumé) */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
+											1
+										</div>
+										<div className="min-w-0 flex-1 space-y-3">
+											<div className="flex flex-wrap items-center gap-2">
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepA.title")}</h4>
+												{kycAllLineReviewsApproved ? (
+													<Badge variant="success" className="text-[10px] font-medium">
+														{t("customer.detail.kyc.workflow.stepA.badgeOk")}
+													</Badge>
+												) : null}
+											</div>
+											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepA.description")}</p>
+											<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+												{[
+													{ key: "email", label: t("customer.detail.kyc.emailReview"), s: customer.emailReviewStatus },
+													{ key: "profile", label: t("customer.detail.kyc.profileReview"), s: customer.profileReviewStatus },
+													{ key: "identity", label: t("customer.detail.kyc.identityReview"), s: customer.identityReviewStatus }
+												].map(row => (
+													<div
+														key={row.key}
+														className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2.5"
 													>
-														{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
-													</Button>
-													<Button size="sm" variant="ghost" onClick={() => { setShowRejectForm(false); setRejectionReason(""); }} disabled={kycSubmitting !== null}>
-														{t("customer.detail.generalInfo.cancel")}
-													</Button>
+														<span className="text-xs font-medium text-slate-700 truncate">{row.label}</span>
+														<Badge variant={reviewStatusBadgeVariant(row.s)} className="shrink-0 text-[10px]">
+															{reviewStatusLabel(row.s)}
+														</Badge>
+													</div>
+												))}
+											</div>
+											{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+												</p>
+											) : null}
+										</div>
+									</div>
+								</section>
+
+								<div className="border-t border-slate-200/80" aria-hidden />
+
+								{/* Étape 2 — Risque */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
+											2
+										</div>
+										<div className="min-w-0 flex-1 space-y-4">
+											<div>
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepB.title")}</h4>
+												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepB.description")}</p>
+											</div>
+											<div className="min-w-0 max-w-3xl">
+												<div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
+													<div className="mb-3 flex flex-wrap items-center gap-2">
+														<h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
+															{t("customer.detail.kyc.onboardingRisk.title")}
+														</h5>
+														<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+															{t("customer.detail.kyc.onboardingRisk.phasePill")}
+														</span>
+													</div>
+													<p className="mb-4 text-[11px] leading-snug text-slate-600">{t("customer.detail.kyc.onboardingRisk.subtitle")}</p>
+													{customer.status === "PENDING_REVIEW" && kycOnboardingRisk ? (
+														<>
+															<div className="mb-4 flex flex-wrap items-stretch gap-3">
+																<div
+																	className={`flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-lg border px-3 py-2.5 ${
+																		riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "danger"
+																			? "border-red-200/90 bg-red-50/60"
+																			: riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "warning"
+																				? "border-amber-200/90 bg-amber-50/50"
+																				: "border-emerald-200/90 bg-emerald-50/40"
+																	}`}
+																>
+																	<span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+																		{t("customer.detail.kyc.onboardingRisk.proposed")}
+																	</span>
+																	<div className="mt-0.5 flex items-baseline gap-0.5">
+																		<span className="text-2xl font-bold tabular-nums tracking-tight text-slate-900">
+																			{kycOnboardingRisk.proposedRiskScore}
+																		</span>
+																		<span className="text-xs font-medium text-slate-500">/100</span>
+																	</div>
+																</div>
+																<div className="flex min-w-[6.5rem] flex-col justify-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2.5">
+																	<span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+																		{t("customer.detail.kyc.onboardingRisk.band")}
+																	</span>
+																	<Badge variant={onboardingRiskBandBadgeVariant(kycOnboardingRisk.riskBand)} className="w-fit text-[11px] font-semibold">
+																		{onboardingRiskBandLabel(kycOnboardingRisk.riskBand)}
+																	</Badge>
+																</div>
+															</div>
+
+															<div className="mb-4 rounded-lg border border-slate-200/80 bg-slate-50/50">
+																<div className="border-b border-slate-200/70 bg-white/90 px-3 py-1.5">
+																	<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+																		{t("customer.detail.kyc.onboardingRisk.components")}
+																	</p>
+																</div>
+																<ul className="max-h-40 divide-y divide-slate-200/60 overflow-y-auto">
+																	{kycOnboardingRisk.components.map((c, i) => (
+																		<li key={`${c.code}-${i}`} className="px-3 py-2">
+																			<div className="flex flex-wrap items-baseline justify-between gap-2 gap-y-1">
+																				<div className="flex min-w-0 flex-1 items-center gap-2">
+																					<span className="shrink-0 rounded bg-slate-200/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-800">
+																						{c.code}
+																					</span>
+																					<span className="truncate text-xs font-medium text-slate-800" title={c.label}>
+																						{c.label}
+																					</span>
+																				</div>
+																				<span className="shrink-0 rounded-md bg-slate-200/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-800">
+																					{t("customer.detail.kyc.onboardingRisk.floorShort", { n: c.floorAfterComponent })}
+																				</span>
+																			</div>
+																			<p className="mt-1 break-words text-[11px] leading-snug text-slate-600">{c.detail}</p>
+																		</li>
+																	))}
+																</ul>
+															</div>
+
+															<p className="mb-3 text-[10px] text-slate-500">
+																<span className="font-medium uppercase tracking-wide">{t("customer.detail.kyc.onboardingRisk.algorithm")}</span>{" "}
+																<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-800">{kycOnboardingRisk.algorithmVersion}</code>
+															</p>
+
+															<div className="flex flex-wrap gap-2 border-t border-slate-200/80 pt-3">
+																<Button
+																	type="button"
+																	size="sm"
+																	variant="outline"
+																	className="text-xs h-7"
+																	onClick={() => setVerifyRisk(kycOnboardingRisk.proposedRiskScore)}
+																>
+																	{t("customer.detail.kyc.onboardingRisk.applyProposed")}
+																</Button>
+																<Button
+																	type="button"
+																	size="sm"
+																	variant="outline"
+																	className="text-xs h-7"
+																	disabled={kycSubmitting !== null || !canFinalizeKyc}
+																	onClick={() => void doVerifyKyc({ useEngineRiskScore: true })}
+																>
+																	{t("customer.detail.kyc.onboardingRisk.verifyWithEngine")}
+																</Button>
+															</div>
+														</>
+													) : (
+														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineWhenPending")}</p>
+													)}
 												</div>
 											</div>
-										)}
+										</div>
 									</div>
-								</div>
+								</section>
+
+								<div className="border-t border-slate-200/80" aria-hidden />
+
+								{/* Étape 3 — Décision finale */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
+											3
+										</div>
+										<div className="min-w-0 flex-1 space-y-4">
+											<div>
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepC.title")}</h4>
+												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepC.description")}</p>
+											</div>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0 md:divide-x md:divide-slate-200">
+												<div className="md:pr-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
+													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.verify.title")}</h5>
+													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.description")}</p>
+													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+														</p>
+													) : null}
+													<div className="space-y-2 mb-3">
+														<label className="flex flex-wrap items-center gap-2 text-xs">
+															<span className="text-slate-700">{t("customer.detail.kyc.verify.riskScore")}</span>
+															<Input
+																type="number"
+																min={0}
+																max={100}
+																value={verifyRisk}
+																onChange={e => setVerifyRisk(Number(e.target.value))}
+																className="h-8 w-16 text-xs"
+															/>
+														</label>
+														<label className="flex items-center gap-2 text-xs text-slate-700">
+															<input type="checkbox" checked={verifyPep} onChange={e => setVerifyPep(e.target.checked)} className="rounded border-slate-300" />
+															{t("customer.detail.kyc.verify.pepFlag")}
+														</label>
+														{kycRiskDeviationExceedsThreshold ? (
+															<label className="flex flex-col gap-1 text-xs">
+																<span className="text-amber-900 font-medium">{t("customer.detail.kyc.verify.overrideReason")}</span>
+																<textarea
+																	value={verifyRiskOverrideReason}
+																	onChange={e => setVerifyRiskOverrideReason(e.target.value)}
+																	placeholder={t("customer.detail.kyc.verify.overrideReasonPlaceholder")}
+																	className="min-h-[56px] w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-xs"
+																	rows={2}
+																/>
+															</label>
+														) : null}
+													</div>
+													<Button
+														onClick={() => void doVerifyKyc()}
+														disabled={kycSubmitting !== null || !canFinalizeKyc}
+														size="sm"
+														className="bg-emerald-600 text-white hover:bg-emerald-700"
+													>
+														{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
+													</Button>
+												</div>
+												<div className="md:pl-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
+													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.reject.title")}</h5>
+													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
+													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+														</p>
+													) : null}
+													{!showRejectForm ? (
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() => setShowRejectForm(true)}
+															disabled={kycSubmitting !== null || !canFinalizeKyc}
+															className="border-red-300 text-red-700 hover:bg-red-50"
+														>
+															{t("customer.detail.kyc.reject.button")}
+														</Button>
+													) : (
+														<div className="space-y-2">
+															<textarea
+																value={rejectionReason}
+																onChange={e => setRejectionReason(e.target.value)}
+																placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
+																className="w-full resize-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+																rows={2}
+															/>
+															<div className="flex flex-wrap gap-2">
+																<Button
+																	size="sm"
+																	variant="outline"
+																	onClick={doRejectKyc}
+																	disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
+																	className="border-red-300 text-red-700 hover:bg-red-50"
+																>
+																	{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
+																</Button>
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	onClick={() => {
+																		setShowRejectForm(false);
+																		setRejectionReason("");
+																	}}
+																	disabled={kycSubmitting !== null}
+																>
+																	{t("customer.detail.generalInfo.cancel")}
+																</Button>
+															</div>
+														</div>
+													)}
+												</div>
+											</div>
+										</div>
+									</div>
+								</section>
 							</div>
 						</div>
 

@@ -609,14 +609,17 @@
 			"wrongRouteOpenButton": "Ouvrir la bonne fiche",
 			"notFound": "Client non trouvé",
 			"tabs": {
-				"profile": "Détail du profil",
 				"overview": "Vue d'ensemble",
+				"dossier": "Dossier client",
+				"pieces": "Pièces et identité",
+				"kycReview": "Revue KYC et décision",
+				"compliance": "Conformité et suivi",
+				"accounts": "Comptes",
+				"profile": "Détail du profil",
 				"documents": "Documents",
 				"addresses": "Adresses",
 				"relatedPersons": "Personnes liées",
-				"kycActions": "Actions KYC",
-				"compliance": "Conformité",
-				"accounts": "Comptes"
+				"kycActions": "Actions KYC"
 			},
 			"photo": {
 				"title": "Photo du client",
@@ -856,6 +859,26 @@
 				"profileReview": "Revue du profil",
 				"identityReview": "Revue de l'identité",
 				"clientStatus": "Statut client",
+				"decisionPanel": {
+					"title": "Décision KYC",
+					"subtitle": "Enchaînement recommandé : revues ligne → risque → vérification ou rejet."
+				},
+				"workflow": {
+					"stepA": {
+						"title": "Revues ligne",
+						"description": "Validez ou refusez chaque volet avant la décision finale.",
+						"badgeOk": "Prêt pour la suite"
+					},
+					"stepB": {
+						"title": "Évaluation du risque",
+						"description": "Consultez la proposition du moteur onboarding et appliquez le score si besoin.",
+						"engineWhenPending": "Moteur et score proposés lorsque le dossier est en attente d'examen."
+					},
+					"stepC": {
+						"title": "Décision finale",
+						"description": "Uniquement si les trois revues ligne sont approuvées et le dossier en attente d'examen."
+					}
+				},
 				"currentStatus": "Statut actuel",
 				"approveButton": "Approuver",
 				"rejectButton": "Rejeter",
@@ -867,20 +890,20 @@
 					"success": "KYC soumis avec succès",
 					"error": "Erreur lors de la soumission du KYC"
 				},
-				"geographyRisk": {
-					"title": "Risque géographique (référentiel interne)",
-					"standardHint": "Aucune exposition pays à vigilance renforcée selon le référentiel chargé.",
-					"points": "Contribution pays (max.)",
-					"floor": "Plancher conseillé pour le score de risque",
-					"apply": "Appliquer au score",
-					"line": "{{source}} — {{country}} ({{tier}}, +{{points}})"
-				},
 				"onboardingRisk": {
-					"title": "Moteur de risque onboarding (phase 2)",
+					"title": "Moteur de risque onboarding",
+					"phasePill": "Phase 2",
+					"subtitle": "Score calculé à partir du référentiel pays, des derniers contrôles KYC (sanctions, PEP listes, identité) et de la case PEP analyste.",
 					"proposed": "Score proposé",
-					"band": "Bandeau",
+					"band": "Bande de risque",
+					"bandValue": {
+						"LOW": "Faible",
+						"MEDIUM": "Modérée",
+						"HIGH": "Élevée"
+					},
 					"algorithm": "Version d'algorithme",
-					"components": "Composantes du score",
+					"components": "Détail par étape",
+					"floorShort": "Plancher {{n}}",
 					"componentLine": "{{code}} — {{label}} : plancher {{floor}} ({{detail}})",
 					"applyProposed": "Appliquer le score proposé",
 					"verifyWithEngine": "Vérifier avec le score moteur uniquement"
