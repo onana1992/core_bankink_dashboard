@@ -51,11 +51,29 @@ export interface KycOnboardingRiskComponent {
 	detail: string;
 }
 
+/** Décision opérationnelle renvoyée par le moteur Drools (backend). */
+export type KycOnboardingDecision =
+	| "ALLOW_STANDARD"
+	| "ALLOW_REINFORCED_REVIEW"
+	| "EDD_REQUIRED"
+	| "BLOCK";
+
+/** Codes de blocage renvoyés par le moteur. */
+export type KycOnboardingBlockReasonCode =
+	| "SANCTIONS_MATCH_CONFIRMED"
+	| "IDENTITY_VERIFICATION_FAIL"
+	| "UBO_CRITICAL_MISSING";
+
 export interface KycOnboardingRiskAssessmentResponse {
 	proposedRiskScore: number;
 	riskBand: string;
 	algorithmVersion: string;
 	components: KycOnboardingRiskComponent[];
+	/** Moteur Drools (ADVISORY / ENFORCED) — absent en SHADOW ou legacy seul. */
+	decision?: string | null;
+	blocked?: boolean | null;
+	blockReasonCode?: string | null;
+	matchedRules?: string[] | null;
 }
 
 export interface Customer {

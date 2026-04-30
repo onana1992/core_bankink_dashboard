@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import Toast from "@/components/ui/Toast";
 import { customersApi, accountsApi } from "@/lib/api";
+import { kycOnboardingRiskShowsEngineMetadata } from "@/lib/kycOnboardingRiskDisplay";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
@@ -190,6 +191,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		return Math.abs(verifyRisk - kycOnboardingRisk.proposedRiskScore) > 10;
 	}, [kycOnboardingRisk, verifyRisk]);
 
+	const kycShowsDroolsEngineMeta = useMemo(
+		() => kycOnboardingRisk != null && kycOnboardingRiskShowsEngineMetadata(kycOnboardingRisk),
+		[kycOnboardingRisk]
+	);
+
 	useEffect(() => {
 		if (!id || customer?.status !== "PENDING_REVIEW") {
 			setKycOnboardingRisk(null);
@@ -328,6 +334,28 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		const key = `customer.detail.kyc.onboardingRisk.bandValue.${b}`;
 		const translated = t(key);
 		return translated === key ? band : translated;
+	}
+
+	function onboardingRiskDecisionBadgeVariant(decision: string): "neutral" | "success" | "warning" | "danger" {
+		const d = decision?.trim().toUpperCase();
+		if (d === "BLOCK" || d === "EDD_REQUIRED") return "danger";
+		if (d === "ALLOW_REINFORCED_REVIEW") return "warning";
+		if (d === "ALLOW_STANDARD") return "success";
+		return "neutral";
+	}
+
+	function onboardingRiskDecisionLabel(decision: string): string {
+		const d = decision?.trim().toUpperCase();
+		const key = `customer.detail.kyc.onboardingRisk.decision.${d}`;
+		const translated = t(key);
+		return translated === key ? decision : translated;
+	}
+
+	function onboardingRiskBlockReasonLabel(code: string | null | undefined): string {
+		if (code == null || code === "") return "—";
+		const key = `customer.detail.kyc.onboardingRisk.blockReason.${code}`;
+		const translated = t(key);
+		return translated === key ? code : translated;
 	}
 
 	function reviewStatusBadgeVariant(s?: Customer["emailReviewStatus"]): "neutral" | "success" | "warning" | "danger" {
@@ -3897,11 +3925,31 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														<h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
 															{t("customer.detail.kyc.onboardingRisk.title")}
 														</h5>
-														<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+														{kycOnboardingRisk != null ? (
+															<span
+																className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+																	kycShowsDroolsEngineMeta
+																		? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-200/80"
+																		: "bg-slate-100 text-slate-600"
+																}`}
+															>
+																{kycShowsDroolsEngineMeta
+																	? t("customer.detail.kyc.onboardingRisk.engineBadge.drools")
+																	: t("customer.detail.kyc.onboardingRisk.engineBadge.shadow")}
+															</span>
+														) : null}
+														<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
 															{t("customer.detail.kyc.onboardingRisk.phasePill")}
 														</span>
 													</div>
-													<p className="mb-4 text-[11px] leading-snug text-slate-600">{t("customer.detail.kyc.onboardingRisk.subtitle")}</p>
+													<p className="mb-2 text-[11px] leading-snug text-slate-600">
+														{t("customer.detail.kyc.onboardingRisk.subtitle")}
+													</p>
+													{kycOnboardingRisk != null && !kycShowsDroolsEngineMeta ? (
+														<p className="mb-4 rounded-md border border-amber-200/80 bg-amber-50/80 px-2 py-1.5 text-[10px] leading-snug text-amber-950">
+															{t("customer.detail.kyc.onboardingRisk.shadowHint")}
+														</p>
+													) : null}
 													{customer.status === "PENDING_REVIEW" && kycOnboardingRisk ? (
 														<>
 															<div className="mb-4 flex flex-wrap items-stretch gap-3">
@@ -3983,6 +4031,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																	variant="outline"
 																	className="text-xs h-7"
 																	disabled={kycSubmitting !== null || !canFinalizeKyc}
+																	title={
+																		kycOnboardingRisk.blocked === true
+																			? t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")
+																			: undefined
+																	}
 																	onClick={() => void doVerifyKyc({ useEngineRiskScore: true })}
 																>
 																	{t("customer.detail.kyc.onboardingRisk.verifyWithEngine")}

@@ -870,7 +870,12 @@
 				"onboardingRisk": {
 					"title": "Onboarding risk engine",
 					"phasePill": "Phase 2",
-					"subtitle": "Score from country referential, latest KYC checks (sanctions, PEP lists, identity), and analyst PEP flag.",
+					"subtitle": "Score and band depend on server config: legacy calculation (shadow) or Drools rules engine (advisory). Uses KYC checks, geography, activity, documents, and analyst PEP flag.",
+					"engineBadge": {
+						"shadow": "Legacy (displayed)",
+						"drools": "Drools (displayed)"
+					},
+					"shadowHint": "The value shown uses the legacy calculator. Drools may still run in parallel on the server (see shadow logs).",
 					"proposed": "Proposed score",
 					"band": "Risk band",
 					"bandValue": {
@@ -882,6 +887,22 @@
 					"components": "Step-by-step breakdown",
 					"floorShort": "Floor {{n}}",
 					"componentLine": "{{code}} — {{label}}: floor {{floor}} ({{detail}})",
+					"decisionLabel": "Operational decision",
+					"blockedTitle": "Engine block",
+					"blockReasonLabel": "Reason code",
+					"matchedRulesTitle": "Matched rules",
+					"blockedVerifyHint": "With server enforcement enabled, verify without a manual score may fail while the file remains blocked. Fix the file or enter a score with an override reason.",
+					"decision": {
+						"ALLOW_STANDARD": "Standard path",
+						"ALLOW_REINFORCED_REVIEW": "Enhanced review",
+						"EDD_REQUIRED": "EDD required",
+						"BLOCK": "Blocked"
+					},
+					"blockReason": {
+						"SANCTIONS_MATCH_CONFIRMED": "Confirmed sanctions match",
+						"IDENTITY_VERIFICATION_FAIL": "Identity verification failed",
+						"UBO_CRITICAL_MISSING": "Critical UBO missing"
+					},
 					"applyProposed": "Apply proposed score",
 					"verifyWithEngine": "Verify with engine score only"
 				},

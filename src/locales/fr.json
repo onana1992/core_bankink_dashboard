@@ -893,7 +893,12 @@
 				"onboardingRisk": {
 					"title": "Moteur de risque onboarding",
 					"phasePill": "Phase 2",
-					"subtitle": "Score calculé à partir du référentiel pays, des derniers contrôles KYC (sanctions, PEP listes, identité) et de la case PEP analyste.",
+					"subtitle": "Score et bande selon la configuration du serveur : calcul historique (shadow) ou moteur de règles Drools (advisory). S’appuie sur les contrôles KYC, la géographie, l’activité, les documents et la case PEP analyste.",
+					"engineBadge": {
+						"shadow": "Historique (affiché)",
+						"drools": "Drools (affiché)"
+					},
+					"shadowHint": "Le score affiché correspond au calcul historique. Un passage Drools peut être exécuté en parallèle côté serveur (logs « shadow »).",
 					"proposed": "Score proposé",
 					"band": "Bande de risque",
 					"bandValue": {
@@ -905,6 +910,22 @@
 					"components": "Détail par étape",
 					"floorShort": "Plancher {{n}}",
 					"componentLine": "{{code}} — {{label}} : plancher {{floor}} ({{detail}})",
+					"decisionLabel": "Décision opérationnelle",
+					"blockedTitle": "Blocage moteur",
+					"blockReasonLabel": "Code motif",
+					"matchedRulesTitle": "Règles déclenchées",
+					"blockedVerifyHint": "En enforcement serveur, une vérification sans score manuel peut être refusée tant que le dossier reste bloqué. Ajustez le dossier ou saisissez un score avec motif d’écart.",
+					"decision": {
+						"ALLOW_STANDARD": "Parcours standard",
+						"ALLOW_REINFORCED_REVIEW": "Revue renforcée",
+						"EDD_REQUIRED": "EDD requis",
+						"BLOCK": "Blocage"
+					},
+					"blockReason": {
+						"SANCTIONS_MATCH_CONFIRMED": "Match sanctions confirmé",
+						"IDENTITY_VERIFICATION_FAIL": "Échec vérification d’identité",
+						"UBO_CRITICAL_MISSING": "UBO critique manquant"
+					},
 					"applyProposed": "Appliquer le score proposé",
 					"verifyWithEngine": "Vérifier avec le score moteur uniquement"
 				},
