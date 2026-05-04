@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
@@ -168,12 +168,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 	const [kycSubmitting, setKycSubmitting] = useState<null | "submit" | "verify" | "reject">(null);
 	const [reviewStatusSubmitting, setReviewStatusSubmitting] = useState<null | "email" | "profile" | "identity">(null);
-	const [verifyRisk, setVerifyRisk] = useState<number>(20);
 	const [verifyPep, setVerifyPep] = useState<boolean>(false);
-	const [verifyRiskOverrideReason, setVerifyRiskOverrideReason] = useState<string>("");
+	/** N’initialise le PEP « évaluation » depuis le profil qu’au premier chargement du client : évite qu’un `load()` écrase la case après cochage. */
+	const evaluationPepInitClientIdRef = useRef<number | null>(null);
 	const [kycOnboardingRisk, setKycOnboardingRisk] = useState<KycOnboardingRiskAssessmentResponse | null>(null);
 	const [rejectionReason, setRejectionReason] = useState<string>("");
-	const [showRejectForm, setShowRejectForm] = useState<boolean>(false);
 
 	const kycAllLineReviewsApproved = useMemo(
 		() =>
@@ -186,37 +185,10 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	/** Même règle que l’API : vérification ou rejet KYC final uniquement si les 3 revues sont APPROVED. */
 	const canFinalizeKyc = customer != null && customer.status === "PENDING_REVIEW" && kycAllLineReviewsApproved;
 
-	const kycRiskDeviationExceedsThreshold = useMemo(() => {
-		if (kycOnboardingRisk == null) return false;
-		return Math.abs(verifyRisk - kycOnboardingRisk.proposedRiskScore) > 10;
-	}, [kycOnboardingRisk, verifyRisk]);
-
 	const kycShowsDroolsEngineMeta = useMemo(
 		() => kycOnboardingRisk != null && kycOnboardingRiskShowsEngineMetadata(kycOnboardingRisk),
 		[kycOnboardingRisk]
 	);
-
-	useEffect(() => {
-		if (!id || customer?.status !== "PENDING_REVIEW") {
-			setKycOnboardingRisk(null);
-			return;
-		}
-		let cancelled = false;
-		(async () => {
-			try {
-				const a = await customersApi.getKycRiskAssessment(id, { pep: verifyPep });
-				if (!cancelled) {
-					setKycOnboardingRisk(a);
-					setVerifyRisk(a.proposedRiskScore);
-				}
-			} catch {
-				if (!cancelled) setKycOnboardingRisk(null);
-			}
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [id, customer?.status, verifyPep]);
 
 	// RelatedPerson states
 	const [rpForm, setRpForm] = useState<AddRelatedPersonRequest>({
@@ -276,6 +248,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [complianceTasks, setComplianceTasks] = useState<ComplianceTask[]>([]);
 	const [complianceLoading, setComplianceLoading] = useState(false);
 	const [complianceAction, setComplianceAction] = useState<string | null>(null);
+	const [decisionPanelScreeningBusy, setDecisionPanelScreeningBusy] = useState(false);
 	const [eddInstruction, setEddInstruction] = useState("");
 	const [taskResolution, setTaskResolution] = useState<Record<number, string>>({});
 
@@ -293,11 +266,61 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		}
 	};
 
-	useEffect(() => {
-		if (activeTab === "compliance" && id) {
-			void loadComplianceData();
+	const listScreeningPresence = useMemo(() => {
+		const hasListScreening = kycChecks.some(
+			c => c.type === "SANCTIONS_SCREENING" || c.type === "PEP_SCREENING"
+		);
+		let latestSanctions: KycCheck | null = null;
+		let latestPep: KycCheck | null = null;
+		for (const c of kycChecks) {
+			if (c.type === "SANCTIONS_SCREENING" && latestSanctions === null) {
+				latestSanctions = c;
+			}
+			if (c.type === "PEP_SCREENING" && latestPep === null) {
+				latestPep = c;
+			}
 		}
-	}, [activeTab, id]);
+		return { hasListScreening, latestSanctions, latestPep };
+	}, [kycChecks]);
+
+	/** Checks listes / KYC : nécessaires au panneau Décision (screening + score) dès que le dossier est en revue. */
+	useEffect(() => {
+		if (!id || customer?.status !== "PENDING_REVIEW") return;
+		void loadComplianceData();
+	}, [id, customer?.status]);
+
+	useEffect(() => {
+		if (!id || Number.isNaN(id)) {
+			setKycOnboardingRisk(null);
+			return;
+		}
+		if (customer?.status !== "PENDING_REVIEW") {
+			setKycOnboardingRisk(null);
+			return;
+		}
+		if (customer.id !== id) {
+			setKycOnboardingRisk(null);
+			return;
+		}
+		if (!listScreeningPresence.hasListScreening) {
+			setKycOnboardingRisk(null);
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			try {
+				const a = await customersApi.getKycRiskAssessment(id, { pep: verifyPep });
+				if (!cancelled) {
+					setKycOnboardingRisk(a);
+				}
+			} catch {
+				if (!cancelled) setKycOnboardingRisk(null);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [id, customer?.id, customer?.status, verifyPep, listScreeningPresence.hasListScreening]);
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -406,6 +429,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				customersApi.getDocuments(id)
 			]);
 			setCustomer(customerData);
+			if (customerData.status === "PENDING_REVIEW") {
+				if (evaluationPepInitClientIdRef.current !== customerData.id) {
+					setVerifyPep(Boolean(customerData.pepFlag));
+					evaluationPepInitClientIdRef.current = customerData.id;
+				}
+			} else {
+				evaluationPepInitClientIdRef.current = null;
+			}
 			setAddresses(addressesData);
 			setDocuments(documentsData);
 
@@ -958,28 +989,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setKycSubmitting(null);
 		}
 	}
-	async function doVerifyKyc(options?: { useEngineRiskScore?: boolean }) {
+	async function doVerifyKyc() {
 		if (!id) return;
 		setKycSubmitting("verify");
 		setError(null);
 		try {
-			if (
-				!options?.useEngineRiskScore &&
-				kycRiskDeviationExceedsThreshold &&
-				verifyRiskOverrideReason.trim().length < 4
-			) {
-				setError(t("customer.detail.kyc.verify.overrideReasonRequired"));
-				return;
-			}
-			const c = await customersApi.verifyKyc(id, {
-				...(options?.useEngineRiskScore ? { useEngineRiskScore: true } : { riskScore: verifyRisk }),
-				pep: verifyPep,
-				...(!options?.useEngineRiskScore && kycRiskDeviationExceedsThreshold
-					? { riskScoreOverrideReason: verifyRiskOverrideReason.trim() }
-					: {})
-			});
+			const c = await customersApi.verifyKyc(id, { pep: verifyPep });
 			setCustomer(c);
-			setVerifyRiskOverrideReason("");
 		} catch (e: any) {
 			const errorMessage = e?.message ?? t("customer.detail.kyc.verify.error");
 			setError(errorMessage);
@@ -994,7 +1010,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		try {
 			const c = await customersApi.rejectKyc(id, rejectionReason || undefined);
 			setCustomer(c);
-			setShowRejectForm(false);
 			setRejectionReason("");
 			setToast({ message: t("customer.detail.kyc.reject.success"), type: "success" });
 		} catch (e: any) {
@@ -2919,12 +2934,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										<img
 											src={selfieUrl}
 											alt={t("customer.detail.photo.alt")}
-											className="w-32 h-32 rounded-full object-cover border-4 border-slate-200 shadow-lg"
+											className="h-32 w-32 rounded-2xl border-4 border-slate-200 object-cover shadow-lg"
 											onError={() => setSelfieError(true)}
 											onLoad={() => setSelfieError(false)}
 										/>
 										{selfieDocument?.status === "APPROVED" && (
-											<div className="absolute bottom-0 right-0 bg-green-500 rounded-full p-1.5 border-2 border-white shadow-md">
+											<div className="absolute bottom-0 right-0 rounded-lg border-2 border-white bg-green-500 p-1.5 shadow-md">
 												<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
 													<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
 												</svg>
@@ -2932,7 +2947,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										)}
 									</div>
 								) : (
-									<div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-slate-200 shadow-lg flex items-center justify-center">
+									<div className="flex h-32 w-32 items-center justify-center rounded-2xl border-4 border-slate-200 bg-slate-100 shadow-lg">
 										<svg className="w-20 h-20 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
 											<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
 										</svg>
@@ -3908,46 +3923,167 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 								<div className="border-t border-slate-200/80" aria-hidden />
 
-								{/* Étape 2 — Risque */}
+								{/* Étape 2 — Screening listes */}
 								<section>
 									<div className="flex flex-wrap items-start gap-3">
 										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
 											2
+										</div>
+										<div className="min-w-0 flex-1 space-y-3">
+											<div className="flex flex-wrap items-center gap-2">
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepScreening.title")}</h4>
+												{listScreeningPresence.hasListScreening ? (
+													<Badge variant="success" className="text-[10px] font-medium">
+														{t("customer.detail.kyc.workflow.stepScreening.badgeOk")}
+													</Badge>
+												) : null}
+											</div>
+											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
+											{customer.status === "PENDING_REVIEW" && complianceLoading && kycChecks.length === 0 ? (
+												<p className="text-xs text-slate-500">{t("customer.detail.kyc.workflow.stepScreening.loading")}</p>
+											) : null}
+											{customer.status === "PENDING_REVIEW" && !complianceLoading && !listScreeningPresence.hasListScreening ? (
+												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.workflow.stepScreening.noneHint")}
+												</p>
+											) : null}
+											{listScreeningPresence.hasListScreening ? (
+												<div className="max-w-3xl space-y-2 rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
+													{listScreeningPresence.latestSanctions ? (
+														<div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+															<span className="text-xs font-medium text-slate-700">
+																{t("customer.detail.kyc.workflow.stepScreening.sanctions")}
+															</span>
+															<div className="flex flex-wrap items-center gap-2">
+																<Badge
+																	variant={
+																		listScreeningPresence.latestSanctions.result === "PASS"
+																			? "success"
+																			: listScreeningPresence.latestSanctions.result === "FAIL"
+																				? "danger"
+																				: "warning"
+																	}
+																	className="text-[10px]"
+																>
+																	{listScreeningPresence.latestSanctions.result}
+																</Badge>
+																<span className="text-[11px] text-slate-500">
+																	{listScreeningPresence.latestSanctions.checkedAt
+																		? new Date(listScreeningPresence.latestSanctions.checkedAt).toLocaleString(locale)
+																		: "—"}
+																</span>
+															</div>
+														</div>
+													) : null}
+													{listScreeningPresence.latestPep ? (
+														<div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+															<span className="text-xs font-medium text-slate-700">
+																{t("customer.detail.kyc.workflow.stepScreening.pep")}
+															</span>
+															<div className="flex flex-wrap items-center gap-2">
+																<Badge
+																	variant={
+																		listScreeningPresence.latestPep.result === "PASS"
+																			? "success"
+																			: listScreeningPresence.latestPep.result === "FAIL"
+																				? "danger"
+																				: "warning"
+																	}
+																	className="text-[10px]"
+																>
+																	{listScreeningPresence.latestPep.result}
+																</Badge>
+																<span className="text-[11px] text-slate-500">
+																	{listScreeningPresence.latestPep.checkedAt
+																		? new Date(listScreeningPresence.latestPep.checkedAt).toLocaleString(locale)
+																		: "—"}
+																</span>
+															</div>
+														</div>
+													) : null}
+												</div>
+											) : null}
+											{customer.status === "PENDING_REVIEW" ? (
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null}
+													onClick={async () => {
+														if (!id) return;
+														setDecisionPanelScreeningBusy(true);
+														try {
+															await customersApi.runListScreening(id);
+															await loadComplianceData();
+															setToast({ message: t("customer.detail.kyc.workflow.stepScreening.rescreenDone"), type: "success" });
+														} catch (e) {
+															setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+														} finally {
+															setDecisionPanelScreeningBusy(false);
+														}
+													}}
+												>
+													{decisionPanelScreeningBusy ? "…" : t("customer.detail.kyc.workflow.stepScreening.rescreening")}
+												</Button>
+											) : null}
+										</div>
+									</div>
+								</section>
+
+								<div className="border-t border-slate-200/80" aria-hidden />
+
+								{/* Étape 3 — Risque */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
+											3
 										</div>
 										<div className="min-w-0 flex-1 space-y-4">
 											<div>
 												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepB.title")}</h4>
 												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepB.description")}</p>
 											</div>
+											{customer.status === "PENDING_REVIEW" ? (
+												<div className="max-w-3xl rounded-xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm">
+													<p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-900">
+														{t("customer.detail.kyc.evaluationPep.title")}
+													</p>
+													<p className="mt-1 text-xs text-slate-700">{t("customer.detail.kyc.evaluationPep.hint")}</p>
+													<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+														<label className="flex cursor-pointer items-center gap-2 text-sm text-slate-900">
+															<input
+																type="checkbox"
+																checked={verifyPep}
+																onChange={e => setVerifyPep(e.target.checked)}
+																className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+															/>
+															<span>{t("customer.detail.kyc.evaluationPep.checkbox")}</span>
+														</label>
+														<span className="text-xs text-slate-600">
+															{t("customer.detail.kyc.evaluationPep.profileFlag")}{" "}
+															<strong>{customer.pepFlag ? t("customer.detail.kyc.evaluationPep.yes") : t("customer.detail.kyc.evaluationPep.no")}</strong>
+														</span>
+													</div>
+												</div>
+											) : null}
 											<div className="min-w-0 max-w-3xl">
 												<div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
 													<div className="mb-3 flex flex-wrap items-center gap-2">
 														<h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
 															{t("customer.detail.kyc.onboardingRisk.title")}
 														</h5>
-														{kycOnboardingRisk != null ? (
-															<span
-																className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-																	kycShowsDroolsEngineMeta
-																		? "bg-indigo-100 text-indigo-900 ring-1 ring-indigo-200/80"
-																		: "bg-slate-100 text-slate-600"
-																}`}
-															>
-																{kycShowsDroolsEngineMeta
-																	? t("customer.detail.kyc.onboardingRisk.engineBadge.drools")
-																	: t("customer.detail.kyc.onboardingRisk.engineBadge.shadow")}
+														{kycOnboardingRisk != null && kycShowsDroolsEngineMeta ? (
+															<span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-900 ring-1 ring-indigo-200/80">
+																{t("customer.detail.kyc.onboardingRisk.engineBadge.drools")}
 															</span>
 														) : null}
 														<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
 															{t("customer.detail.kyc.onboardingRisk.phasePill")}
 														</span>
 													</div>
-													<p className="mb-2 text-[11px] leading-snug text-slate-600">
-														{t("customer.detail.kyc.onboardingRisk.subtitle")}
-													</p>
+													<p className="mb-2 text-[11px] leading-snug text-slate-600">{t("customer.detail.kyc.onboardingRisk.subtitle")}</p>
 													{kycOnboardingRisk != null && !kycShowsDroolsEngineMeta ? (
 														<p className="mb-4 rounded-md border border-amber-200/80 bg-amber-50/80 px-2 py-1.5 text-[10px] leading-snug text-amber-950">
-															{t("customer.detail.kyc.onboardingRisk.shadowHint")}
+															{t("customer.detail.kyc.onboardingRisk.metadataPartialHint")}
 														</p>
 													) : null}
 													{customer.status === "PENDING_REVIEW" && kycOnboardingRisk ? (
@@ -4010,38 +4146,17 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																</ul>
 															</div>
 
-															<p className="mb-3 text-[10px] text-slate-500">
+															<p className="text-[10px] text-slate-500">
 																<span className="font-medium uppercase tracking-wide">{t("customer.detail.kyc.onboardingRisk.algorithm")}</span>{" "}
 																<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-800">{kycOnboardingRisk.algorithmVersion}</code>
 															</p>
-
-															<div className="flex flex-wrap gap-2 border-t border-slate-200/80 pt-3">
-																<Button
-																	type="button"
-																	size="sm"
-																	variant="outline"
-																	className="text-xs h-7"
-																	onClick={() => setVerifyRisk(kycOnboardingRisk.proposedRiskScore)}
-																>
-																	{t("customer.detail.kyc.onboardingRisk.applyProposed")}
-																</Button>
-																<Button
-																	type="button"
-																	size="sm"
-																	variant="outline"
-																	className="text-xs h-7"
-																	disabled={kycSubmitting !== null || !canFinalizeKyc}
-																	title={
-																		kycOnboardingRisk.blocked === true
-																			? t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")
-																			: undefined
-																	}
-																	onClick={() => void doVerifyKyc({ useEngineRiskScore: true })}
-																>
-																	{t("customer.detail.kyc.onboardingRisk.verifyWithEngine")}
-																</Button>
-															</div>
 														</>
+													) : customer.status === "PENDING_REVIEW" && !listScreeningPresence.hasListScreening ? (
+														<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
+															{t("customer.detail.kyc.workflow.stepB.needScreeningFirst")}
+														</p>
+													) : customer.status === "PENDING_REVIEW" && listScreeningPresence.hasListScreening && !kycOnboardingRisk ? (
+														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineLoading")}</p>
 													) : (
 														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineWhenPending")}</p>
 													)}
@@ -4053,11 +4168,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 								<div className="border-t border-slate-200/80" aria-hidden />
 
-								{/* Étape 3 — Décision finale */}
+								{/* Étape 4 — Décision finale */}
 								<section>
 									<div className="flex flex-wrap items-start gap-3">
 										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
-											3
+											4
 										</div>
 										<div className="min-w-0 flex-1 space-y-4">
 											<div>
@@ -4067,44 +4182,26 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0 md:divide-x md:divide-slate-200">
 												<div className="md:pr-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
 													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.verify.title")}</h5>
-													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.description")}</p>
+													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.descriptionNoManualScore")}</p>
 													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
 														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
 															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 														</p>
 													) : null}
-													<div className="space-y-2 mb-3">
-														<label className="flex flex-wrap items-center gap-2 text-xs">
-															<span className="text-slate-700">{t("customer.detail.kyc.verify.riskScore")}</span>
-															<Input
-																type="number"
-																min={0}
-																max={100}
-																value={verifyRisk}
-																onChange={e => setVerifyRisk(Number(e.target.value))}
-																className="h-8 w-16 text-xs"
-															/>
-														</label>
-														<label className="flex items-center gap-2 text-xs text-slate-700">
-															<input type="checkbox" checked={verifyPep} onChange={e => setVerifyPep(e.target.checked)} className="rounded border-slate-300" />
-															{t("customer.detail.kyc.verify.pepFlag")}
-														</label>
-														{kycRiskDeviationExceedsThreshold ? (
-															<label className="flex flex-col gap-1 text-xs">
-																<span className="text-amber-900 font-medium">{t("customer.detail.kyc.verify.overrideReason")}</span>
-																<textarea
-																	value={verifyRiskOverrideReason}
-																	onChange={e => setVerifyRiskOverrideReason(e.target.value)}
-																	placeholder={t("customer.detail.kyc.verify.overrideReasonPlaceholder")}
-																	className="min-h-[56px] w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-																	rows={2}
-																/>
-															</label>
-														) : null}
-													</div>
+													{kycOnboardingRisk?.blocked === true ? (
+														<p className="mb-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+															{t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")}
+														</p>
+													) : null}
 													<Button
 														onClick={() => void doVerifyKyc()}
-														disabled={kycSubmitting !== null || !canFinalizeKyc}
+														disabled={
+															kycSubmitting !== null ||
+															!canFinalizeKyc ||
+															!listScreeningPresence.hasListScreening ||
+															kycOnboardingRisk == null ||
+															kycOnboardingRisk.blocked === true
+														}
 														size="sm"
 														className="bg-emerald-600 text-white hover:bg-emerald-700"
 													>
@@ -4119,49 +4216,33 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 														</p>
 													) : null}
-													{!showRejectForm ? (
+													<label className="mb-2 block text-xs font-medium text-slate-700">{t("customer.detail.kyc.reject.reason")}</label>
+													<textarea
+														value={rejectionReason}
+														onChange={e => setRejectionReason(e.target.value)}
+														placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
+														className="mb-3 w-full resize-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
+														rows={3}
+													/>
+													<div className="flex flex-wrap gap-2">
 														<Button
-															variant="outline"
 															size="sm"
-															onClick={() => setShowRejectForm(true)}
-															disabled={kycSubmitting !== null || !canFinalizeKyc}
+															variant="outline"
+															onClick={() => void doRejectKyc()}
+															disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
 															className="border-red-300 text-red-700 hover:bg-red-50"
 														>
-															{t("customer.detail.kyc.reject.button")}
+															{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
 														</Button>
-													) : (
-														<div className="space-y-2">
-															<textarea
-																value={rejectionReason}
-																onChange={e => setRejectionReason(e.target.value)}
-																placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
-																className="w-full resize-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
-																rows={2}
-															/>
-															<div className="flex flex-wrap gap-2">
-																<Button
-																	size="sm"
-																	variant="outline"
-																	onClick={doRejectKyc}
-																	disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
-																	className="border-red-300 text-red-700 hover:bg-red-50"
-																>
-																	{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
-																</Button>
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={() => {
-																		setShowRejectForm(false);
-																		setRejectionReason("");
-																	}}
-																	disabled={kycSubmitting !== null}
-																>
-																	{t("customer.detail.generalInfo.cancel")}
-																</Button>
-															</div>
-														</div>
-													)}
+														<Button
+															size="sm"
+															variant="ghost"
+															onClick={() => setRejectionReason("")}
+															disabled={kycSubmitting !== null}
+														>
+															{t("customer.detail.generalInfo.cancel")}
+														</Button>
+													</div>
 												</div>
 											</div>
 										</div>

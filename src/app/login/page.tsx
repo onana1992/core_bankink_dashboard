@@ -1,16 +1,24 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
+function readLoginErrorFromUrl(): string | null {
+	if (typeof window === "undefined") return null;
+	const errorParam = new URLSearchParams(window.location.search).get("error");
+	if (errorParam === "session_expired") return "session_expired";
+	if (errorParam === "not_authenticated") return "not_authenticated";
+	return null;
+}
+
 function LoginContent() {
 	const router = useRouter();
-	const searchParams = useSearchParams();
+	const pathname = usePathname();
 	const { t } = useTranslation();
 	const { login, isAuthenticated } = useAuth();
 	const [username, setUsername] = useState("");
@@ -25,14 +33,15 @@ function LoginContent() {
 	}, [isAuthenticated, router]);
 
 	useEffect(() => {
-		// Vérifier les paramètres d'erreur dans l'URL
-		const errorParam = searchParams?.get("error");
-		if (errorParam === "session_expired") {
+		// Lecture côté client uniquement : évite useSearchParams + Suspense (fallback SSR ≠ arbre hydraté).
+		const code = readLoginErrorFromUrl();
+		if (code === "session_expired") {
 			setError(t("login.errors.sessionExpired"));
-		} else if (errorParam === "not_authenticated") {
+		} else if (code === "not_authenticated") {
 			setError(t("login.errors.notAuthenticated"));
 		}
-	}, [searchParams, t]);
+		// Ne pas appeler setError(null) ici : préserver erreurs validation / API login.
+	}, [pathname, t]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -125,11 +134,7 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
-	return (
-		<Suspense fallback={<div className="min-h-screen bg-white flex items-center justify-center">Chargement...</div>}>
-			<LoginContent />
-		</Suspense>
-	);
+	return <LoginContent />;
 }
 
 

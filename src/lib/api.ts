@@ -545,24 +545,9 @@ export const customersApi = {
 		return handleJsonResponse<KycOnboardingRiskAssessmentResponse>(res);
 	},
 
-	async verifyKyc(
-		id: number | string,
-		params: {
-			riskScore?: number;
-			pep?: boolean;
-			riskScoreOverrideReason?: string;
-			/** Si true, le backend applique uniquement le score moteur (paramètre riskScore omis). */
-			useEngineRiskScore?: boolean;
-		} = {}
-	): Promise<Customer> {
+	async verifyKyc(id: number | string, params: { pep?: boolean } = {}): Promise<Customer> {
 		const usp = new URLSearchParams();
-		if (!params.useEngineRiskScore && typeof params.riskScore === "number") {
-			usp.set("riskScore", String(params.riskScore));
-		}
 		if (typeof params.pep === "boolean") usp.set("pep", String(params.pep));
-		if (params.riskScoreOverrideReason && params.riskScoreOverrideReason.trim()) {
-			usp.set("riskScoreOverrideReason", params.riskScoreOverrideReason.trim());
-		}
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/verify?${usp.toString()}`, {
 			method: "POST",
 			headers: getAuthHeaders()

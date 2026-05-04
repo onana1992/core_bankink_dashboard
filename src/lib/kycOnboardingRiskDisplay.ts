@@ -1,8 +1,7 @@
-import type { KycOnboardingRiskAssessmentResponse } from "@types/customer";
+import type { KycOnboardingRiskAssessmentResponse } from "@/types/customer";
 
 /**
- * Indique si la réponse API expose les champs du moteur Drools (ADVISORY / ENFORCED).
- * En SHADOW, le backend renvoie le legacy avec decision / matchedRules absents.
+ * Indique si la réponse API expose les métadonnées du moteur (decision, matchedRules, etc.).
  */
 export function kycOnboardingRiskShowsEngineMetadata(
 	response: KycOnboardingRiskAssessmentResponse | null | undefined

@@ -9,7 +9,13 @@ import Badge from "@/components/ui/Badge";
 import { loansApi, accountsApi } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
 import { useToast } from "@/contexts/ToastContext";
-import type { Account, AccountStatus, LoanBalanceBreakdown, LoanScheduleItem } from "@/types";
+import type {
+	Account,
+	AccountStatus,
+	LoanBalanceBreakdown,
+	LoanScheduleItem,
+	PaymentMethod
+} from "@/types";
 
 export default function LoanDetailPage() {
 	const params = useParams();

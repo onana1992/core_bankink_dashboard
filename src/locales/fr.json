@@ -861,7 +861,7 @@
 				"clientStatus": "Statut client",
 				"decisionPanel": {
 					"title": "Décision KYC",
-					"subtitle": "Enchaînement recommandé : revues ligne → risque → vérification ou rejet."
+					"subtitle": "Enchaînement recommandé : revues ligne → screening listes → évaluation du risque → vérification ou rejet."
 				},
 				"workflow": {
 					"stepA": {
@@ -869,14 +869,27 @@
 						"description": "Validez ou refusez chaque volet avant la décision finale.",
 						"badgeOk": "Prêt pour la suite"
 					},
+					"stepScreening": {
+						"title": "Screening listes",
+						"description": "Sanctions et PEP : au moins un passage est obligatoire avant le calcul du score moteur. Vous pouvez relancer un screening à tout moment.",
+						"badgeOk": "Screening effectué",
+						"loading": "Chargement des contrôles…",
+						"noneHint": "Aucun screening listes enregistré. Utilisez le bouton ci-dessous pour lancer un premier screening.",
+						"sanctions": "Dernier sanctions",
+						"pep": "Dernier PEP",
+						"rescreening": "Relancer le screening",
+						"rescreenDone": "Screening listes mis à jour."
+					},
 					"stepB": {
 						"title": "Évaluation du risque",
-						"description": "Consultez la proposition du moteur onboarding et appliquez le score si besoin.",
-						"engineWhenPending": "Moteur et score proposés lorsque le dossier est en attente d'examen."
+						"description": "Ajustez le statut PEP pour l’analyse si nécessaire, puis consultez la proposition du moteur (recalcul automatique après l’étape screening).",
+						"engineWhenPending": "Moteur et score proposés lorsque le dossier est en attente d'examen et qu’un screening listes a été effectué.",
+						"needScreeningFirst": "Complétez d’abord l’étape 2 (screening listes) : le score moteur n’est calculé qu’après au moins un contrôle sanctions ou PEP.",
+						"engineLoading": "Calcul du score moteur en cours…"
 					},
 					"stepC": {
 						"title": "Décision finale",
-						"description": "Uniquement si les trois revues ligne sont approuvées et le dossier en attente d'examen."
+						"description": "Validez ou rejetez le dossier lorsque les revues ligne sont approuvées. Le score enregistré est celui du moteur (étape 3), sans saisie manuelle."
 					}
 				},
 				"currentStatus": "Statut actuel",
@@ -890,15 +903,24 @@
 					"success": "KYC soumis avec succès",
 					"error": "Erreur lors de la soumission du KYC"
 				},
+				"evaluationPep": {
+					"title": "PEP pris en compte pour l’évaluation",
+					"hint": "Ce choix est envoyé au moteur de risque. Modifiez-le pour relancer une évaluation (étape 3).",
+					"checkbox": "Traiter le client comme PEP pour cette évaluation",
+					"profileFlag": "PEP enregistré sur le profil :",
+					"yes": "Oui",
+					"no": "Non"
+				},
 				"onboardingRisk": {
 					"title": "Moteur de risque onboarding",
 					"phasePill": "Phase 2",
-					"subtitle": "Score et bande selon la configuration du serveur : calcul historique (shadow) ou moteur de règles Drools (advisory). S’appuie sur les contrôles KYC, la géographie, l’activité, les documents et la case PEP analyste.",
+					"subtitle": "Score et bande produits par le moteur Drools à partir des contrôles KYC, de la géographie, de l’activité, des documents et du statut PEP d’évaluation ci-dessus.",
 					"engineBadge": {
 						"shadow": "Historique (affiché)",
 						"drools": "Drools (affiché)"
 					},
 					"shadowHint": "Le score affiché correspond au calcul historique. Un passage Drools peut être exécuté en parallèle côté serveur (logs « shadow »).",
+					"metadataPartialHint": "Métadonnées moteur partielles (decision / règles) : vérifiez la version du backend.",
 					"proposed": "Score proposé",
 					"band": "Bande de risque",
 					"bandValue": {
@@ -914,7 +936,7 @@
 					"blockedTitle": "Blocage moteur",
 					"blockReasonLabel": "Code motif",
 					"matchedRulesTitle": "Règles déclenchées",
-					"blockedVerifyHint": "En enforcement serveur, une vérification sans score manuel peut être refusée tant que le dossier reste bloqué. Ajustez le dossier ou saisissez un score avec motif d’écart.",
+					"blockedVerifyHint": "Le moteur bloque ce dossier : corrigez les points bloquants avant de pouvoir vérifier.",
 					"decision": {
 						"ALLOW_STANDARD": "Parcours standard",
 						"ALLOW_REINFORCED_REVIEW": "Revue renforcée",
@@ -932,6 +954,7 @@
 				"verify": {
 					"title": "Vérification",
 					"description": "Approuver le KYC avec score de risque et indicateur PEP",
+					"descriptionNoManualScore": "Le score et le PEP enregistrés sont ceux du moteur (étape 3) et du statut PEP d’évaluation. Aucune saisie manuelle du score ici.",
 					"riskScore": "Score de risque",
 					"pepFlag": "Personne PEP",
 					"overrideReason": "Motif d'écart (obligatoire si le score diffère de plus de 10 points du moteur)",

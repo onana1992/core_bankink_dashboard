@@ -69,7 +69,7 @@ export interface KycOnboardingRiskAssessmentResponse {
 	riskBand: string;
 	algorithmVersion: string;
 	components: KycOnboardingRiskComponent[];
-	/** Moteur Drools (ADVISORY / ENFORCED) — absent en SHADOW ou legacy seul. */
+	/** Champs renseignés par le moteur Drools (peuvent être absents si API plus ancienne). */
 	decision?: string | null;
 	blocked?: boolean | null;
 	blockReasonCode?: string | null;
@@ -86,6 +86,8 @@ export interface Customer {
 	phone?: string | null;
 	status: CustomerStatus;
 	riskScore?: number | null;
+	/** Dernière exécution enregistrée du scoring onboarding (verify). */
+	lastRiskAssessmentAt?: string | null;
 	pepFlag?: boolean | null;
 	rejectionReason?: string | null;
 	/** Motif re-KYC demandé par le flux AML (si applicable) */

@@ -838,7 +838,7 @@
 				"clientStatus": "Client status",
 				"decisionPanel": {
 					"title": "KYC decision",
-					"subtitle": "Recommended flow: line reviews → risk → verify or reject."
+					"subtitle": "Recommended flow: line reviews → list screening → risk assessment → verify or reject."
 				},
 				"workflow": {
 					"stepA": {
@@ -846,14 +846,27 @@
 						"description": "Approve or reject each item before the final decision.",
 						"badgeOk": "Ready for next step"
 					},
+					"stepScreening": {
+						"title": "List screening",
+						"description": "Sanctions and PEP: at least one run is required before the engine score. You can re-run screening at any time.",
+						"badgeOk": "Screening completed",
+						"loading": "Loading checks…",
+						"noneHint": "No list screening on file yet. Use the button below to run an initial screening.",
+						"sanctions": "Latest sanctions",
+						"pep": "Latest PEP",
+						"rescreening": "Re-run screening",
+						"rescreenDone": "List screening updated."
+					},
 					"stepB": {
 						"title": "Risk assessment",
-						"description": "Review the onboarding risk engine proposal and apply the score if needed.",
-						"engineWhenPending": "Engine and proposed score are available when the file is pending review."
+						"description": "Adjust the PEP flag used for analysis if needed, then review the engine proposal (auto re-run after list screening).",
+						"engineWhenPending": "Engine and proposed score are available when the file is pending review and list screening has been performed.",
+						"needScreeningFirst": "Complete step 2 (list screening) first: the engine score is only computed after at least one sanctions or PEP check exists.",
+						"engineLoading": "Computing engine score…"
 					},
 					"stepC": {
 						"title": "Final decision",
-						"description": "Only when all three line reviews are approved and the file is pending review."
+						"description": "Approve or reject when line reviews are done. The stored score is always the engine score from step 3 (no manual score entry)."
 					}
 				},
 				"currentStatus": "Current status",
@@ -867,15 +880,24 @@
 					"success": "KYC submitted successfully",
 					"error": "Error submitting KYC"
 				},
+				"evaluationPep": {
+					"title": "PEP used for risk evaluation",
+					"hint": "This choice is sent to the risk engine. Change it to trigger a new evaluation (step 3).",
+					"checkbox": "Treat client as PEP for this evaluation",
+					"profileFlag": "PEP on client profile:",
+					"yes": "Yes",
+					"no": "No"
+				},
 				"onboardingRisk": {
 					"title": "Onboarding risk engine",
 					"phasePill": "Phase 2",
-					"subtitle": "Score and band depend on server config: legacy calculation (shadow) or Drools rules engine (advisory). Uses KYC checks, geography, activity, documents, and analyst PEP flag.",
+					"subtitle": "Score and band from the Drools engine using KYC checks, geography, activity, documents, and the evaluation PEP flag above.",
 					"engineBadge": {
 						"shadow": "Legacy (displayed)",
 						"drools": "Drools (displayed)"
 					},
 					"shadowHint": "The value shown uses the legacy calculator. Drools may still run in parallel on the server (see shadow logs).",
+					"metadataPartialHint": "Partial engine metadata (decision / rules): check backend version.",
 					"proposed": "Proposed score",
 					"band": "Risk band",
 					"bandValue": {
@@ -891,7 +913,7 @@
 					"blockedTitle": "Engine block",
 					"blockReasonLabel": "Reason code",
 					"matchedRulesTitle": "Matched rules",
-					"blockedVerifyHint": "With server enforcement enabled, verify without a manual score may fail while the file remains blocked. Fix the file or enter a score with an override reason.",
+					"blockedVerifyHint": "The engine blocks this file: fix blocking issues before you can verify.",
 					"decision": {
 						"ALLOW_STANDARD": "Standard path",
 						"ALLOW_REINFORCED_REVIEW": "Enhanced review",
@@ -909,6 +931,7 @@
 				"verify": {
 					"title": "Verification",
 					"description": "Approve KYC with risk score and PEP indicator",
+					"descriptionNoManualScore": "The stored risk score and PEP come from the engine (step 3) and the evaluation PEP flag. No manual score entry here.",
 					"riskScore": "Risk Score",
 					"pepFlag": "PEP Person",
 					"overrideReason": "Override reason (required if score differs by more than 10 from engine)",

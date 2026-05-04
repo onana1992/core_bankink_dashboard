@@ -5,10 +5,15 @@ import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
 
 export default function LanguageSwitcher() {
-	const { i18n, ready } = useTranslation();
+	const { i18n } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
+	const [mounted, setMounted] = useState(false);
 	const [currentLang, setCurrentLang] = useState(i18n.language || "en");
 	const dropdownRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	const languages = [
 		{ code: "en", label: "English" },
@@ -91,8 +96,13 @@ export default function LanguageSwitcher() {
 				aria-expanded={isOpen}
 			>
 				<Globe className="h-4 w-4 text-gray-700" />
-				<span className="text-sm font-medium text-gray-700 hidden sm:inline">{currentLanguage.label}</span>
-				<span className="text-sm font-medium text-gray-700 sm:hidden">{currentLanguage.code.toUpperCase()}</span>
+				{/* Libellé uniquement après hydratation : évite tout écart SSR/client (i18n, détecteur, stockage). */}
+				{mounted && (
+					<>
+						<span className="text-sm font-medium text-gray-700 hidden sm:inline">{currentLanguage.label}</span>
+						<span className="text-sm font-medium text-gray-700 sm:hidden">{currentLanguage.code.toUpperCase()}</span>
+					</>
+				)}
 			</button>
 			{isOpen && (
 				<div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50 overflow-hidden">

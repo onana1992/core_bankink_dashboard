@@ -55,7 +55,8 @@ export type CreateRuleDefinitionRequest = {
 
 export type PublishRuleVersionRequest = {
 	effectiveFrom: string;
-	parametersJson: string;
+	/** Optionnel ; non utilisé par Drools (défaut `{}` côté API). */
+	parametersJson?: string | null;
 	enabled: boolean;
 };
 
