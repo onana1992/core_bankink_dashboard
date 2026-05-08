@@ -738,6 +738,7 @@
 			},
 			"photo": {
 				"title": "Photo du client",
+				"selfieLabel": "Selfie du client",
 				"subtitle": "Selfie et vérification",
 				"alt": "Selfie du client",
 				"upload": "Uploader un selfie",

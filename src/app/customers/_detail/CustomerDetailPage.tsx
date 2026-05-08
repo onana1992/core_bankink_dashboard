@@ -11,6 +11,8 @@ import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
 import Toast from "@/components/ui/Toast";
 import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
+import { OpsInlineAlert, OpsLoadingState, OpsPageHeader } from "@/components/ops";
+import { OPS_CARD_HEADER, OPS_CARD_SHELL, OPS_PAGE_STACK } from "@/components/ops/opsClasses";
 import { customersApi, accountsApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
@@ -156,6 +158,12 @@ function kycCheckTypeRowAccent(type: KycCheckType): string {
 
 function translatedCustomerStatus(t: TFunction, status: Customer["status"]): string {
 	const key = `customer.statuses.${status}`;
+	const lbl = t(key);
+	return lbl === key ? status : lbl;
+}
+
+function documentReviewStatusLabel(t: TFunction, status: string): string {
+	const key = `customer.detail.profileDetail.reviewStatus.${status}`;
 	const lbl = t(key);
 	return lbl === key ? status : lbl;
 }
@@ -1591,11 +1599,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 	if (loading) {
 		return (
-			<div className="flex min-h-[50vh] items-center justify-center py-20">
-				<div className="text-center">
-					<div className="mx-auto mb-5 h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-t-indigo-600" />
-					<p className="text-sm font-medium text-slate-600">{t("customer.detail.loading")}</p>
-				</div>
+			<div className={`${OPS_PAGE_STACK} w-full min-w-0`}>
+				<OpsLoadingState message={t("customer.detail.loading")} />
 			</div>
 		);
 	}
@@ -1627,32 +1632,32 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	if (!loading && customer && customer.type !== expectedType) {
 		const correctPath = customerDetailPath(customer.id, customer.type);
 		return (
-			<div className="mx-auto max-w-2xl space-y-6 pb-12">
-				<div className="overflow-hidden rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-6 shadow-lg shadow-amber-100/40 sm:p-7">
-					<p className="text-base font-semibold tracking-tight text-amber-950">{t("customer.detail.wrongRouteTitle")}</p>
-					<p className="mt-2 text-sm leading-relaxed text-amber-900/90">
-						{t("customer.detail.wrongRouteDescription", {
-							opened: t(`customer.types.${expectedType}`),
-							actual: t(`customer.types.${customer.type}`)
-						})}
-					</p>
-					<div className="mt-6 flex flex-wrap gap-3">
-						<Link href={correctPath}>
-							<Button className="shadow-sm">{t("customer.detail.wrongRouteOpenButton")}</Button>
-						</Link>
-						<Link href="/customers">
-							<Button variant="outline" className="border-amber-300/80 bg-white/80">
-								{t("customer.detail.backToList")}
-							</Button>
-						</Link>
+			<div className={`${OPS_PAGE_STACK} w-full min-w-0`}>
+				<OpsInlineAlert variant="warning">
+					<div>
+						<p className="font-medium">{t("customer.detail.wrongRouteTitle")}</p>
+						<p className="mt-2 text-sm leading-relaxed opacity-90">
+							{t("customer.detail.wrongRouteDescription", {
+								opened: t(`customer.types.${expectedType}`),
+								actual: t(`customer.types.${customer.type}`)
+							})}
+						</p>
 					</div>
+				</OpsInlineAlert>
+				<div className="flex flex-wrap gap-3">
+					<Link href={correctPath}>
+						<Button>{t("customer.detail.wrongRouteOpenButton")}</Button>
+					</Link>
+					<Link href="/customers">
+						<Button variant="outline">{t("customer.detail.backToList")}</Button>
+					</Link>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="mx-auto max-w-6xl space-y-8 pb-12">
+		<div className={`${OPS_PAGE_STACK} w-full min-w-0 pb-8`}>
 			{toast && (
 				<Toast
 					message={toast.message}
@@ -1666,145 +1671,143 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				))}
 			</datalist>
 
-			{/* En-tête */}
-			<div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-md shadow-slate-200/50 sm:p-7">
-				<Link
-					href="/customers"
-					className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-indigo-700"
-				>
-					<svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-					</svg>
-					{t("customer.detail.backToList")}
-				</Link>
-				<div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-					<div className="flex items-start gap-4">
-						<div
-							className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg ${
-								expectedType === "BUSINESS"
-									? "bg-gradient-to-br from-violet-600 to-indigo-900"
-									: "bg-gradient-to-br from-sky-500 to-indigo-800"
-							}`}
-						>
-							{expectedType === "BUSINESS" ? (
-								<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={1.75}
-										d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+			<Link
+				href="/customers"
+				className="inline-flex items-center gap-1.5 text-sm font-medium text-ops-fg-muted transition hover:text-ops-fg"
+			>
+				<svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+				</svg>
+				{t("customer.detail.backToList")}
+			</Link>
+
+			<OpsPageHeader
+				leading={
+					customer ? (
+						<div className="shrink-0" aria-label={t("customer.detail.photo.selfieLabel")}>
+							{selfieUrl && id && !selfieError ? (
+								<div className="relative h-14 w-14 sm:h-16 sm:w-16">
+									<img
+										src={selfieUrl}
+										alt={t("customer.detail.photo.alt")}
+										className="h-full w-full rounded-2xl border border-ops-border object-cover shadow-sm"
+										onError={() => setSelfieError(true)}
+										onLoad={() => setSelfieError(false)}
 									/>
-								</svg>
+									{selfieDocument?.status === "APPROVED" && (
+										<div className="absolute bottom-0.5 right-0.5 rounded-md border-2 border-white bg-emerald-600 p-0.5 shadow-sm" title={documentReviewStatusLabel(t, "APPROVED")}>
+											<svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+												<path
+													fillRule="evenodd"
+													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+													clipRule="evenodd"
+												/>
+											</svg>
+										</div>
+									)}
+								</div>
 							) : (
-								<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-									<path
-										strokeLinecap="round"
-										strokeLinejoin="round"
-										strokeWidth={1.75}
-										d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-									/>
-								</svg>
-							)}
-						</div>
-						<div className="min-w-0">
-							<div className="flex flex-wrap items-center gap-2">
-								<h1 className="text-2xl font-bold tracking-tight text-black sm:text-3xl">
-									{customer?.displayName || `${t("common.customers")} #${id}`}
-								</h1>
-								{customer && (
-									<span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
-										{t(`customer.types.${customer.type}`)}
-									</span>
-								)}
-							</div>
-							<p className="mt-1.5 text-sm text-slate-600 sm:text-base">{t("customer.detail.subtitle")}</p>
-							{customer && (
-								<div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200/90 bg-slate-50/85 px-4 py-3 ring-1 ring-slate-900/[0.03]">
-									<div className="flex flex-wrap items-center gap-2">
-										<span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-											{t("customer.detail.headerStrip.dossierStatus")}
-										</span>
-										<Badge variant={statusBadgeVariant(customer.status)} className="gap-0 text-xs font-medium">
-											<span>{translatedCustomerStatus(t, customer.status)}</span>
-											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
-												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
-											</span>
-										</Badge>
-									</div>
-									<div className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
-									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.clientId")}</span>
-										<span className="rounded-md bg-white px-2 py-0.5 font-mono ring-1 ring-slate-200">{customer.id}</span>
-									</div>
-									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.typeLabel")}</span>
-										<span className="rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200">
-											{t(`customer.types.${customer.type}`)}
-										</span>
-									</div>
-									{typeof customer.riskScore === "number" && (
-										<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.riskScore")}</span>
-											<Badge variant={riskBadgeVariant(customer.riskScore)} className="text-[11px]">
-												{customer.riskScore}/100
-											</Badge>
-										</div>
-									)}
-									{customer.lastRiskAssessmentAt && (
-										<div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-600">
-											<span className="font-medium text-slate-500 shrink-0">
-												{t("customer.detail.headerStrip.lastRiskAt")}
-											</span>
-											<span className="truncate tabular-nums">
-												{new Date(customer.lastRiskAssessmentAt).toLocaleString(locale)}
-											</span>
-										</div>
-									)}
-									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.pepLabel")}</span>
-										<Badge variant={customer.pepFlag ? "danger" : "success"} className="text-[11px]">
-											{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
-										</Badge>
-									</div>
+								<div
+									className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-dashed border-ops-border bg-ops-surface-muted sm:h-16 sm:w-16"
+									role="img"
+									aria-label={t("customer.detail.photo.alt")}
+								>
+									<svg className="h-8 w-8 text-ops-fg-muted/50 sm:h-9 sm:w-9" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+									</svg>
 								</div>
 							)}
 						</div>
-					</div>
-					<div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-						<Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2 border-slate-200">
+					) : undefined
+				}
+				title={
+					<span className="inline-flex flex-wrap items-center gap-2">
+						<span>{customer?.displayName || `${t("common.customers")} #${id}`}</span>
+						{customer ? (
+							<span className="inline-flex items-center rounded-full border border-ops-border bg-ops-surface-muted px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+								{t(`customer.types.${customer.type}`)}
+							</span>
+						) : null}
+					</span>
+				}
+				description={t("customer.detail.subtitle")}
+				actions={
+					<>
+						<Button variant="outline" onClick={() => router.back()} className="flex items-center gap-2">
 							<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 							</svg>
 							{t("customer.detail.back")}
 						</Button>
-						<Button variant="outline" onClick={load} className="flex items-center gap-2 border-slate-200">
+						<Button variant="outline" onClick={() => load()} className="flex items-center gap-2">
 							<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
 							{t("common.refresh")}
 						</Button>
-					</div>
-				</div>
-				{error && (
-					<div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50/90 px-4 py-3 text-red-900">
-						<svg className="mt-0.5 h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-						</svg>
-						<span className="text-sm">{error}</span>
-					</div>
-				)}
-			</div>
+					</>
+				}
+			/>
 
 			{customer && (
-				<div className="mb-6 overflow-hidden rounded-xl border border-indigo-200/55 bg-gradient-to-r from-indigo-50/80 via-white to-slate-50/90 px-5 py-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+				<div className={`${OPS_CARD_SHELL} px-4 py-3 sm:px-5 sm:py-4`}>
+					<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+								{t("customer.detail.headerStrip.dossierStatus")}
+							</span>
+							<Badge variant={statusBadgeVariant(customer.status)} className="gap-0 text-xs font-medium">
+								<span>{translatedCustomerStatus(t, customer.status)}</span>
+								<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
+									{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+								</span>
+							</Badge>
+						</div>
+						<div className="hidden h-4 w-px bg-ops-border sm:block" aria-hidden />
+						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
+							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.clientId")}</span>
+							<span className="rounded-md border border-ops-border bg-ops-surface-muted px-2 py-0.5 font-mono">{customer.id}</span>
+						</div>
+						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
+							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.typeLabel")}</span>
+							<span className="rounded-md border border-ops-border bg-ops-surface-muted px-2 py-0.5">{t(`customer.types.${customer.type}`)}</span>
+						</div>
+						{typeof customer.riskScore === "number" && (
+							<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
+								<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.riskScore")}</span>
+								<Badge variant={riskBadgeVariant(customer.riskScore)} className="text-[11px]">
+									{customer.riskScore}/100
+								</Badge>
+							</div>
+						)}
+						{customer.lastRiskAssessmentAt && (
+							<div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-ops-fg">
+								<span className="shrink-0 font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.lastRiskAt")}</span>
+								<span className="truncate tabular-nums">{new Date(customer.lastRiskAssessmentAt).toLocaleString(locale)}</span>
+							</div>
+						)}
+						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
+							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.pepLabel")}</span>
+							<Badge variant={customer.pepFlag ? "danger" : "success"} className="text-[11px]">
+								{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
+							</Badge>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{error && customer ? (
+				<OpsInlineAlert variant="error">
+					<span className="text-sm">{error}</span>
+				</OpsInlineAlert>
+			) : null}
+
+			{customer && expectedType === "BUSINESS" && (
+				<div className={`${OPS_CARD_SHELL} p-4 sm:p-5`}>
 					<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 						<div className="min-w-0 flex-1 space-y-2">
-							<h3 className="text-sm font-semibold tracking-tight text-slate-900">
-								{t("customer.detail.headerDecision.title")}
-							</h3>
-							<p className="max-w-prose text-xs leading-relaxed text-slate-600">
-								{t("customer.detail.headerDecision.hint")}
-							</p>
+							<h3 className="text-sm font-semibold tracking-tight text-ops-fg">{t("customer.detail.headerDecision.title")}</h3>
+							<p className="max-w-prose text-xs leading-relaxed text-ops-fg-muted">{t("customer.detail.headerDecision.hint")}</p>
 							{kycChecks.length > 0 ? (
 								<div className="flex flex-wrap items-center gap-2">
 									{listScreeningPresence.latestSanctions ? (
@@ -1815,18 +1818,15 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									) : null}
 									{listScreeningPresence.latestPep ? (
 										<Badge variant={kycCheckResultBadgeVariant(listScreeningPresence.latestPep.result)}>
-											{t("customer.detail.headerDecision.screeningPep")}:{" "}
-											{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
+											{t("customer.detail.headerDecision.screeningPep")}: {kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
 										</Badge>
 									) : null}
 									{!listScreeningPresence.latestSanctions && !listScreeningPresence.latestPep ? (
-										<span className="text-xs text-slate-500">—</span>
+										<span className="text-xs text-ops-fg-muted">—</span>
 									) : null}
 								</div>
 							) : (
-								<p className="text-xs text-slate-500">
-									{complianceLoading ? t("customer.detail.loading") : "—"}
-								</p>
+								<p className="text-xs text-ops-fg-muted">{complianceLoading ? t("customer.detail.loading") : "—"}</p>
 							)}
 						</div>
 						<div className="flex flex-wrap gap-2 lg:shrink-0">
@@ -1834,7 +1834,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								type="button"
 								size="sm"
 								variant="outline"
-								className="border-slate-300 bg-white"
 								onClick={() => {
 									setActiveTab("compliance");
 									setComplianceInnerTab("review");
@@ -1846,7 +1845,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								type="button"
 								size="sm"
 								variant="outline"
-								className="border-slate-300 bg-white"
 								onClick={() => {
 									setActiveTab("compliance");
 									setComplianceInnerTab("review");
@@ -1858,7 +1856,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								type="button"
 								size="sm"
 								variant="outline"
-								className="border-slate-300 bg-white"
 								onClick={() => {
 									setActiveTab("compliance");
 									setComplianceInnerTab("screeningChecks");
@@ -1870,7 +1867,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								type="button"
 								size="sm"
 								variant="outline"
-								className="border-slate-300 bg-white"
 								onClick={() => {
 									setActiveTab("compliance");
 									setComplianceInnerTab("tasks");
@@ -1882,7 +1878,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								type="button"
 								size="sm"
 								variant="outline"
-								className="border-slate-300 bg-white"
 								onClick={() => {
 									setActiveTab("compliance");
 									setComplianceInnerTab("auditTrail");
@@ -1891,13 +1886,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							>
 								{t("customer.detail.headerDecision.openAudit")}
 							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								className="border-slate-300 bg-white"
-								onClick={() => router.push(`/aml/alerts?clientId=${customer.id}`)}
-							>
+							<Button type="button" size="sm" variant="outline" onClick={() => router.push(`/aml/alerts?clientId=${customer.id}`)}>
 								{t("customer.detail.headerDecision.openAmlAlerts")}
 							</Button>
 						</div>
@@ -1905,21 +1894,15 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				</div>
 			)}
 
-			{/* Onglets + contenu */}
-			<div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md shadow-slate-200/50">
-				<nav
-					className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-gradient-to-r from-slate-100/90 via-slate-50 to-slate-100/90 px-2 py-2 sm:px-3"
-					aria-label={t("customer.detail.subtitle")}
-				>
+			<div className={OPS_CARD_SHELL}>
+				<nav className="flex gap-1 overflow-x-auto border-b border-ops-border bg-ops-surface-muted px-2 py-2 sm:px-3" aria-label={t("customer.detail.subtitle")}>
 					{tabs.map(tab => (
 						<button
 							key={tab.id}
 							type="button"
 							onClick={() => setActiveTab(tab.id)}
-							className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${
-								activeTab === tab.id
-									? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/90"
-									: "text-slate-600 hover:bg-white/80 hover:text-slate-900"
+							className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${
+								activeTab === tab.id ? "bg-ops-surface text-ops-fg shadow-sm ring-1 ring-ops-border" : "text-ops-fg-muted hover:bg-ops-surface hover:text-ops-fg"
 							}`}
 						>
 							{tab.label}
@@ -1927,28 +1910,16 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					))}
 				</nav>
 
-				<div className="min-h-[280px] bg-gradient-to-b from-white via-white to-slate-50/40 p-6 sm:p-8">
+				<div className="min-h-[280px] bg-ops-surface p-6 sm:p-8">
 				{activeTab === "dossier" && customer && (
 					<div className="space-y-6">
 					<div className="space-y-6">
-						<div
-							className={
-								expectedType === "BUSINESS"
-									? "overflow-hidden rounded-2xl border border-violet-200/85 bg-gradient-to-br from-white via-violet-50/[0.4] to-indigo-50/30 shadow-md shadow-violet-200/25 ring-1 ring-violet-950/[0.06]"
-									: "overflow-hidden rounded-2xl border border-slate-200/85 bg-gradient-to-br from-white via-slate-50/45 to-indigo-50/[0.2] shadow-md shadow-slate-200/40 ring-1 ring-slate-900/[0.06]"
-							}
-						>
-							<div
-								className={
-									expectedType === "BUSINESS"
-										? "flex items-center justify-between gap-4 border-b border-violet-100/95 bg-gradient-to-r from-violet-600/[0.14] via-white to-indigo-600/[0.1] px-6 py-5 sm:px-8"
-										: "flex items-center justify-between gap-4 border-b border-slate-100/95 bg-gradient-to-r from-indigo-600/[0.11] via-white to-slate-100/85 px-6 py-5 sm:px-8"
-								}
-							>
-								<div className="flex min-w-0 flex-1 items-start gap-4">
+						<div className={OPS_CARD_SHELL}>
+							<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
+								<div className="flex min-w-0 flex-1 items-start gap-3">
 									{expectedType === "BUSINESS" && (
-										<div className="mt-0.5 hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-900 text-white shadow-md sm:flex">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<div className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ops-fg-muted text-white sm:flex" aria-hidden>
+											<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
 													strokeLinecap="round"
 													strokeLinejoin="round"
@@ -1959,8 +1930,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</div>
 									)}
 									{expectedType === "PERSON" && (
-										<div className="mt-0.5 hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-slate-800 text-white shadow-md sm:flex">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<div className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ops-fg-muted text-white sm:flex" aria-hidden>
+											<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
 													strokeLinecap="round"
 													strokeLinejoin="round"
@@ -1971,35 +1942,26 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</div>
 									)}
 									<div className="min-w-0">
-										<h2 className="text-xl font-bold tracking-tight text-black">
+										<h2 className="text-lg font-semibold tracking-tight text-ops-fg">
 											{expectedType === "BUSINESS"
 												? t("customer.detail.profile.businessTitle")
 												: t("customer.detail.profile.title")}
 										</h2>
-										{expectedType === "PERSON" && (
-											<p className="mt-1 text-xs text-slate-600">{t("customer.detail.profile.subtitle")}</p>
-										)}
+										{expectedType === "PERSON" ? (
+											<p className="mt-1 text-xs text-ops-fg-muted">{t("customer.detail.profile.subtitle")}</p>
+										) : null}
 									</div>
 								</div>
-								{!isEditingProfile && (
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setIsEditingProfile(true)}
-										className={
-											expectedType === "BUSINESS"
-												? "shrink-0 border-violet-200/80 bg-white/90 text-black hover:bg-violet-50"
-												: "shrink-0 border-indigo-200/80 bg-white/90 text-slate-900 hover:bg-indigo-50"
-										}
-									>
+								{!isEditingProfile ? (
+									<Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)} className="shrink-0">
 										{t("customer.detail.generalInfo.edit")}
 									</Button>
-								)}
+								) : null}
 							</div>
 							<div className="p-6 sm:p-8">
 								{customer.type === "PERSON" ? (
 									!isEditingProfile ? (
-										<div className="space-y-8 rounded-xl border border-slate-100/90 bg-white/85 p-5 shadow-inner ring-1 ring-slate-950/[0.04] sm:p-6">
+										<div className="space-y-8 rounded-lg border border-ops-border bg-ops-surface-muted/50 p-5 sm:p-6">
 											<section>
 												<h3 className="border-b border-slate-200/80 pb-2 text-xs font-bold uppercase tracking-wider text-black">
 													{t("customer.detail.profile.sectionIdentity")}
@@ -2127,7 +2089,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											}}
 											className="space-y-6"
 										>
-											<div className="space-y-8 rounded-xl border border-slate-100/90 bg-white/85 p-5 shadow-inner ring-1 ring-slate-950/[0.04] sm:p-6">
+											<div className="space-y-8 rounded-lg border border-ops-border bg-ops-surface-muted/50 p-5 sm:p-6">
 												<section>
 													<h3 className="border-b border-slate-200/80 pb-2 text-xs font-bold uppercase tracking-wider text-black">
 														{t("customer.detail.profile.sectionIdentity")}
@@ -2303,7 +2265,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											{t("customer.detail.business.title")}
 										</p>
 										<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-											<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+											<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 												<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
 													<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 														<path
@@ -2318,7 +2280,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													{t("customer.detail.profile.sectionLegal")}
 												</h4>
 											</div>
-											<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+											<div className="bg-ops-surface p-4 sm:p-5">
 												<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 													<div>
 														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -2406,7 +2368,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</div>
 
 										<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-											<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+											<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 												<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
 													<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 														<path
@@ -2421,7 +2383,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													{t("customer.detail.profile.sectionActivityGovernance")}
 												</h4>
 											</div>
-											<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+											<div className="bg-ops-surface p-4 sm:p-5">
 												<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 													<div>
 														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -2462,7 +2424,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</div>
 
 										<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-											<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+											<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 												<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-700 text-white shadow-sm">
 													<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 														<path
@@ -2477,7 +2439,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													{t("customer.detail.profile.sectionFinancial")}
 												</h4>
 											</div>
-											<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+											<div className="bg-ops-surface p-4 sm:p-5">
 												<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 													<div>
 														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -2538,7 +2500,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												{t("customer.detail.business.title")}
 											</p>
 											<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-												<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+												<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 													<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
 														<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 															<path
@@ -2553,7 +2515,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{t("customer.detail.profile.sectionLegal")}
 													</h4>
 												</div>
-												<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+												<div className="bg-ops-surface p-4 sm:p-5">
 													<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 														<div>
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
@@ -2686,7 +2648,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											</div>
 
 											<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-												<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+												<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 													<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
 														<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 															<path
@@ -2701,7 +2663,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{t("customer.detail.profile.sectionActivityGovernance")}
 													</h4>
 												</div>
-												<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+												<div className="bg-ops-surface p-4 sm:p-5">
 													<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 														<div>
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
@@ -2773,7 +2735,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											</div>
 
 											<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-												<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+												<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 													<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-700 text-white shadow-sm">
 														<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 															<path
@@ -2788,7 +2750,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{t("customer.detail.profile.sectionFinancial")}
 													</h4>
 												</div>
-												<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+												<div className="bg-ops-surface p-4 sm:p-5">
 													<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 														<div>
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
@@ -2897,8 +2859,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<div className="space-y-6">
 						<div className="grid gap-6 md:grid-cols-2">
 							{/* Carte Adresses */}
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+								<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 									<div className="flex items-center gap-3">
 										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3051,8 +3013,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 
 							{/* Formulaire Ajouter une adresse */}
-							<form onSubmit={submitAddress} className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+							<form onSubmit={submitAddress} className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+								<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 									<div className="flex items-center gap-3">
 										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3145,8 +3107,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					{expectedType === "BUSINESS" && (
 					<div className="space-y-6">
 						{/* Section Related Persons */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 								<div className="flex items-center gap-3">
 									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3415,7 +3377,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				{activeTab === "overview" && (
 					<div className="space-y-6">
 						{customer && customer.status !== "VERIFIED" && customer.status !== "PENDING_REVIEW" && (
-							<div className="overflow-hidden rounded-xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/50 via-white to-white p-5 shadow-sm ring-1 ring-indigo-900/[0.06]">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface p-5 shadow-ops-card">
 								<h2 className="text-base font-semibold tracking-tight text-slate-900 mb-1">{t("customer.detail.kyc.submit.title")}</h2>
 								<p className="text-xs text-slate-600 mb-4">{t("customer.detail.kyc.submit.description")}</p>
 								<Button onClick={doSubmitKyc} disabled={kycSubmitting !== null} size="sm">
@@ -3423,126 +3385,23 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</Button>
 							</div>
 						)}
-						{/* Carte Selfie améliorée */}
-			{customer && (
-				<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-					<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-						<div className="flex items-center gap-3">
-							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-								<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-								</svg>
-							</div>
-							<div>
-								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.photo.title")}</h2>
-								<p className="text-sm text-slate-500">{t("customer.detail.photo.subtitle")}</p>
-							</div>
-						</div>
-					</div>
-					<div className="p-6">
-						<div className="flex items-center gap-6">
-							<div className="flex-shrink-0">
-								{selfieUrl && id && !selfieError ? (
-									<div className="relative">
-										<img
-											src={selfieUrl}
-											alt={t("customer.detail.photo.alt")}
-											className="h-32 w-32 rounded-2xl border-4 border-slate-200 object-cover shadow-lg"
-											onError={() => setSelfieError(true)}
-											onLoad={() => setSelfieError(false)}
-										/>
-										{selfieDocument?.status === "APPROVED" && (
-											<div className="absolute bottom-0 right-0 rounded-lg border-2 border-white bg-green-500 p-1.5 shadow-md">
-												<svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-													<path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-												</svg>
-											</div>
-										)}
-									</div>
-								) : (
-									<div className="flex h-32 w-32 items-center justify-center rounded-2xl border-4 border-slate-200 bg-slate-100 shadow-lg">
-										<svg className="w-20 h-20 text-slate-400" fill="currentColor" viewBox="0 0 24 24">
-											<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-										</svg>
-									</div>
-								)}
-							</div>
-							<div className="flex-1">
-								<div className="flex items-center gap-2 mb-3">
-									<Badge variant={statusBadgeVariant(customer.status)}>
-										{customer.status}
-									</Badge>
-									<Badge variant={customer.type === "PERSON" ? "info" : "warning"}>
-										{customer.type}
-									</Badge>
-								</div>
-								{!selfieUrl ? (
-									<form onSubmit={uploadSelfie} className="flex items-center gap-3">
-										<div className="flex-1">
-											<input
-												type="file"
-												id="selfie-upload"
-												accept="image/*"
-												onChange={e => setSelfieFile(e.target.files?.[0] ?? null)}
-												className="hidden"
-											/>
-											<label
-												htmlFor="selfie-upload"
-												className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-lg shadow-sm text-sm font-medium text-slate-600 bg-white hover:bg-slate-50 cursor-pointer transition-colors"
-											>
-												<svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-												</svg>
-												{selfieFile ? selfieFile.name : t("customer.detail.photo.upload")}
-											</label>
-										</div>
-										{selfieFile && (
-											<Button type="submit" disabled={selfieUploading} size="sm">
-												{selfieUploading ? t("customer.detail.photo.uploading") : t("customer.detail.photo.send")}
-											</Button>
-										)}
-									</form>
-								) : (
-									<div className="flex items-center gap-2">
-										<a
-											href={selfieUrl}
-											target="_blank"
-											rel="noopener noreferrer"
-											className="text-sm text-indigo-600 hover:text-indigo-800 underline font-medium"
-										>
-											{t("customer.detail.photo.view")}
-										</a>
-										{selfieDocument?.status && (
-											<Badge variant={selfieDocument.status === "APPROVED" ? "success" : selfieDocument.status === "REJECTED" ? "danger" : "warning"}>
-												{selfieDocument.status}
-											</Badge>
-										)}
-									</div>
-								)}
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
-
-						{/* Informations principales */}
-						{/* Carte Informations générales */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-					<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-3">
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-									<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						{/* Photo + informations générales (carte unique) */}
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+					<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
+						<div className="flex items-center justify-between gap-4">
+							<div className="flex min-w-0 items-center gap-3">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
+									<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 									</svg>
 								</div>
-								<div>
-									<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.generalInfo.title")}</h2>
-									<p className="text-xs text-slate-500">{t("customer.detail.generalInfo.subtitle")}</p>
+								<div className="min-w-0">
+									<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.generalInfo.title")}</h2>
+									<p className="text-xs text-ops-fg-muted">{t("customer.detail.generalInfo.subtitle")}</p>
 								</div>
 							</div>
 							{!isEditing && customer && (
-								<Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+								<Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="shrink-0">
 									{t("customer.detail.generalInfo.edit")}
 								</Button>
 							)}
@@ -3550,6 +3409,30 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 					<div className="p-6">
 						{loading && <div className="text-sm text-slate-500 text-center py-4">{t("common.loading")}</div>}
+						{customer && !selfieUrl ? (
+							<div className="mb-6 border-b border-ops-border pb-6">
+								<p className="mb-2 text-xs font-medium text-ops-fg">{t("customer.detail.photo.selfieLabel")}</p>
+								<form onSubmit={uploadSelfie} className="flex flex-col gap-3 sm:flex-row sm:items-center">
+									<div className="min-w-0 flex-1">
+										<input type="file" id="selfie-upload" accept="image/*" onChange={e => setSelfieFile(e.target.files?.[0] ?? null)} className="hidden" />
+										<label
+											htmlFor="selfie-upload"
+											className="inline-flex cursor-pointer items-center rounded-lg border border-ops-border bg-ops-surface px-4 py-2 text-sm font-medium text-ops-fg shadow-sm transition hover:bg-ops-surface-muted"
+										>
+											<svg className="mr-2 h-5 w-5 text-ops-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+											</svg>
+											{selfieFile ? selfieFile.name : t("customer.detail.photo.upload")}
+										</label>
+									</div>
+									{selfieFile ? (
+										<Button type="submit" disabled={selfieUploading} size="sm">
+											{selfieUploading ? t("customer.detail.photo.uploading") : t("customer.detail.photo.send")}
+										</Button>
+									) : null}
+								</form>
+							</div>
+						) : null}
 						{customer && (
 							<>
 								{!isEditing ? (
@@ -3650,7 +3533,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{t("customer.detail.business.title")}
 													</p>
 													<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-														<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+														<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 															<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
 																<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 																	<path
@@ -3665,7 +3548,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																{t("customer.detail.profile.sectionLegal")}
 															</h4>
 														</div>
-														<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+														<div className="bg-ops-surface p-4 sm:p-5">
 															<dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6">
 																<div>
 																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -3732,7 +3615,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													</div>
 
 													<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-														<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+														<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 															<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm">
 																<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 																	<path
@@ -3747,7 +3630,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																{t("customer.detail.profile.sectionActivityGovernance")}
 															</h4>
 														</div>
-														<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+														<div className="bg-ops-surface p-4 sm:p-5">
 															<dl className="grid grid-cols-1 gap-4">
 																<div>
 																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -3788,7 +3671,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													</div>
 
 													<div className="overflow-hidden rounded-xl border border-violet-200/85 bg-white shadow-sm ring-1 ring-violet-950/[0.06]">
-														<div className="flex items-center gap-2 border-b border-violet-100/90 bg-gradient-to-r from-violet-50/90 via-white to-indigo-50/40 px-4 py-2.5">
+														<div className="flex items-center gap-2 border-b border-ops-border bg-ops-surface-muted px-4 py-2.5">
 															<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-700 text-white shadow-sm">
 																<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 																	<path
@@ -3803,7 +3686,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																{t("customer.detail.profile.sectionFinancial")}
 															</h4>
 														</div>
-														<div className="bg-gradient-to-b from-white to-violet-50/20 p-4 sm:p-5">
+														<div className="bg-ops-surface p-4 sm:p-5">
 															<dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-x-6">
 																<div>
 																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
@@ -4051,16 +3934,16 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				{activeTab === "pieces" && (
 					<div className="space-y-6">
 						{/* En-tête */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.documents.title")}</h2>
 								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.documents.subtitle")}</p>
 							</div>
 						</div>
 
 						{/* Carte Upload */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
 								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.documents.upload")}</h3>
 							</div>
 							<div className="p-6">
@@ -4176,8 +4059,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						</div>
 
 						{/* Carte Liste des documents */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
 								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.documents.saved")}</h3>
 							</div>
 							<div className="p-6">
@@ -4304,8 +4187,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 				{activeTab === "compliance" && customer && (
 					<div className="space-y-6">
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 								<h2 id="compliance-tab-title" className="text-xl font-semibold tracking-tight text-slate-900">
 									{t("customer.detail.compliance.title")}
 								</h2>
@@ -4348,8 +4231,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				{complianceInnerTab === "review" && (
 					<div className="space-y-6">
 						{/* En-tête */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.title")}</h2>
 								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.kyc.subtitle")}</p>
 							</div>
@@ -4357,8 +4240,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 						{/* Grille: Revue email, Revue profil, Revue identité */}
 						<div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+								<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
 									<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.emailReview")}</h3>
 								</div>
 								<div className="p-5">
@@ -4377,8 +4260,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</div>
 							</div>
 
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+								<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
 									<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.profileReview")}</h3>
 								</div>
 								<div className="p-5">
@@ -4397,8 +4280,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</div>
 							</div>
 
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-5 py-3.5">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+								<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
 									<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.identityReview")}</h3>
 								</div>
 								<div className="p-5">
@@ -4419,8 +4302,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						</div>
 
 						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.decisionPanel.title")}</h2>
 								<p className="mt-0.5 max-w-3xl text-sm text-slate-500">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
 							</div>
@@ -4852,7 +4735,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						id="compliance-subpanel-screeningChecks"
 						aria-labelledby="compliance-subtab-screeningChecks"
 					>
-						<section className="overflow-hidden rounded-xl border border-indigo-200/55 bg-gradient-to-br from-indigo-50/40 via-white to-white shadow-md shadow-indigo-100/40 ring-1 ring-slate-900/[0.04]">
+						<section className={OPS_CARD_SHELL}>
 							<div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
 								<div className="min-w-0 flex-1 space-y-4">
 									<div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -4924,8 +4807,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 						</section>
 
-						<section className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/80 px-5 py-4">
+						<section className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-4">
 								<h3 className="text-sm font-semibold tracking-tight text-slate-900">
 									{t("customer.detail.compliance.screeningBlockTitle")}
 								</h3>
@@ -4934,7 +4817,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</p>
 							</div>
 							<div className="p-5">
-								<div className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white p-4 sm:p-5 ring-1 ring-slate-900/[0.02]">
+								<div className="rounded-lg border border-ops-border bg-ops-surface-muted p-4 sm:p-5">
 									<p className="text-xs font-semibold tracking-tight text-slate-900">
 										{t("customer.detail.compliance.simulatorBlockTitle")}
 									</p>
@@ -5027,8 +4910,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							>
 								{t("customer.detail.compliance.dossierTrackingTitle")}
 							</h3>
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/60 px-5 py-4">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="flex flex-wrap items-start justify-between gap-3 border-b border-ops-border bg-ops-surface-muted px-5 py-4">
 								<div>
 									<h3 className="text-sm font-semibold tracking-tight text-slate-900">
 										{t("customer.detail.compliance.checksTitle")}
@@ -5153,7 +5036,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							id="compliance-subpanel-tasks"
 							aria-labelledby="compliance-subtab-tasks"
 						>
-							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
 								<div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/90 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
 									<h3 className="shrink-0 text-sm font-semibold text-slate-800">{t("customer.detail.compliance.tasksTitle")}</h3>
 									<div className="flex flex-1 flex-col gap-2 min-w-[12rem] sm:min-w-0 sm:max-w-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -5267,7 +5150,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							id="compliance-subpanel-timeline"
 							aria-labelledby="compliance-subtab-timeline"
 						>
-						<section className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]" aria-labelledby="compliance-events-heading">
+						<section className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card" aria-labelledby="compliance-events-heading">
 							<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
 								<h3 id="compliance-events-heading" className="text-sm font-semibold tracking-tight text-slate-900">
 									{t("customer.detail.timeline.title")}
@@ -5378,7 +5261,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							aria-labelledby="compliance-subtab-auditTrail"
 						>
 							<section
-								className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]"
+								className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card"
 								aria-labelledby="compliance-audit-trail-heading"
 							>
 								<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
@@ -5416,8 +5299,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				{activeTab === "accounts" && (
 					<div className="space-y-6">
 						{/* Section Comptes */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">

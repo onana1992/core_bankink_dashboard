@@ -738,6 +738,7 @@
 			},
 			"photo": {
 				"title": "Customer Photo",
+				"selfieLabel": "Customer selfie",
 				"subtitle": "Selfie and verification",
 				"alt": "Customer selfie",
 				"upload": "Upload a selfie",
