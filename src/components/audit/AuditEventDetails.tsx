@@ -3,37 +3,10 @@
 import type { AuditEvent } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import { getAuditActionBadgeClass } from "@/components/ops/auditActionBadgeClasses";
 
 export function getAuditActionBadge(action: string) {
-	const colors: Record<string, string> = {
-		LOGIN: "bg-green-100 text-green-800",
-		LOGOUT: "bg-gray-100 text-gray-800",
-		CREATE: "bg-blue-100 text-blue-800",
-		UPDATE: "bg-yellow-100 text-yellow-800",
-		DELETE: "bg-red-100 text-red-800",
-		READ: "bg-purple-100 text-purple-800",
-		EXECUTE: "bg-indigo-100 text-indigo-800",
-		REFRESH_TOKEN: "bg-pink-100 text-pink-800",
-		KYC_CLIENT_CREATED: "bg-cyan-100 text-cyan-800",
-		KYC_SUBMITTED: "bg-cyan-100 text-cyan-800",
-		KYC_VERIFIED: "bg-emerald-100 text-emerald-800",
-		KYC_REJECTED: "bg-rose-100 text-rose-800",
-		KYC_CHECK_CREATED: "bg-sky-100 text-sky-800",
-		KYC_LIST_SCREENING_RUN: "bg-violet-100 text-violet-800",
-		KYC_SANCTIONS_SCREENING_RUN: "bg-rose-100 text-rose-800",
-		KYC_PEP_SCREENING_RUN: "bg-purple-100 text-purple-800",
-		KYC_RISK_ASSESSMENT_RUN: "bg-fuchsia-100 text-fuchsia-800",
-		KYC_EMAIL_REVIEW_SET: "bg-teal-100 text-teal-800",
-		KYC_PROFILE_REVIEW_SET: "bg-amber-100 text-amber-800",
-		KYC_IDENTITY_REVIEW_SET: "bg-lime-100 text-lime-800",
-		KYC_DOCUMENT_REVIEW_SET: "bg-orange-100 text-orange-800",
-		KYC_CLIENT_PERSONAL_INFO_UPDATED: "bg-yellow-100 text-yellow-800",
-		KYC_CLIENT_ADDRESS_ADDED: "bg-sky-100 text-sky-800",
-		KYC_CLIENT_ADDRESS_UPDATED: "bg-blue-100 text-blue-800",
-		KYC_COMPLIANCE_TASK_CREATED: "bg-blue-100 text-blue-800",
-		KYC_COMPLIANCE_TASK_PATCHED: "bg-yellow-100 text-yellow-800"
-	};
-	return <Badge className={colors[action] || "bg-gray-100 text-gray-800"}>{action}</Badge>;
+	return <Badge className={getAuditActionBadgeClass(action)}>{action}</Badge>;
 }
 
 export function formatAuditEventDate(dateString: string) {

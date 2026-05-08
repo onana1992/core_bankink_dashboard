@@ -22,15 +22,15 @@ export default function Toast({ message, type, onClose, duration = 3000 }: Toast
 	}, [onClose, duration]);
 
 	const bgColor = {
-		success: "bg-green-50 border-green-200 text-green-800",
-		error: "bg-red-50 border-red-200 text-red-800",
-		info: "bg-blue-50 border-blue-200 text-blue-800",
-		warning: "bg-yellow-50 border-yellow-200 text-yellow-800"
+		success: "border-[var(--ops-toast-success-border)] bg-[var(--ops-toast-success-bg)] text-[var(--ops-toast-success-fg)]",
+		error: "border-[var(--ops-toast-error-border)] bg-[var(--ops-toast-error-bg)] text-[var(--ops-toast-error-fg)]",
+		info: "border-[var(--ops-toast-info-border)] bg-[var(--ops-toast-info-bg)] text-[var(--ops-toast-info-fg)]",
+		warning: "border-[var(--ops-toast-warning-border)] bg-[var(--ops-toast-warning-bg)] text-[var(--ops-toast-warning-fg)]"
 	}[type];
 
 	return (
 		<div
-			className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md border shadow-lg ${bgColor} transition-all duration-300 ease-in-out`}
+			className={`fixed top-4 right-4 z-50 max-w-[min(100vw-2rem,28rem)] px-4 py-3 rounded-ops-lg border shadow-ops-overlay ${bgColor} transition-all duration-300 ease-in-out`}
 			role="alert"
 			style={{
 				animation: "slideIn 0.3s ease-out"

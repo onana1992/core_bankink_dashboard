@@ -11,4 +11,5 @@ export * from './balanceSnapshot';
 export * from './loan';
 export * from './paymentMethod';
 export * from './aml';
+export * from './ui';
 

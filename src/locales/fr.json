@@ -77,6 +77,13 @@
 	"topbar": {
 		"toggleSidebar": "Basculer la barre latérale"
 	},
+	"apiErrors": {
+		"network": "Impossible de se connecter au serveur. Vérifiez que le backend est démarré et accessible.",
+		"unknown": "Une erreur inattendue s'est produite.",
+		"identity_document_duplicate": "Un autre client utilise déjà cette pièce d'identité (type, numéro, pays d'émission).",
+		"identity_document_number_required": "Le numéro de la pièce d'identité est obligatoire.",
+		"identity_document_issuing_country_required": "Le pays d'émission de la pièce d'identité est obligatoire."
+	},
 	"dashboard": {
 		"title": "Tableau de bord",
 		"subtitle": "Vue d'ensemble du système bancaire",
@@ -140,6 +147,8 @@
 		"email": "Email",
 		"risk": "Risque",
 		"loading": "Chargement...",
+		"auditTableLoading": "Chargement des événements…",
+		"auditTableEmpty": "Aucun événement trouvé",
 		"reset": "Réinitialiser",
 		"back": "Retour",
 		"cancel": "Annuler",

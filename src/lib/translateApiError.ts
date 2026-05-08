@@ -38,7 +38,14 @@ export function translateApiError(message: string, t: TFunction): string {
 	if (message.includes("error.product.not.found")) return t("account.new.errors.productNotFound");
 	if (message.includes("error.product.must.be.active")) return t("account.new.errors.productMustBeActive");
 
-	// Clé générique error.xxx -> account.new.errors.xxx
+	// Clés backend error.a.b.c -> apiErrors.a_b_c (OPS / KYC / conformité)
+	if (message.startsWith("error.")) {
+		const apiKey = `apiErrors.${message.slice("error.".length).replace(/\./g, "_")}`;
+		const apiTranslated = t(apiKey);
+		if (apiTranslated !== apiKey) return apiTranslated;
+	}
+
+	// Clé générique error.xxx -> account.new.errors.xxx (comptes, etc.)
 	if (message.startsWith("error.")) {
 		const key = message.replace("error.", "").replace(/\./g, "");
 		const translationKey = `account.new.errors.${key}`;

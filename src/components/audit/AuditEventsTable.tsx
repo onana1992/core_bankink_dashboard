@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import type { AuditEvent } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
 import { formatAuditEventDate, getAuditActionBadge } from "@/components/audit/AuditEventDetails";
+import {
+	OpsEmptyState,
+	OpsLoadingState,
+	OpsTableCard,
+	OPS_TD,
+	OPS_TH,
+	OPS_THEAD,
+	OPS_TABLE,
+	OPS_TABLE_WRAP,
+	OPS_TR_HOVER
+} from "@/components/ops";
 
 type AuditEventsTableProps = {
 	events: AuditEvent[];
@@ -37,68 +49,57 @@ export function AuditEventsTable({
 	onResourceTrace,
 	showUserColumn = true
 }: AuditEventsTableProps) {
-	return (
-		<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-			<div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-				<h2 className="text-lg font-semibold text-gray-900">{resultsHeading}</h2>
-			</div>
+	const { t } = useTranslation();
 
+	return (
+		<OpsTableCard title={resultsHeading}>
 			{loading ? (
-				<div className="p-12 text-center">
-					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-					<p className="mt-4 text-gray-600">Chargement des événements…</p>
-				</div>
+				<OpsLoadingState embedded message={t("common.auditTableLoading")} />
 			) : events.length === 0 ? (
-				<div className="p-12 text-center">
-					<p className="text-gray-500 text-lg font-medium">Aucun événement trouvé</p>
-				</div>
+				<OpsEmptyState embedded title={t("common.auditTableEmpty")} />
 			) : (
 				<>
-					<div className="overflow-x-auto">
-						<table className="min-w-full divide-y divide-gray-200">
-							<thead className="bg-gray-50">
+					<div className={OPS_TABLE_WRAP}>
+						<table className={OPS_TABLE}>
+							<thead className={OPS_THEAD}>
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-									{showUserColumn && (
-										<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-											Utilisateur
-										</th>
-									)}
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ressource</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID Ressource</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">IP</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className={OPS_TH}>Date</th>
+									{showUserColumn ? <th className={OPS_TH}>Utilisateur</th> : null}
+									<th className={OPS_TH}>Action</th>
+									<th className={OPS_TH}>Ressource</th>
+									<th className={OPS_TH}>ID Ressource</th>
+									<th className={OPS_TH}>IP</th>
+									<th className={OPS_TH}>Actions</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200 text-sm">
-								{events.map(event => (
-									<tr key={event.id} className="hover:bg-gray-50 transition-colors">
-										<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatAuditEventDate(event.createdAt)}</td>
+							<tbody className="divide-y divide-ops-border bg-ops-surface text-sm">
+								{events.map((event) => (
+									<tr key={event.id} className={OPS_TR_HOVER}>
+										<td className={`${OPS_TD} whitespace-nowrap`}>{formatAuditEventDate(event.createdAt)}</td>
 										{showUserColumn && (
-											<td className="px-6 py-4 whitespace-nowrap">
+											<td className={OPS_TD}>
 												{event.user ? (
 													<Link
 														href={`/audit/user/${event.user.id}`}
-														className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+														className="font-medium text-ops-ring hover:underline"
 													>
 														{event.user.username}
 													</Link>
 												) : (
-													<span className="text-gray-400">-</span>
+													<span className="text-ops-fg-muted">-</span>
 												)}
 											</td>
 										)}
-										<td className="px-6 py-4 whitespace-nowrap">{getAuditActionBadge(event.action)}</td>
-										<td className="px-6 py-4 whitespace-nowrap">
-											<Badge className="bg-gray-100 text-gray-800">{event.resourceType}</Badge>
+										<td className={OPS_TD}>{getAuditActionBadge(event.action)}</td>
+										<td className={OPS_TD}>
+											<Badge className="bg-ops-surface-muted text-ops-fg">{event.resourceType}</Badge>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-900">
+										<td className={`${OPS_TD} font-mono`}>
 											{event.resourceId ? (
 												<button
 													type="button"
 													onClick={() => onResourceTrace(event.resourceType, event.resourceId!)}
-													className="text-blue-600 hover:text-blue-800 underline"
+													className="text-ops-ring hover:underline"
 												>
 													{event.resourceId}
 												</button>
@@ -106,8 +107,8 @@ export function AuditEventsTable({
 												"-"
 											)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-600">{event.ipAddress || "-"}</td>
-										<td className="px-6 py-4 whitespace-nowrap">
+										<td className={`${OPS_TD} font-mono text-ops-fg-muted`}>{event.ipAddress || "-"}</td>
+										<td className={OPS_TD}>
 											<Button onClick={() => onEventDetails(event.id)} variant="secondary" className="text-xs">
 												Détails
 											</Button>
@@ -134,6 +135,6 @@ export function AuditEventsTable({
 					/>
 				</>
 			)}
-		</div>
+		</OpsTableCard>
 	);
 }

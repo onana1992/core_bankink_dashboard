@@ -77,6 +77,13 @@
 	"topbar": {
 		"toggleSidebar": "Toggle sidebar"
 	},
+	"apiErrors": {
+		"network": "Unable to reach the server. Check that the backend is running and reachable.",
+		"unknown": "An unexpected error occurred.",
+		"identity_document_duplicate": "Another client already uses this identity document (type, number, issuing country).",
+		"identity_document_number_required": "Identity document number is required.",
+		"identity_document_issuing_country_required": "Identity document issuing country is required."
+	},
 	"dashboard": {
 		"title": "Dashboard",
 		"subtitle": "Banking system overview",
@@ -140,6 +147,8 @@
 		"email": "Email",
 		"risk": "Risk",
 		"loading": "Loading...",
+		"auditTableLoading": "Loading events…",
+		"auditTableEmpty": "No events found",
 		"reset": "Reset",
 		"back": "Back",
 		"cancel": "Cancel",

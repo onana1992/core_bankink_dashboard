@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* OPS / KYC / AML — design tokens (Phase 1 foundation) */
+:root {
+  --ops-radius-sm: 0.25rem;
+  --ops-radius-md: 0.375rem;
+  --ops-radius-lg: 0.5rem;
+  --ops-radius-xl: 0.75rem;
+  --ops-border: #e5e7eb;
+  --ops-border-strong: #d1d5db;
+  --ops-surface: #ffffff;
+  --ops-surface-muted: #f9fafb;
+  --ops-fg: #111827;
+  --ops-fg-muted: #6b7280;
+  --ops-ring: #3b82f6;
+  --ops-shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --ops-shadow-overlay: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --ops-domain-kyc: #0e7490;
+  --ops-domain-aml: #7c3aed;
+  --ops-domain-audit: #4338ca;
+  --ops-toast-success-bg: #ecfdf5;
+  --ops-toast-success-border: #a7f3d0;
+  --ops-toast-success-fg: #065f46;
+  --ops-toast-error-bg: #fef2f2;
+  --ops-toast-error-border: #fecaca;
+  --ops-toast-error-fg: #991b1b;
+  --ops-toast-info-bg: #eff6ff;
+  --ops-toast-info-border: #bfdbfe;
+  --ops-toast-info-fg: #1e40af;
+  --ops-toast-warning-bg: #fffbeb;
+  --ops-toast-warning-border: #fde68a;
+  --ops-toast-warning-fg: #92400e;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

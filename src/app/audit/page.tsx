@@ -1,15 +1,27 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auditApi, usersApi } from "@/lib/api";
+import { resolveApiExceptionMessage } from "@/lib/resolveApiException";
 import { AUDIT_ACTION_CODES, type AuditEvent, type User, type AuditStatisticsResponse } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { getAuditActionBadge } from "@/components/audit/AuditEventDetails";
 import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
+import {
+	OpsField,
+	OpsFilterPanel,
+	OpsInlineAlert,
+	OpsLoadingState,
+	OpsPageHeader,
+	OPS_PAGE_STACK,
+	OpsSelect
+} from "@/components/ops";
 
 function AuditPageContent() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const traceSearchKey = searchParams.toString();
@@ -86,13 +98,8 @@ function AuditPageContent() {
 			setEvents(data.content ?? []);
 			setTotalPages(data.totalPages ?? 0);
 			setTotalElements(data.totalElements ?? 0);
-		} catch (e: any) {
-			const errorMessage = e?.message || "Erreur lors du chargement des événements";
-			if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
-				setError("Impossible de se connecter au serveur. Vérifiez que le backend est démarré et accessible.");
-			} else {
-				setError(errorMessage);
-			}
+		} catch (e: unknown) {
+			setError(resolveApiExceptionMessage(e, t));
 			setEvents([]);
 		} finally {
 			setLoading(false);
@@ -145,8 +152,8 @@ function AuditPageContent() {
 			const trace = await auditApi.getResourceTrace(resourceType, resourceId);
 			setEvents(trace.events);
 			setCurrentPage(0);
-		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement de la traçabilité");
+		} catch (e: unknown) {
+			setError(resolveApiExceptionMessage(e, t));
 		} finally {
 			setLoading(false);
 		}
@@ -335,19 +342,18 @@ function AuditPageContent() {
 			{/* Liste des événements */}
 			<>
 					{/* Filtres */}
-					<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-						<h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-							<svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<OpsFilterPanel
+						title="Filtres"
+						icon={
+							<svg className="w-5 h-5 text-ops-fg-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 							</svg>
-							Filtres
-						</h2>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Utilisateur</label>
+						}
+						gridClassName="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6"
+					>
+							<OpsField label="Utilisateur">
 								{userList.length > 0 ? (
-									<select
-										className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+									<OpsSelect
 										value={filters.userId}
 										onChange={(e) => {
 											setFilters({ ...filters, userId: e.target.value });
@@ -355,10 +361,12 @@ function AuditPageContent() {
 										}}
 									>
 										<option value="">Tous les utilisateurs</option>
-										{userList.map(user => (
-											<option key={user.id} value={user.id}>{user.username}</option>
+										{userList.map((user) => (
+											<option key={user.id} value={user.id}>
+												{user.username}
+											</option>
 										))}
-									</select>
+									</OpsSelect>
 								) : (
 									<Input
 										type="number"
@@ -382,11 +390,9 @@ function AuditPageContent() {
 										Ouvrir la page « activité de cet utilisateur »
 									</button>
 								) : null}
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
-								<select
-									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							</OpsField>
+							<OpsField label="Action">
+								<OpsSelect
 									value={filters.action}
 									onChange={(e) => {
 										setFilters({ ...filters, action: e.target.value });
@@ -394,15 +400,14 @@ function AuditPageContent() {
 									}}
 								>
 									<option value="">Toutes les actions</option>
-									{AUDIT_ACTION_CODES.map(action => (
+									{AUDIT_ACTION_CODES.map((action) => (
 										<option key={action} value={action}>
 											{action}
 										</option>
 									))}
-								</select>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Type de ressource</label>
+								</OpsSelect>
+							</OpsField>
+							<OpsField label="Type de ressource">
 								<Input
 									value={filters.resourceType}
 									onChange={(e) => {
@@ -411,9 +416,8 @@ function AuditPageContent() {
 									}}
 									placeholder="User, Account, etc."
 								/>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+							</OpsField>
+							<OpsField label="Date de début">
 								<Input
 									type="datetime-local"
 									value={filters.fromDate}
@@ -422,9 +426,8 @@ function AuditPageContent() {
 										setCurrentPage(0);
 									}}
 								/>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-2">Date de fin</label>
+							</OpsField>
+							<OpsField label="Date de fin">
 								<Input
 									type="datetime-local"
 									value={filters.toDate}
@@ -433,7 +436,7 @@ function AuditPageContent() {
 										setCurrentPage(0);
 									}}
 								/>
-							</div>
+							</OpsField>
 							<div className="flex items-end">
 								<Button
 									onClick={() => {
@@ -452,14 +455,9 @@ function AuditPageContent() {
 									Réinitialiser
 								</Button>
 							</div>
-						</div>
-					</div>
+					</OpsFilterPanel>
 
-					{error && (
-						<div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-							{error}
-						</div>
-					)}
+					{error && <OpsInlineAlert variant="error">{error}</OpsInlineAlert>}
 
 					<AuditEventsTable
 						events={eventList}
@@ -485,14 +483,7 @@ function AuditPageContent() {
 
 export default function AuditPage() {
 	return (
-		<Suspense
-			fallback={
-				<div className="p-12 text-center">
-					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-					<p className="mt-4 text-gray-600">Chargement…</p>
-				</div>
-			}
-		>
+		<Suspense fallback={<OpsLoadingState message="Chargement…" />}>
 			<AuditPageContent />
 		</Suspense>
 	);

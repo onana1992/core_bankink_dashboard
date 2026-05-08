@@ -5,10 +5,28 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
+import {
+	DomainStatusBadge,
+	OpsEmptyState,
+	OpsField,
+	OpsFilterPanel,
+	OpsInlineAlert,
+	OpsLoadingState,
+	OpsPageHeader,
+	OpsTableCard,
+	OPS_PAGE_STACK,
+	OPS_TD,
+	OPS_TH,
+	OPS_THEAD,
+	OPS_TABLE,
+	OPS_TABLE_WRAP,
+	OPS_TR_HOVER,
+	OpsSelect
+} from "@/components/ops";
 import { customersApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
+import { resolveApiExceptionMessage } from "@/lib/resolveApiException";
 import type { Customer } from "@/types";
 
 export default function CustomersPage() {
@@ -43,8 +61,8 @@ export default function CustomersPage() {
 			setCustomers(response.content);
 			setTotalPages(response.totalPages);
 			setTotalElements(response.totalElements);
-		} catch (e: any) {
-			setError(e?.message ?? t("customer.errors.unknown"));
+		} catch (e: unknown) {
+			setError(resolveApiExceptionMessage(e, t));
 		} finally {
 			setLoading(false);
 		}
@@ -70,67 +88,51 @@ export default function CustomersPage() {
 		};
 	}, [customers, totalElements]);
 
-	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
-		switch (status) {
-			case "VERIFIED":
-				return "success";
-			case "DRAFT":
-				return "warning";
-			case "REJECTED":
-			case "BLOCKED":
-				return "danger";
-			case "PENDING_REVIEW":
-			default:
-				return "info";
-		}
-	}
-
-	function riskBadgeVariant(score?: number | null): "neutral" | "success" | "warning" | "danger" {
-		if (typeof score !== "number") return "neutral";
-		if (score >= 70) return "danger";
-		if (score >= 40) return "warning";
-		return "success";
+	function riskTone(score?: number | null): string {
+		if (typeof score !== "number") return "bg-slate-100 text-slate-700";
+		if (score >= 70) return "bg-rose-100 text-rose-800";
+		if (score >= 40) return "bg-amber-100 text-amber-800";
+		return "bg-emerald-100 text-emerald-800";
 	}
 
 	// Les filtres sont maintenant gérés côté serveur, donc on utilise directement customers
 	const filteredCustomers = customers;
 
 	return (
-		<div className="space-y-6">
-			{/* En-tête */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-3xl font-bold text-gray-900">{t("common.customers")}</h1>
-					<p className="text-gray-600 mt-1">{t("customer.description")}</p>
-				</div>
-				<div className="flex gap-3">
-					<Button onClick={load} variant="outline" className="flex items-center gap-2">
-						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-						</svg>
-						{t("common.refresh")}
-					</Button>
-					<Link href="/customers/new">
-						<Button variant="outline" className="flex items-center gap-2">
-							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+		<div className={OPS_PAGE_STACK}>
+			<OpsPageHeader
+				title={t("common.customers")}
+				description={t("customer.description")}
+				actions={
+					<>
+						<Button onClick={load} variant="outline" className="flex items-center gap-2">
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							{t("customer.newPerson")}
+							{t("common.refresh")}
 						</Button>
-					</Link>
-					<Link href="/customers/new/business">
-						<Button className="flex items-center gap-2">
-							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-							</svg>
-							{t("customer.newCompany")}
-						</Button>
-					</Link>
-				</div>
-			</div>
+						<Link href="/customers/new">
+							<Button variant="outline" className="flex items-center gap-2">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+								</svg>
+								{t("customer.newPerson")}
+							</Button>
+						</Link>
+						<Link href="/customers/new/business">
+							<Button className="flex items-center gap-2">
+								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+								</svg>
+								{t("customer.newCompany")}
+							</Button>
+						</Link>
+					</>
+				}
+			/>
 
 			{/* Statistiques */}
-			<div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
 				<div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl shadow-sm border border-blue-200">
 					<div className="flex items-center justify-between">
 						<div>
@@ -211,138 +213,128 @@ export default function CustomersPage() {
 				</div>
 			</div>
 
-			{/* Filtres */}
-			<div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-				<div className="flex items-center gap-2 mb-4">
-					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<OpsFilterPanel
+				title={t("customer.filters.title")}
+				icon={
+					<svg className="w-5 h-5 text-ops-fg-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">{t("customer.filters.title")}</h2>
-				</div>
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.filters.search")}</label>
-						<div className="relative">
-							<Input
-								placeholder={t("customer.filters.searchPlaceholder")}
-								value={q}
-								onChange={(e) => {
-									setQ(e.target.value);
-									setPage(0); // Reset to first page when search changes
-								}}
-								className="pl-10"
-							/>
-							<svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-							</svg>
-						</div>
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.filters.status")}</label>
-						<select
-							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-							value={filterStatus}
+				}
+				gridClassName="grid grid-cols-1 md:grid-cols-3 gap-4"
+			>
+				<OpsField label={t("customer.filters.search")}>
+					<div className="relative">
+						<Input
+							placeholder={t("customer.filters.searchPlaceholder")}
+							value={q}
 							onChange={(e) => {
-								setFilterStatus(e.target.value as typeof filterStatus);
-								setPage(0); // Reset to first page when filter changes
+								setQ(e.target.value);
+								setPage(0);
 							}}
-						>
-							<option value="ALL">{t("common.all")}</option>
-							<option value="DRAFT">{t("customer.statuses.DRAFT")}</option>
-							<option value="PENDING_REVIEW">{t("customer.statuses.PENDING_REVIEW")}</option>
-							<option value="VERIFIED">{t("customer.statuses.VERIFIED")}</option>
-							<option value="REJECTED">{t("customer.statuses.REJECTED")}</option>
-							<option value="BLOCKED">{t("customer.statuses.BLOCKED")}</option>
-						</select>
+							className="pl-10"
+						/>
+						<svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-ops-fg-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+						</svg>
 					</div>
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.filters.type")}</label>
-						<select
-							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-							value={filterType}
-							onChange={(e) => {
-								setFilterType(e.target.value as typeof filterType);
-								setPage(0); // Reset to first page when filter changes
-							}}
-						>
-							<option value="ALL">{t("common.all")}</option>
-							<option value="PERSON">{t("customer.types.PERSON")}</option>
-							<option value="BUSINESS">{t("customer.types.BUSINESS")}</option>
-						</select>
-					</div>
-				</div>
-			</div>
+				</OpsField>
+				<OpsField label={t("customer.filters.status")}>
+					<OpsSelect
+						value={filterStatus}
+						onChange={(e) => {
+							setFilterStatus(e.target.value as typeof filterStatus);
+							setPage(0);
+						}}
+					>
+						<option value="ALL">{t("common.all")}</option>
+						<option value="DRAFT">{t("customer.statuses.DRAFT")}</option>
+						<option value="PENDING_REVIEW">{t("customer.statuses.PENDING_REVIEW")}</option>
+						<option value="VERIFIED">{t("customer.statuses.VERIFIED")}</option>
+						<option value="REJECTED">{t("customer.statuses.REJECTED")}</option>
+						<option value="BLOCKED">{t("customer.statuses.BLOCKED")}</option>
+					</OpsSelect>
+				</OpsField>
+				<OpsField label={t("customer.filters.type")}>
+					<OpsSelect
+						value={filterType}
+						onChange={(e) => {
+							setFilterType(e.target.value as typeof filterType);
+							setPage(0);
+						}}
+					>
+						<option value="ALL">{t("common.all")}</option>
+						<option value="PERSON">{t("customer.types.PERSON")}</option>
+						<option value="BUSINESS">{t("customer.types.BUSINESS")}</option>
+					</OpsSelect>
+				</OpsField>
+			</OpsFilterPanel>
 
-			{/* Erreur */}
 			{error && (
-				<div className="bg-red-50 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded flex items-center gap-2">
-					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<OpsInlineAlert variant="error">
+					<svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 					</svg>
-					{error}
-				</div>
+					<span>{error}</span>
+				</OpsInlineAlert>
 			)}
 
-			{/* Liste */}
 			{loading ? (
-				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
-					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">{t("common.loading")}</p>
-				</div>
+				<OpsLoadingState message={t("common.loading")} />
 			) : filteredCustomers.length === 0 ? (
-				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
-					<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-					</svg>
-					<p className="text-gray-500 text-lg font-medium">{t("customer.table.noCustomers")}</p>
-					<p className="text-gray-400 text-sm mt-2">{t("customer.table.noCustomersHint")}</p>
-				</div>
+				<OpsEmptyState
+					title={t("customer.table.noCustomers")}
+					hint={t("customer.table.noCustomersHint")}
+					icon={
+						<svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+						</svg>
+					}
+				/>
 			) : (
-				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-					<div className="overflow-x-auto">
-						<table className="min-w-full divide-y divide-gray-200">
-							<thead className="bg-gray-50">
+				<OpsTableCard>
+					<div className={OPS_TABLE_WRAP}>
+						<table className={OPS_TABLE}>
+							<thead className={OPS_THEAD}>
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.id")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.name")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.type")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.status")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-52">{t("customer.table.phone")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.risk")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("customer.table.actions")}</th>
+									<th className={`${OPS_TH} py-4`}>{t("common.id")}</th>
+									<th className={`${OPS_TH} py-4`}>{t("common.name")}</th>
+									<th className={`${OPS_TH} py-4`}>{t("common.type")}</th>
+									<th className={`${OPS_TH} py-4`}>{t("common.status")}</th>
+									<th className={`${OPS_TH} py-4 w-52`}>{t("customer.table.phone")}</th>
+									<th className={`${OPS_TH} py-4`}>{t("common.risk")}</th>
+									<th className={`${OPS_TH} py-4 text-right`}>{t("customer.table.actions")}</th>
 								</tr>
 							</thead>
-							<tbody className="bg-white divide-y divide-gray-200 text-sm">
-								{filteredCustomers.map(c => (
-									<tr key={c.id} className="hover:bg-gray-50 transition-colors">
-										<td className="px-6 py-4 whitespace-nowrap">
-											<span className="font-mono font-medium text-gray-900">{c.id}</span>
+							<tbody className="divide-y divide-ops-border bg-ops-surface">
+								{filteredCustomers.map((c) => (
+									<tr key={c.id} className={`${OPS_TR_HOVER} text-sm`}>
+										<td className={OPS_TD}>
+											<span className="font-mono font-medium">{c.id}</span>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap">
-											<Link
-												href={customerDetailPath(c.id, c.type)}
-												className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
-											>
+										<td className={OPS_TD}>
+											<Link href={customerDetailPath(c.id, c.type)} className="font-medium text-ops-ring hover:underline">
 												{c.displayName}
 											</Link>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-gray-700">
-											{t(`customer.types.${c.type}`)}
+										<td className={`${OPS_TD} text-ops-fg-muted`}>{t(`customer.types.${c.type}`)}</td>
+										<td className={OPS_TD}>
+											<DomainStatusBadge domain="kyc" category="client" code={c.status}>
+												{t(`customer.statuses.${c.status}`)}
+											</DomainStatusBadge>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap">
-											<Badge variant={statusBadgeVariant(c.status)}>{t(`customer.statuses.${c.status}`)}</Badge>
-										</td>
-										<td className="px-6 py-4 text-gray-700 overflow-hidden max-w-[13rem]" title={c.phone || undefined}>
+										<td className={`${OPS_TD} max-w-[13rem] overflow-hidden text-ops-fg-muted`} title={c.phone || undefined}>
 											<span className="block truncate min-w-0">{c.phone || "-"}</span>
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap">
+										<td className={OPS_TD}>
 											{typeof c.riskScore === "number" ? (
-												<Badge variant={riskBadgeVariant(c.riskScore)}>{c.riskScore}</Badge>
+												<span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${riskTone(c.riskScore)}`}>
+													{c.riskScore}
+												</span>
 											) : (
-												<span className="text-gray-400">-</span>
+												<span className="text-ops-fg-muted">-</span>
 											)}
 										</td>
-										<td className="px-6 py-4 whitespace-nowrap text-right">
+										<td className={`${OPS_TD} text-right`}>
 											<Link href={customerDetailPath(c.id, c.type)}>
 												<Button variant="outline" size="sm" className="flex items-center gap-1">
 													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,10 +361,13 @@ export default function CustomersPage() {
 							showFirstLast
 							sizeOptions={PAGE_SIZE_OPTIONS}
 							size={size}
-							onSizeChange={(s) => { setSize(s); setPage(0); }}
+							onSizeChange={(s) => {
+								setSize(s);
+								setPage(0);
+							}}
 						/>
 					)}
-				</div>
+				</OpsTableCard>
 			)}
 		</div>
 	);
