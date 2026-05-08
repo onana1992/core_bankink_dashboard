@@ -160,6 +160,15 @@
 			"SUSPENDED": "Suspended"
 		}
 	},
+	"tablePagination": {
+		"range": "Showing {{from}}–{{to}} of {{total}} {{resultsLabel}}",
+		"pageSize": "Page size",
+		"first": "First",
+		"previous": "Previous",
+		"next": "Next",
+		"last": "Last",
+		"pageOf": "Page {{current}} of {{total}}"
+	},
 	"customer": {
 		"new": "New Customer",
 		"newPerson": "New individual",
@@ -190,6 +199,9 @@
 				"phoneInvalid": "Invalid phone format.",
 				"emailRequired": "Email is required.",
 				"emailInvalid": "Invalid email address.",
+				"emailAlreadyExists": "This email address is already used by another customer.",
+				"phoneAlreadyExists": "This phone number is already used by another customer.",
+				"emailAndPhoneAlreadyExists": "Both email address and phone number are already used by other customers.",
 				"genderRequired": "Gender is required.",
 				"birthDateRequired": "Date of birth is required.",
 				"maritalStatusRequired": "Marital status is required.",
@@ -608,6 +620,43 @@
 			"wrongRouteDescription": "You are on the {{opened}} workspace, but this client is registered as {{actual}}. Open the matching page below.",
 			"wrongRouteOpenButton": "Open the correct record",
 			"notFound": "Customer not found",
+			"headerStrip": {
+				"dossierStatus": "File status",
+				"typeLabel": "Type",
+				"riskScore": "Risk score",
+				"lastRiskAt": "Last risk run",
+				"pepLabel": "PEP",
+				"clientId": "Client ref.",
+				"statusCode": "({{code}})"
+			},
+			"timeline": {
+				"title": "File events",
+				"subtitle": "Synthetic view from KYC checks, documents, compliance tasks and dated milestones. This is not a legally binding audit log.",
+				"empty": "No dated events for this file.",
+				"paginationResultsLabel": "events",
+				"columnRank": "#",
+				"columnCategory": "Category",
+				"columnWhen": "Date & time",
+				"columnSummary": "Event",
+				"columnDetail": "Detail",
+				"badge": {
+					"customer": "Customer file",
+					"kyc": "KYC check",
+					"task": "Compliance task",
+					"document": "Supporting document"
+				},
+				"kind": {
+					"customer_created": "Customer record created",
+					"customer_updated": "Customer record updated",
+					"risk_assessment": "Onboarding risk assessment recorded",
+					"rekyc_requested": "AML/CFT re-KYC request recorded",
+					"kyc_check": "{{type}} · {{result}}",
+					"task_created": "Task created · {{type}} — {{status}}",
+					"task_resolved": "Task updated · {{type}} — {{status}}",
+					"document_uploaded": "Document uploaded · {{type}}",
+					"document_reviewed": "Document reviewed · {{type}} — {{status}}"
+				}
+			},
 			"tabs": {
 				"overview": "Overview",
 				"dossier": "Customer file",
@@ -673,6 +722,95 @@
 				"riskProfiles": "AML risk profiles",
 				"alerts": "AML alerts",
 				"newCase": "New AML case"
+			},
+			"compliance": {
+				"title": "Compliance and file monitoring",
+				"subtitle": "KYC checks, list screening (sanctions and PEP), compliance tasks and enhanced due diligence (EDD).",
+				"screeningBlockTitle": "List screening",
+				"screeningBlockHint": "Re-run sanctions and PEP list screening using the buttons below. Full check details are under « KYC checks ».",
+				"subTabs": {
+					"aria": "Compliance areas for this file",
+					"screening": "List screening",
+					"data": "KYC checks",
+					"tasks": "Compliance tasks",
+					"timeline": "Events",
+					"auditTrail": "KYC audit trail"
+				},
+				"auditTrail": {
+					"title": "KYC audit trail",
+					"subtitle": "Merged ops audit log and risk-engine snapshots, newest first.",
+					"empty": "No audit entries for this file yet.",
+					"loadError": "Could not load the audit trail.",
+					"columnRank": "#",
+					"columnWhen": "Date",
+					"columnKind": "Type",
+					"columnSummary": "Summary",
+					"columnActor": "User",
+					"columnDetail": "Detail",
+					"kind": {
+						"AUDIT_EVENT": "Action",
+						"RISK_RUN": "Engine"
+					},
+					"paginationResultsLabel": "entries",
+					"riskRunSummary": "Score {{score}} · {{band}} · {{decision}}",
+					"riskRunBlocked": "Blocked ({{code}})",
+					"action": {
+						"KYC_CLIENT_CREATED": "KYC client file created",
+						"KYC_SUBMITTED": "KYC file submitted",
+						"KYC_VERIFIED": "KYC verified (approved)",
+						"KYC_REJECTED": "KYC rejected",
+						"KYC_CHECK_CREATED": "KYC check added",
+						"KYC_LIST_SCREENING_RUN": "List screening run",
+						"KYC_SANCTIONS_SCREENING_RUN": "Sanctions screening run",
+						"KYC_PEP_SCREENING_RUN": "PEP screening run",
+						"KYC_RISK_ASSESSMENT_RUN": "Engine scoring (view)",
+						"KYC_EMAIL_REVIEW_SET": "Email review updated",
+						"KYC_PROFILE_REVIEW_SET": "Profile review updated",
+						"KYC_IDENTITY_REVIEW_SET": "Identity review updated",
+						"KYC_DOCUMENT_REVIEW_SET": "Document review updated",
+						"KYC_CLIENT_PERSONAL_INFO_UPDATED": "Personal information updated",
+						"KYC_CLIENT_ADDRESS_ADDED": "Address added",
+						"KYC_CLIENT_ADDRESS_UPDATED": "Address updated",
+						"KYC_COMPLIANCE_TASK_CREATED": "Compliance task created",
+						"KYC_COMPLIANCE_TASK_PATCHED": "Compliance task updated"
+					}
+				},
+				"simulatorBlockTitle": "UI simulator",
+				"simulatorBlockHint": "Testing only: inserts synthetic checks (provider ui-simulator), separate from operational screening.",
+				"dossierTrackingTitle": "KYC checks",
+				"rekycBanner": "AML re-KYC context",
+				"checksTitle": "KYC checks",
+				"checksSubtitle": "Newest checks first.",
+				"checksTotal": "{{count}} recorded check(s)",
+				"tasksTitle": "Compliance tasks",
+				"runScreening": "Run list screening (stub)",
+				"refresh": "Refresh",
+				"createEdd": "Open EDD task",
+				"instruction": "Instruction",
+				"markDone": "Mark done",
+				"cancel": "Cancel task",
+				"type": "Type",
+				"status": "Status",
+				"result": "Outcome",
+				"at": "Performed at",
+				"columnId": "#",
+				"columnProvider": "Provider",
+				"emptyChecksTitle": "No checks yet",
+				"emptyChecks": "No recorded checks.",
+				"emptyTasks": "No tasks.",
+				"resolution": "Resolution note (optional)",
+				"screeningDone": "List checks recorded.",
+				"eddCreated": "EDD task created.",
+				"taskUpdated": "Task updated.",
+				"paginationResultsLabel": "KYC checks",
+				"checkType": {
+					"ID_VERIFICATION": "ID verification",
+					"SANCTIONS_SCREENING": "Sanctions screening",
+					"PEP_SCREENING": "PEP screening",
+					"ADDRESS_VALIDATION": "Address validation"
+				},
+				"summaryStripTitle": "Compliance file summary",
+				"summaryStripSubtitle": "KYC status is always visible here — full decision workflow under the KYC review tab."
 			},
 			"profile": {
 				"title": "Personal information",
@@ -832,6 +970,11 @@
 			"kyc": {
 				"title": "KYC Actions",
 				"subtitle": "Email, profile, identity review and client status",
+				"checkResult": {
+					"PASS": "Pass (PASS)",
+					"REVIEW": "Manual review (REVIEW)",
+					"FAIL": "Fail (FAIL)"
+				},
 				"emailReview": "Email review",
 				"profileReview": "Profile review",
 				"identityReview": "Identity review",
@@ -848,25 +991,31 @@
 					},
 					"stepScreening": {
 						"title": "List screening",
-						"description": "Sanctions and PEP: at least one run is required before the engine score. You can re-run screening at any time.",
+						"description": "Sanctions and PEP: at least one run is required before the score is computed. Each check can end as Pass (PASS), Manual review (REVIEW) or Fail (FAIL). REVIEW means manual analysis is expected before a final decision. You can re-run screening at any time.",
+						"reviewOutcomeHint": "At least one latest sanctions or PEP check is in manual review (REVIEW). Clear open items per your internal procedure before approving KYC.",
 						"badgeOk": "Screening completed",
 						"loading": "Loading checks…",
 						"noneHint": "No list screening on file yet. Use the button below to run an initial screening.",
 						"sanctions": "Latest sanctions",
 						"pep": "Latest PEP",
 						"rescreening": "Re-run screening",
-						"rescreenDone": "List screening updated."
+						"rescreenDone": "List screening updated.",
+						"simulateSanctions": "Simulate sanctions screening",
+						"simulatePep": "Simulate PEP screening",
+						"pass": "PASS",
+						"review": "REVIEW",
+						"fail": "FAIL",
+						"simulationDone": "Simulated check: {{type}} — outcome {{result}}."
 					},
 					"stepB": {
 						"title": "Risk assessment",
-						"description": "Adjust the PEP flag used for analysis if needed, then review the engine proposal (auto re-run after list screening).",
-						"engineWhenPending": "Engine and proposed score are available when the file is pending review and list screening has been performed.",
-						"needScreeningFirst": "Complete step 2 (list screening) first: the engine score is only computed after at least one sanctions or PEP check exists.",
-						"engineLoading": "Computing engine score…"
+						"description": "Adjust the PEP flag if needed, then review the proposed score and risk band after list screening.",
+						"needScreeningFirst": "Complete step 2 (list screening) first: the evaluation score is available only after at least one sanctions or PEP check exists.",
+						"engineLoading": "Computing score…"
 					},
 					"stepC": {
 						"title": "Final decision",
-						"description": "Approve or reject when line reviews are done. The stored score is always the engine score from step 3 (no manual score entry)."
+						"description": "Approve or reject when line reviews are done. The stored score is always the one from step 3 (no manual score entry)."
 					}
 				},
 				"currentStatus": "Current status",
@@ -913,7 +1062,7 @@
 					"blockedTitle": "Engine block",
 					"blockReasonLabel": "Reason code",
 					"matchedRulesTitle": "Matched rules",
-					"blockedVerifyHint": "The engine blocks this file: fix blocking issues before you can verify.",
+					"blockedVerifyHint": "Risk evaluation blocks this file: fix the blocking items before you can verify.",
 					"decision": {
 						"ALLOW_STANDARD": "Standard path",
 						"ALLOW_REINFORCED_REVIEW": "Enhanced review",
@@ -931,7 +1080,7 @@
 				"verify": {
 					"title": "Verification",
 					"description": "Approve KYC with risk score and PEP indicator",
-					"descriptionNoManualScore": "The stored risk score and PEP come from the engine (step 3) and the evaluation PEP flag. No manual score entry here.",
+					"descriptionNoManualScore": "The stored risk score and PEP come from step 3 and the evaluation PEP flag. No manual score entry here.",
 					"riskScore": "Risk Score",
 					"pepFlag": "PEP Person",
 					"overrideReason": "Override reason (required if score differs by more than 10 from engine)",
@@ -3005,7 +3154,9 @@
 		},
 		"rules": {
 			"title": "AML rules",
-			"subtitle": "Rule definitions catalog and published versions.",
+			"subtitle": "Catalog: rule codes, active versions, on/off. Thresholds and logic live in Drools (.drl).",
+			"catalogHint": "The code must match the Drools ruleCode (e.g. TX_SINGLE_AMOUNT_XAF). Only definitions with an active version on the evaluation date produce persisted alerts.",
+			"publishHint": "New version: effective date and enabled flag only. No per-version JSON parameters.",
 			"stats": {
 				"total": "Definitions",
 				"categories": "Categories",

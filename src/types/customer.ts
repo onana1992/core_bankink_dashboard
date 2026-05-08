@@ -1,3 +1,5 @@
+import type { AuditActionCode } from "./auth";
+
 export type CustomerType = "PERSON" | "BUSINESS";
 export type CustomerStatus = "DRAFT" | "PENDING_REVIEW" | "VERIFIED" | "REJECTED" | "BLOCKED";
 
@@ -74,6 +76,21 @@ export interface KycOnboardingRiskAssessmentResponse {
 	blocked?: boolean | null;
 	blockReasonCode?: string | null;
 	matchedRules?: string[] | null;
+}
+
+/** Snapshot `kyc_risk_runs` (GET …/kyc/risk-runs). */
+export interface KycRiskRunItem {
+	id: number;
+	createdAt: string;
+	runSource: string;
+	analystPepFlag: boolean;
+	inputHash: string;
+	algorithmVersion: string;
+	proposedRiskScore: number;
+	riskBand: string;
+	decision: string | null;
+	blocked: boolean;
+	blockReasonCode: string | null;
 }
 
 export interface Customer {
@@ -163,6 +180,7 @@ export type IdCardSide = "RECTO" | "VERSO";
 export interface UploadDocumentOptions {
 	idCardSide?: IdCardSide;
 	identityDocumentNumber?: string;
+	identityDocumentIssuingCountry?: string;
 	identityDocumentExpiresOn?: string;
 }
 
@@ -179,6 +197,7 @@ export interface Document {
 	status: DocumentStatus;
 	reviewerNote?: string | null;
 	identityDocumentNumber?: string | null;
+	identityDocumentIssuingCountry?: string | null;
 	identityDocumentExpiresOn?: string | null;
 	uploadedAt?: string;
 	reviewedAt?: string | null;
@@ -278,6 +297,11 @@ export interface AddRelatedPersonRequest {
 	residenceCountry?: string;
 	email?: string;
 	phone?: string;
+}
+
+export interface CustomerContactUniquenessResponse {
+	emailUnique: boolean;
+	phoneUnique: boolean;
 }
 
 

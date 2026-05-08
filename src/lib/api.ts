@@ -11,8 +11,10 @@ import type {
 	KycCheck,
 	KycCheckResult,
 	KycCheckType,
+	CustomerContactUniquenessResponse,
 	KycGeographyRiskResponse,
 	KycOnboardingRiskAssessmentResponse,
+	KycRiskRunItem,
 	Document,
 	DocumentType,
 	IdCardSide,
@@ -134,7 +136,8 @@ import type {
 	PatchCaseStatusRequest,
 	CreateDeclarationResponse,
 	AmlAlertStatus,
-	AmlAlertSeverity
+	AmlAlertSeverity,
+	PagedResponse
 } from "@/types";
 
 // Validate and set API base URL
@@ -396,6 +399,20 @@ export const customersApi = {
 		return handleJsonResponse<Customer>(res);
 	},
 
+	async checkContactUniqueness(
+		params: { email?: string; phone?: string }
+	): Promise<CustomerContactUniquenessResponse> {
+		const usp = new URLSearchParams();
+		if (params.email && params.email.trim()) usp.set("email", params.email.trim());
+		if (params.phone && params.phone.trim()) usp.set("phone", params.phone.trim());
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/uniqueness${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<CustomerContactUniquenessResponse>(res);
+	},
+
 	async get(id: number | string): Promise<Customer> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}`, {
 			headers: getAuthHeaders(),
@@ -470,6 +487,9 @@ export const customersApi = {
 		if ((type === "ID_CARD" || type === "PASSPORT") && options?.identityDocumentNumber != null) {
 			params.set("identityDocumentNumber", options.identityDocumentNumber);
 		}
+		if ((type === "ID_CARD" || type === "PASSPORT") && options?.identityDocumentIssuingCountry != null) {
+			params.set("identityDocumentIssuingCountry", options.identityDocumentIssuingCountry);
+		}
 		if ((type === "ID_CARD" || type === "PASSPORT") && options?.identityDocumentExpiresOn) {
 			params.set("identityDocumentExpiresOn", options.identityDocumentExpiresOn);
 		}
@@ -543,6 +563,36 @@ export const customersApi = {
 			{ headers: getAuthHeaders(), cache: "no-store" }
 		);
 		return handleJsonResponse<KycOnboardingRiskAssessmentResponse>(res);
+	},
+
+	async listKycRiskRuns(
+		id: number | string,
+		params: { page?: number; size?: number } = {}
+	): Promise<PagedResponse<KycRiskRunItem>> {
+		const usp = new URLSearchParams();
+		if (typeof params.page === "number") usp.set("page", String(params.page));
+		if (typeof params.size === "number") usp.set("size", String(params.size));
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/customers/${id}/kyc/risk-runs${q ? `?${q}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" }
+		);
+		return handleJsonResponse<PagedResponse<KycRiskRunItem>>(res);
+	},
+
+	async getKycAuditTimeline(
+		id: number | string,
+		params: { page?: number; size?: number } = {}
+	): Promise<PagedResponse<AuditEvent>> {
+		const usp = new URLSearchParams();
+		if (typeof params.page === "number") usp.set("page", String(params.page));
+		if (typeof params.size === "number") usp.set("size", String(params.size));
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/customers/${id}/kyc/audit-timeline${q ? `?${q}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" }
+		);
+		return handleJsonResponse<PagedResponse<AuditEvent>>(res);
 	},
 
 	async verifyKyc(id: number | string, params: { pep?: boolean } = {}): Promise<Customer> {

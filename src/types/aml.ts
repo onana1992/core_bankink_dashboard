@@ -43,7 +43,6 @@ export type AmlRuleVersionResponse = {
 	effectiveFrom: string;
 	effectiveTo: string | null;
 	enabled: boolean;
-	parametersJson: string;
 };
 
 export type CreateRuleDefinitionRequest = {
@@ -55,8 +54,6 @@ export type CreateRuleDefinitionRequest = {
 
 export type PublishRuleVersionRequest = {
 	effectiveFrom: string;
-	/** Optionnel ; non utilisé par Drools (défaut `{}` côté API). */
-	parametersJson?: string | null;
 	enabled: boolean;
 };
 

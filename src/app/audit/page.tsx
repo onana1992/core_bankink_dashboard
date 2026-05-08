@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auditApi, usersApi } from "@/lib/api";
-import type { AuditEvent, User, AuditStatisticsResponse } from "@/types";
+import { AUDIT_ACTION_CODES, type AuditEvent, type User, type AuditStatisticsResponse } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Badge from "@/components/ui/Badge";
-import TablePagination from "@/components/ui/TablePagination";
+import { getAuditActionBadge } from "@/components/audit/AuditEventDetails";
+import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
 
-type ViewMode = "list" | "details";
+function AuditPageContent() {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const traceSearchKey = searchParams.toString();
+	const skipNextLoadEventsRef = useRef(false);
 
-export default function AuditPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -18,8 +22,6 @@ export default function AuditPage() {
 	const userList = Array.isArray(users) ? users : [];
 	const eventList = Array.isArray(events) ? events : [];
 	const [statistics, setStatistics] = useState<AuditStatisticsResponse | null>(null);
-	const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
-	const [viewMode, setViewMode] = useState<ViewMode>("list");
 	const [currentPage, setCurrentPage] = useState(0);
 	const [pageSize, setPageSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(0);
@@ -35,14 +37,29 @@ export default function AuditPage() {
 	useEffect(() => {
 		loadUsers();
 		loadStatistics();
-		loadEvents();
 	}, []);
 
 	useEffect(() => {
-		if (viewMode === "list") {
-			loadEvents();
+		const rt = searchParams.get("resourceType");
+		const rid = searchParams.get("resourceId");
+		if (rt && rid) {
+			const n = Number(rid);
+			if (!Number.isNaN(n)) {
+				void (async () => {
+					await handleViewResourceTrace(rt, n);
+					skipNextLoadEventsRef.current = true;
+					router.replace("/audit", { scroll: false });
+				})();
+				return;
+			}
 		}
-	}, [filters, currentPage, pageSize, viewMode]);
+		if (skipNextLoadEventsRef.current) {
+			skipNextLoadEventsRef.current = false;
+			return;
+		}
+		loadEvents();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- loadEvents reflects filters/page; trace URL uses ref to skip one list fetch after replace
+	}, [filters, currentPage, pageSize, traceSearchKey]);
 
 	async function loadUsers() {
 		try {
@@ -117,22 +134,16 @@ export default function AuditPage() {
 		}
 	}
 
-	async function handleViewEventDetails(eventId: number) {
-		try {
-			const event = await auditApi.getEvent(eventId);
-			setSelectedEvent(event);
-			setViewMode("details");
-		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement des détails");
-		}
+	function handleViewEventDetails(eventId: number) {
+		router.push(`/audit/${eventId}`);
 	}
 
 	async function handleViewResourceTrace(resourceType: string, resourceId: number) {
 		try {
 			setLoading(true);
+			setError(null);
 			const trace = await auditApi.getResourceTrace(resourceType, resourceId);
 			setEvents(trace.events);
-			setViewMode("list");
 			setCurrentPage(0);
 		} catch (e: any) {
 			setError(e?.message ?? "Erreur lors du chargement de la traçabilité");
@@ -141,34 +152,13 @@ export default function AuditPage() {
 		}
 	}
 
-	function getActionBadge(action: string) {
-		const colors: Record<string, string> = {
-			LOGIN: "bg-green-100 text-green-800",
-			LOGOUT: "bg-gray-100 text-gray-800",
-			CREATE: "bg-blue-100 text-blue-800",
-			UPDATE: "bg-yellow-100 text-yellow-800",
-			DELETE: "bg-red-100 text-red-800",
-			READ: "bg-purple-100 text-purple-800",
-			EXECUTE: "bg-indigo-100 text-indigo-800",
-			REFRESH_TOKEN: "bg-pink-100 text-pink-800"
-		};
-		return <Badge className={colors[action] || "bg-gray-100 text-gray-800"}>{action}</Badge>;
-	}
-
-	function formatDate(dateString: string) {
-		return new Date(dateString).toLocaleString('fr-FR', {
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit',
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit'
-		});
-	}
-
 	function handlePageChange(newPage: number) {
 		setCurrentPage(newPage);
-		window.scrollTo({ top: 0, behavior: 'smooth' });
+		window.scrollTo({ top: 0, behavior: "smooth" });
+	}
+
+	function userIdFromStatsUsername(username: string): number | undefined {
+		return userList.find(u => u.username === username)?.id;
 	}
 
 	return (
@@ -266,7 +256,7 @@ export default function AuditPage() {
 								.map(([action, count]) => (
 									<div key={action} className="flex items-center justify-between">
 										<div className="flex items-center gap-2 flex-1">
-											{getActionBadge(action)}
+											{getAuditActionBadge(action)}
 											<div className="flex-1 bg-gray-200 rounded-full h-2.5">
 												<div 
 													className="bg-blue-600 h-2.5 rounded-full transition-all"
@@ -301,216 +291,49 @@ export default function AuditPage() {
 				</div>
 			)}
 
-			{/* Vue détails */}
-			{viewMode === "details" && selectedEvent && (
-				<div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-					{/* Header avec gradient */}
-					<div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5">
-						<div className="flex justify-between items-start">
-							<div className="flex items-center gap-3">
-								<div className="bg-white/20 rounded-lg p-2">
-									<svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-									</svg>
-								</div>
-								<div>
-									<h2 className="text-2xl font-bold text-white">Détails de l'événement</h2>
-									<p className="text-blue-100 text-sm mt-1">ID: #{selectedEvent.id}</p>
-								</div>
-							</div>
-							<Button 
-								onClick={() => {
-									setViewMode("list");
-									setSelectedEvent(null);
-								}} 
-								variant="secondary"
-								className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-							>
-								<svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-								</svg>
-								Retour
-							</Button>
-						</div>
-					</div>
-
-					{/* Contenu */}
-					<div className="p-6">
-						{/* Informations principales */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-							<div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
-								<div className="flex items-center gap-2 mb-2">
-									<svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-									<h3 className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Date et heure</h3>
-								</div>
-								<p className="text-gray-900 font-medium">{formatDate(selectedEvent.createdAt)}</p>
-							</div>
-
-							<div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-100">
-								<div className="flex items-center gap-2 mb-2">
-									<svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-									<h3 className="text-xs font-semibold text-green-700 uppercase tracking-wide">Utilisateur</h3>
-								</div>
-								<p className="text-gray-900 font-medium">
-									{selectedEvent.user ? (
-										<span className="flex items-center gap-2">
-											<span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-semibold">
-												{selectedEvent.user.username}
+			{statistics && statistics.eventsByUser && Object.keys(statistics.eventsByUser).length > 0 && (
+				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+					<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+						<svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+						</svg>
+						Activité par utilisateur
+					</h3>
+					<p className="text-sm text-gray-600 mb-4">
+						Cliquez sur un nom pour ouvrir l&apos;historique d&apos;audit de cet utilisateur (pagination côté serveur).
+					</p>
+					<div className="space-y-2 max-h-64 overflow-y-auto">
+						{Object.entries(statistics.eventsByUser)
+							.sort(([, a], [, b]) => b - a)
+							.slice(0, 25)
+							.map(([username, count]) => {
+								const uid = userIdFromStatsUsername(username);
+								return (
+									<div key={username} className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0">
+										{uid !== undefined ? (
+											<button
+												type="button"
+												onClick={() => router.push(`/audit/user/${uid}`)}
+												className="text-sm text-left text-blue-600 hover:text-blue-800 hover:underline font-medium truncate"
+											>
+												{username}
+											</button>
+										) : (
+											<span className="text-sm text-gray-700 font-medium truncate" title={username}>
+												{username}
+												<span className="ml-2 text-xs font-normal text-gray-400">(ID inconnu dans la liste chargée)</span>
 											</span>
-										</span>
-									) : (
-										<span className="text-gray-400 italic">Non disponible</span>
-									)}
-								</p>
-							</div>
-
-							<div className="bg-gradient-to-br from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-100">
-								<div className="flex items-center gap-2 mb-2">
-									<svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-									</svg>
-									<h3 className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Action</h3>
-								</div>
-								<div>{getActionBadge(selectedEvent.action)}</div>
-							</div>
-
-							<div className="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-100">
-								<div className="flex items-center gap-2 mb-2">
-									<svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-									</svg>
-									<h3 className="text-xs font-semibold text-orange-700 uppercase tracking-wide">Type de ressource</h3>
-								</div>
-								<p className="text-gray-900 font-medium">
-									<Badge className="bg-orange-100 text-orange-800">{selectedEvent.resourceType}</Badge>
-								</p>
-							</div>
-						</div>
-
-						{/* Informations secondaires */}
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-							<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-								<h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">ID Ressource</h3>
-								{selectedEvent.resourceId ? (
-									<div className="flex items-center gap-2">
-										<code className="bg-gray-200 px-3 py-1.5 rounded font-mono text-sm text-gray-900">
-											{selectedEvent.resourceId}
-										</code>
-										<Button
-											onClick={() => handleViewResourceTrace(selectedEvent.resourceType, selectedEvent.resourceId!)}
-											variant="secondary"
-											className="text-xs px-2 py-1"
-										>
-											<svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-											</svg>
-											Traçabilité
-										</Button>
-									</div>
-								) : (
-									<p className="text-gray-400 italic">-</p>
-								)}
-							</div>
-
-							<div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-								<h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Adresse IP</h3>
-								<p className="text-gray-900 font-mono text-sm">
-									{selectedEvent.ipAddress ? (
-										<span className="bg-gray-200 px-3 py-1.5 rounded inline-block">
-											{selectedEvent.ipAddress}
-										</span>
-									) : (
-										<span className="text-gray-400 italic">-</span>
-									)}
-								</p>
-							</div>
-						</div>
-
-						{/* User Agent */}
-						{selectedEvent.userAgent && (
-							<div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-								<h3 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2 flex items-center gap-2">
-									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-									</svg>
-									User Agent
-								</h3>
-								<p className="text-gray-700 text-sm break-all bg-white p-3 rounded border border-gray-200">
-									{selectedEvent.userAgent}
-								</p>
-							</div>
-						)}
-
-						{/* Détails JSON */}
-						{selectedEvent.details && (() => {
-							let parsedDetails: any = null;
-							let isJson = false;
-							try {
-								parsedDetails = JSON.parse(selectedEvent.details);
-								isJson = true;
-							} catch (e) {
-								// Ce n'est pas du JSON valide, afficher comme texte
-							}
-							
-							return (
-								<div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
-									<div className="flex items-center justify-between mb-4">
-										<h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center gap-2">
-											<svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-											</svg>
-											{isJson ? "Détails (JSON)" : "Détails"}
-										</h3>
-										{isJson && (
-											<Badge className="bg-green-500/20 text-green-400 border border-green-500/30">
-												JSON Valide
-											</Badge>
 										)}
+										<span className="text-sm font-semibold text-gray-900 shrink-0">{count.toLocaleString()}</span>
 									</div>
-									{isJson ? (
-										<div className="bg-gray-950 p-4 rounded-lg border border-gray-800 overflow-x-auto">
-											<pre className="text-green-400 text-sm font-mono leading-relaxed">
-												{JSON.stringify(parsedDetails, null, 2)}
-											</pre>
-										</div>
-									) : (
-										<div className="bg-gray-950 p-4 rounded-lg border border-gray-800">
-											<pre className="text-gray-300 text-sm font-mono leading-relaxed whitespace-pre-wrap break-words">
-												{selectedEvent.details}
-											</pre>
-										</div>
-									)}
-									{isJson && parsedDetails && (
-										<div className="mt-4 pt-4 border-t border-gray-700">
-											<h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Vue structurée</h4>
-											<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-												{Object.entries(parsedDetails).map(([key, value]) => (
-													<div key={key} className="bg-gray-800/50 p-3 rounded border border-gray-700">
-														<div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-															{key}
-														</div>
-														<div className="text-gray-200 text-sm font-medium">
-															{typeof value === 'object' ? JSON.stringify(value) : String(value)}
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									)}
-								</div>
-							);
-						})()}
+								);
+							})}
 					</div>
 				</div>
 			)}
 
 			{/* Liste des événements */}
-			{viewMode === "list" && (
-				<>
+			<>
 					{/* Filtres */}
 					<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 						<h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -547,6 +370,18 @@ export default function AuditPage() {
 										placeholder="ID utilisateur (ex: 1)"
 									/>
 								)}
+								{filters.userId ? (
+									<button
+										type="button"
+										onClick={() => {
+											const id = Number(filters.userId);
+											if (Number.isFinite(id) && id > 0) router.push(`/audit/user/${id}`);
+										}}
+										className="mt-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+									>
+										Ouvrir la page « activité de cet utilisateur »
+									</button>
+								) : null}
 							</div>
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
@@ -559,14 +394,11 @@ export default function AuditPage() {
 									}}
 								>
 									<option value="">Toutes les actions</option>
-									<option value="LOGIN">LOGIN</option>
-									<option value="LOGOUT">LOGOUT</option>
-									<option value="CREATE">CREATE</option>
-									<option value="UPDATE">UPDATE</option>
-									<option value="DELETE">DELETE</option>
-									<option value="READ">READ</option>
-									<option value="EXECUTE">EXECUTE</option>
-									<option value="REFRESH_TOKEN">REFRESH_TOKEN</option>
+									{AUDIT_ACTION_CODES.map(action => (
+										<option key={action} value={action}>
+											{action}
+										</option>
+									))}
 								</select>
 							</div>
 							<div>
@@ -629,107 +461,39 @@ export default function AuditPage() {
 						</div>
 					)}
 
-					{/* Tableau des événements */}
-					<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-						<div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-							<h2 className="text-lg font-semibold text-gray-900">
-								Événements d'audit ({(totalElements ?? 0).toLocaleString()})
-							</h2>
-						</div>
-
-						{loading ? (
-							<div className="p-12 text-center">
-								<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-								<p className="mt-4 text-gray-600">Chargement des événements...</p>
-							</div>
-						) : eventList.length === 0 ? (
-							<div className="p-12 text-center">
-								<p className="text-gray-500 text-lg font-medium">Aucun événement trouvé</p>
-							</div>
-						) : (
-							<>
-								<div className="overflow-x-auto">
-									<table className="min-w-full divide-y divide-gray-200">
-										<thead className="bg-gray-50">
-											<tr>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Utilisateur</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Action</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Ressource</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">ID Ressource</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">IP</th>
-												<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-											</tr>
-										</thead>
-										<tbody className="bg-white divide-y divide-gray-200 text-sm">
-											{eventList.map(event => (
-												<tr key={event.id} className="hover:bg-gray-50 transition-colors">
-													<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-														{formatDate(event.createdAt)}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														{event.user ? (
-															<span className="font-medium text-gray-900">{event.user.username}</span>
-														) : (
-															<span className="text-gray-400">-</span>
-														)}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														{getActionBadge(event.action)}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														<Badge className="bg-gray-100 text-gray-800">{event.resourceType}</Badge>
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-900">
-														{event.resourceId ? (
-															<button
-																onClick={() => handleViewResourceTrace(event.resourceType, event.resourceId!)}
-																className="text-blue-600 hover:text-blue-800 underline"
-															>
-																{event.resourceId}
-															</button>
-														) : (
-															"-"
-														)}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-600">
-														{event.ipAddress || "-"}
-													</td>
-													<td className="px-6 py-4 whitespace-nowrap">
-														<Button
-															onClick={() => handleViewEventDetails(event.id)}
-															variant="secondary"
-															className="text-xs"
-														>
-															Détails
-														</Button>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								</div>
-
-								<TablePagination
-									page={currentPage}
-									totalPages={totalPages}
-									totalElements={totalElements ?? 0}
-									pageSize={pageSize}
-									onPageChange={handlePageChange}
-									resultsLabel="événements"
-									showFirstLast
-									sizeOptions={[10, 20, 50, 100]}
-									size={pageSize}
-									onSizeChange={(s) => {
-										setPageSize(s);
-										setCurrentPage(0);
-									}}
-								/>
-							</>
-						)}
-					</div>
-				</>
-			)}
+					<AuditEventsTable
+						events={eventList}
+						loading={loading}
+						totalPages={totalPages}
+						totalElements={totalElements ?? 0}
+						currentPage={currentPage}
+						pageSize={pageSize}
+						resultsHeading={`Événements d'audit (${(totalElements ?? 0).toLocaleString()})`}
+						onPageChange={handlePageChange}
+						onPageSizeChange={(s) => {
+							setPageSize(s);
+							setCurrentPage(0);
+						}}
+						onEventDetails={handleViewEventDetails}
+						onResourceTrace={handleViewResourceTrace}
+						showUserColumn
+					/>
+			</>
 		</div>
+	);
+}
+
+export default function AuditPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="p-12 text-center">
+					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+					<p className="mt-4 text-gray-600">Chargement…</p>
+				</div>
+			}
+		>
+			<AuditPageContent />
+		</Suspense>
 	);
 }

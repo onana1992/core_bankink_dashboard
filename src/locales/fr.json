@@ -160,6 +160,15 @@
 			"SUSPENDED": "Suspendu"
 		}
 	},
+	"tablePagination": {
+		"range": "Affichage de {{from}} à {{to}} sur {{total}} {{resultsLabel}}",
+		"pageSize": "Taille de page",
+		"first": "Premier",
+		"previous": "Précédent",
+		"next": "Suivant",
+		"last": "Dernier",
+		"pageOf": "Page {{current}} sur {{total}}"
+	},
 	"customer": {
 		"new": "Nouveau client",
 		"newPerson": "Nouvelle personne physique",
@@ -190,6 +199,9 @@
 				"phoneInvalid": "Le format du téléphone est invalide.",
 				"emailRequired": "L'email est requis.",
 				"emailInvalid": "L'email n'est pas valide.",
+				"emailAlreadyExists": "Cette adresse e-mail est déjà utilisée par un autre client.",
+				"phoneAlreadyExists": "Ce numéro de téléphone est déjà utilisé par un autre client.",
+				"emailAndPhoneAlreadyExists": "L'adresse e-mail et le numéro de téléphone sont déjà utilisés par d'autres clients.",
 				"genderRequired": "Le genre est requis.",
 				"birthDateRequired": "La date de naissance est requise.",
 				"maritalStatusRequired": "Le statut matrimonial est requis.",
@@ -608,6 +620,43 @@
 			"wrongRouteDescription": "Vous êtes sur l'espace {{opened}}, alors que ce client est enregistré comme {{actual}}. Ouvrez la fiche correspondante ci-dessous.",
 			"wrongRouteOpenButton": "Ouvrir la bonne fiche",
 			"notFound": "Client non trouvé",
+			"headerStrip": {
+				"dossierStatus": "Statut du dossier",
+				"typeLabel": "Type",
+				"riskScore": "Score risque",
+				"lastRiskAt": "Dernier calcul risque",
+				"pepLabel": "PEP",
+				"clientId": "Réf. client",
+				"statusCode": "({{code}})"
+			},
+			"timeline": {
+				"title": "Événements du dossier",
+				"subtitle": "Vue synthétique à partir des contrôles KYC, des pièces, des tâches de conformité et des dates du dossier. Il ne s’agit pas d’un journal d’audit opposable.",
+				"empty": "Aucun événement daté pour ce dossier.",
+				"paginationResultsLabel": "événements",
+				"columnRank": "#",
+				"columnCategory": "Catégorie",
+				"columnWhen": "Date et heure",
+				"columnSummary": "Libellé",
+				"columnDetail": "Détail",
+				"badge": {
+					"customer": "Dossier client",
+					"kyc": "Contrôle KYC",
+					"task": "Tâche conformité",
+					"document": "Pièce justificative"
+				},
+				"kind": {
+					"customer_created": "Fiche client créée",
+					"customer_updated": "Fiche client mise à jour",
+					"risk_assessment": "Évaluation du risque (onboarding) enregistrée",
+					"rekyc_requested": "Demande de re-KYC LBC-FT enregistrée",
+					"kyc_check": "{{type}} · {{result}}",
+					"task_created": "Tâche créée · {{type}} — {{status}}",
+					"task_resolved": "Tâche mise à jour · {{type}} — {{status}}",
+					"document_uploaded": "Dépôt de pièce · {{type}}",
+					"document_reviewed": "Revue de pièce · {{type}} — {{status}}"
+				}
+			},
 			"tabs": {
 				"overview": "Vue d'ensemble",
 				"dossier": "Dossier client",
@@ -675,12 +724,66 @@
 				"newCase": "Nouveau dossier AML"
 			},
 			"compliance": {
-				"title": "Screening & tâches conformité",
-				"subtitle": "Contrôles KYC, stub listes, workflow EDD.",
+				"title": "Conformité et suivi du dossier",
+				"subtitle": "Contrôles KYC, screening sur listes (sanctions et PEP), tâches de conformité et examen renforcé (EDD).",
+				"screeningBlockTitle": "Screening sur listes",
+				"screeningBlockHint": "Relancez le screening sanctions et PEP depuis les boutons ci-dessous. Le détail des contrôles figure dans l’onglet « Contrôles KYC ».",
+				"subTabs": {
+					"aria": "Rubriques de conformité pour ce dossier",
+					"screening": "Screening listes",
+					"data": "Contrôles KYC",
+					"tasks": "Tâches de conformité",
+					"timeline": "Événements",
+					"auditTrail": "Piste d’audit KYC"
+				},
+				"auditTrail": {
+					"title": "Piste d’audit KYC",
+					"subtitle": "Journal des actions ops (audit) et exécutions du moteur de scoring, fusionnés par date.",
+					"empty": "Aucune entrée d’audit pour ce dossier.",
+					"loadError": "Impossible de charger la piste d’audit.",
+					"columnRank": "#",
+					"columnWhen": "Date",
+					"columnKind": "Type",
+					"columnSummary": "Résumé",
+					"columnActor": "Utilisateur",
+					"columnDetail": "Détail",
+					"kind": {
+						"AUDIT_EVENT": "Action",
+						"RISK_RUN": "Moteur"
+					},
+					"paginationResultsLabel": "entrées",
+					"riskRunSummary": "Score {{score}} · {{band}} · {{decision}}",
+					"riskRunBlocked": "Bloqué ({{code}})",
+					"action": {
+						"KYC_CLIENT_CREATED": "Création du dossier client KYC",
+						"KYC_SUBMITTED": "Soumission du dossier KYC",
+						"KYC_VERIFIED": "Vérification KYC (acceptation)",
+						"KYC_REJECTED": "Rejet du dossier KYC",
+						"KYC_CHECK_CREATED": "Contrôle KYC ajouté",
+						"KYC_LIST_SCREENING_RUN": "Screening listes exécuté",
+						"KYC_SANCTIONS_SCREENING_RUN": "Screening sanctions exécuté",
+						"KYC_PEP_SCREENING_RUN": "Screening PEP exécuté",
+						"KYC_RISK_ASSESSMENT_RUN": "Scoring moteur (consultation)",
+						"KYC_EMAIL_REVIEW_SET": "Revue e-mail",
+						"KYC_PROFILE_REVIEW_SET": "Revue profil",
+						"KYC_IDENTITY_REVIEW_SET": "Revue identité",
+						"KYC_DOCUMENT_REVIEW_SET": "Revue document",
+						"KYC_CLIENT_PERSONAL_INFO_UPDATED": "Informations personnelles modifiées",
+						"KYC_CLIENT_ADDRESS_ADDED": "Adresse ajoutée",
+						"KYC_CLIENT_ADDRESS_UPDATED": "Adresse modifiée",
+						"KYC_COMPLIANCE_TASK_CREATED": "Tâche conformité créée",
+						"KYC_COMPLIANCE_TASK_PATCHED": "Tâche conformité mise à jour"
+					}
+				},
+				"simulatorBlockTitle": "Simulation (interface)",
+				"simulatorBlockHint": "Outil de test : enregistre des contrôles fictifs (« ui-simulator »), distinct du passage métier.",
+				"dossierTrackingTitle": "Contrôles KYC",
 				"rekycBanner": "Contexte re-KYC AML",
 				"checksTitle": "Contrôles KYC",
-				"tasksTitle": "Tâches conformité",
-				"runScreening": "Lancer screening listes (stub)",
+				"checksSubtitle": "Les contrôles les plus récents apparaissent en premier.",
+				"checksTotal": "{{count}} contrôle(s) enregistré(s)",
+				"tasksTitle": "Tâches de conformité",
+				"runScreening": "Lancer le screening sur listes (simulation)",
 				"refresh": "Actualiser",
 				"createEdd": "Ouvrir tâche EDD",
 				"instruction": "Consigne",
@@ -690,12 +793,24 @@
 				"status": "Statut",
 				"result": "Résultat",
 				"at": "Date du contrôle",
+				"columnId": "#",
+				"columnProvider": "Fournisseur",
+				"emptyChecksTitle": "Aucun contrôle pour l’instant",
 				"emptyChecks": "Aucun contrôle enregistré.",
 				"emptyTasks": "Aucune tâche.",
 				"resolution": "Note de résolution (optionnel)",
 				"screeningDone": "Contrôles listes enregistrés.",
 				"eddCreated": "Tâche EDD créée.",
-				"taskUpdated": "Tâche mise à jour."
+				"taskUpdated": "Tâche mise à jour.",
+				"paginationResultsLabel": "contrôles KYC",
+				"checkType": {
+					"ID_VERIFICATION": "Vérification d’identité",
+					"SANCTIONS_SCREENING": "Screening sanctions",
+					"PEP_SCREENING": "Screening PEP",
+					"ADDRESS_VALIDATION": "Validation d’adresse"
+				},
+				"summaryStripTitle": "Résumé dossier conformité",
+				"summaryStripSubtitle": "Statut KYC visible sur tous les écrans — détail décision sous l’onglet Revue KYC."
 			},
 			"profile": {
 				"title": "Informations personnelles",
@@ -855,6 +970,11 @@
 			"kyc": {
 				"title": "Actions KYC",
 				"subtitle": "Revue email, profil, identité et statut client",
+				"checkResult": {
+					"PASS": "Conforme (PASS)",
+					"REVIEW": "Révision requise (REVIEW)",
+					"FAIL": "Non conforme (FAIL)"
+				},
 				"emailReview": "Revue de l'email",
 				"profileReview": "Revue du profil",
 				"identityReview": "Revue de l'identité",
@@ -871,25 +991,31 @@
 					},
 					"stepScreening": {
 						"title": "Screening listes",
-						"description": "Sanctions et PEP : au moins un passage est obligatoire avant le calcul du score moteur. Vous pouvez relancer un screening à tout moment.",
+						"description": "Sanctions et PEP : au moins un passage est obligatoire avant le calcul du score. Chaque contrôle peut se conclure par Conforme (PASS), Révision requise (REVIEW) ou Non conforme (FAIL). REVIEW signifie qu’une analyse manuelle est attendue avant décision. Vous pouvez relancer un screening à tout moment.",
+						"reviewOutcomeHint": "Au moins un dernier contrôle sanctions ou PEP est en « révision » (REVIEW). Traitez les points ouverts selon votre procédure interne avant de valider le KYC.",
 						"badgeOk": "Screening effectué",
 						"loading": "Chargement des contrôles…",
 						"noneHint": "Aucun screening listes enregistré. Utilisez le bouton ci-dessous pour lancer un premier screening.",
 						"sanctions": "Dernier sanctions",
 						"pep": "Dernier PEP",
 						"rescreening": "Relancer le screening",
-						"rescreenDone": "Screening listes mis à jour."
+						"rescreenDone": "Screening listes mis à jour.",
+						"simulateSanctions": "Simulation screening sanctions",
+						"simulatePep": "Simulation screening PEP",
+						"pass": "PASS",
+						"review": "REVIEW",
+						"fail": "FAIL",
+						"simulationDone": "Contrôle simulé : {{type}} — résultat {{result}}."
 					},
 					"stepB": {
 						"title": "Évaluation du risque",
-						"description": "Ajustez le statut PEP pour l’analyse si nécessaire, puis consultez la proposition du moteur (recalcul automatique après l’étape screening).",
-						"engineWhenPending": "Moteur et score proposés lorsque le dossier est en attente d'examen et qu’un screening listes a été effectué.",
-						"needScreeningFirst": "Complétez d’abord l’étape 2 (screening listes) : le score moteur n’est calculé qu’après au moins un contrôle sanctions ou PEP.",
-						"engineLoading": "Calcul du score moteur en cours…"
+						"description": "Ajustez le statut PEP si nécessaire, puis consultez le score et la bande proposés après l’étape screening listes.",
+						"needScreeningFirst": "Complétez d’abord l’étape 2 (screening listes) : le score d’évaluation n’est disponible qu’après au moins un contrôle sanctions ou PEP.",
+						"engineLoading": "Calcul du score en cours…"
 					},
 					"stepC": {
 						"title": "Décision finale",
-						"description": "Validez ou rejetez le dossier lorsque les revues ligne sont approuvées. Le score enregistré est celui du moteur (étape 3), sans saisie manuelle."
+						"description": "Validez ou rejetez le dossier lorsque les revues ligne sont approuvées. Le score enregistré est celui de l’étape 3, sans saisie manuelle."
 					}
 				},
 				"currentStatus": "Statut actuel",
@@ -905,7 +1031,7 @@
 				},
 				"evaluationPep": {
 					"title": "PEP pris en compte pour l’évaluation",
-					"hint": "Ce choix est envoyé au moteur de risque. Modifiez-le pour relancer une évaluation (étape 3).",
+					"hint": "Ce choix est pris en compte pour l’évaluation du risque. Modifiez-le pour relancer le calcul (étape 3).",
 					"checkbox": "Traiter le client comme PEP pour cette évaluation",
 					"profileFlag": "PEP enregistré sur le profil :",
 					"yes": "Oui",
@@ -936,7 +1062,7 @@
 					"blockedTitle": "Blocage moteur",
 					"blockReasonLabel": "Code motif",
 					"matchedRulesTitle": "Règles déclenchées",
-					"blockedVerifyHint": "Le moteur bloque ce dossier : corrigez les points bloquants avant de pouvoir vérifier.",
+					"blockedVerifyHint": "L’évaluation du risque bloque ce dossier : corrigez les points bloquants avant de pouvoir vérifier.",
 					"decision": {
 						"ALLOW_STANDARD": "Parcours standard",
 						"ALLOW_REINFORCED_REVIEW": "Revue renforcée",
@@ -3057,7 +3183,9 @@
 		},
 		"rules": {
 			"title": "Règles AML",
-			"subtitle": "Catalogue des définitions et gestion des versions publiées.",
+			"subtitle": "Catalogue : codes, versions actives, activation. Seuils et logique dans Drools (.drl).",
+			"catalogHint": "Le code doit correspondre au ruleCode Drools (ex. TX_SINGLE_AMOUNT_XAF). Seules les définitions avec une version active à la date d’évaluation déclenchent la persistance d’alertes.",
+			"publishHint": "Nouvelle version : date d’effet et activation uniquement. Pas de paramètres JSON par version.",
 			"stats": {
 				"total": "Définitions",
 				"categories": "Catégories",

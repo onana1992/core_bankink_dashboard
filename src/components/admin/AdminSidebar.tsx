@@ -118,7 +118,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
-							<NavLink href="/aml/alerts/new" label={t("sidebar.amlNewAlert")} icon={PlusCircle} collapsed={collapsed} />
 							<NavLink href="/aml/rules" label={t("sidebar.amlRules")} icon={ScrollText} collapsed={collapsed} />
 							<NavLink
 								href="/aml/cases"
@@ -127,7 +126,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
-							<NavLink href="/aml/cases/new" label={t("sidebar.amlNewCase")} icon={PlusCircle} collapsed={collapsed} />
 							<NavLink href="/aml/risk-profiles" label={t("sidebar.amlRiskProfiles")} icon={ShieldCheck} collapsed={collapsed} />
 							<NavLink href="/compliance/vigilance" label={t("sidebar.complianceVigilance")} icon={RefreshCcw} collapsed={collapsed} />
 						</div>

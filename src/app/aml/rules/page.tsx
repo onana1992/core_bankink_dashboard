@@ -38,7 +38,6 @@ export default function AmlRulesPage() {
 
 	const [publishFor, setPublishFor] = useState<number | null>(null);
 	const [pubFrom, setPubFrom] = useState(() => new Date().toISOString().slice(0, 10));
-	const [pubJson, setPubJson] = useState("{}");
 	const [pubEnabled, setPubEnabled] = useState(true);
 
 	const stats = useMemo(() => {
@@ -116,11 +115,9 @@ export default function AmlRulesPage() {
 		try {
 			await amlApi.publishRuleVersion(ruleDefinitionId, {
 				effectiveFrom: pubFrom,
-				parametersJson: pubJson,
 				enabled: pubEnabled
 			});
 			setPublishFor(null);
-			setPubJson("{}");
 			const v = await amlApi.listRuleVersions(ruleDefinitionId);
 			setVersions((prev) => ({ ...prev, [ruleDefinitionId]: v ?? [] }));
 			await loadRules();
@@ -149,6 +146,7 @@ export default function AmlRulesPage() {
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">{t("aml.rules.title")}</h1>
 					<p className="text-gray-600 mt-1">{t("aml.rules.subtitle")}</p>
+					<p className="text-sm text-gray-500 mt-2 max-w-2xl">{t("aml.rules.catalogHint")}</p>
 				</div>
 				<div className="flex flex-wrap gap-3">
 					<Button type="button" variant="outline" className="flex items-center gap-2" onClick={() => void loadRules()} disabled={loading}>
@@ -263,6 +261,7 @@ export default function AmlRulesPage() {
 					<h2 className="text-lg font-semibold text-gray-900">
 						{t("aml.rules.publishVersion")} #{publishFor}
 					</h2>
+					<p className="text-sm text-gray-600">{t("aml.rules.publishHint")}</p>
 					<div className="grid sm:grid-cols-2 gap-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("aml.rules.effectiveFrom")}</label>
@@ -273,15 +272,6 @@ export default function AmlRulesPage() {
 								<input type="checkbox" className="rounded border-gray-300" checked={pubEnabled} onChange={(e) => setPubEnabled(e.target.checked)} />
 								{t("aml.rules.enabled")}
 							</label>
-						</div>
-						<div className="sm:col-span-2">
-							<label className="block text-sm font-medium text-gray-700 mb-2">parametersJson</label>
-							<textarea
-								className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm font-mono min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-								value={pubJson}
-								onChange={(e) => setPubJson(e.target.value)}
-								spellCheck={false}
-							/>
 						</div>
 					</div>
 					<div className="flex flex-wrap gap-2">

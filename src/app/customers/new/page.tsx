@@ -295,6 +295,22 @@ export default function NewCustomerPage() {
 		return validateIdentity() ?? validateContact() ?? validateProfile() ?? validateAddress() ?? validateDocuments() ?? null;
 	}
 
+	async function validateContactUniquenessBeforeSubmit(): Promise<string | null> {
+		const email = identity.email?.trim() ?? "";
+		const phone = composeInternationalPhone(phoneDialIso2, phoneNational).trim();
+		const uniqueness = await customersApi.checkContactUniqueness({ email, phone });
+		if (!uniqueness.emailUnique && !uniqueness.phoneUnique) {
+			return t("customer.wizard.validation.emailAndPhoneAlreadyExists");
+		}
+		if (!uniqueness.emailUnique) {
+			return t("customer.wizard.validation.emailAlreadyExists");
+		}
+		if (!uniqueness.phoneUnique) {
+			return t("customer.wizard.validation.phoneAlreadyExists");
+		}
+		return null;
+	}
+
 	async function submitAllCustomer(): Promise<number> {
 		const emailTrimmed = identity.email!.trim();
 		const phone = composeInternationalPhone(phoneDialIso2, phoneNational).trim();
@@ -334,6 +350,7 @@ export default function NewCustomerPage() {
 
 		const idMeta = {
 			identityDocumentNumber: identityDocumentNumber.trim(),
+			identityDocumentIssuingCountry: profile.nationality.trim().toUpperCase(),
 			identityDocumentExpiresOn: identityDocumentExpiresOn.trim()
 		};
 		if (idDocType === "ID_CARD") {
@@ -370,6 +387,11 @@ export default function NewCustomerPage() {
 			}
 			setSubmitting(true);
 			try {
+				const uniquenessError = await validateContactUniquenessBeforeSubmit();
+				if (uniquenessError) {
+					setError(uniquenessError);
+					return;
+				}
 				const id = await submitAllCustomer();
 				setCreatedCustomerId(id);
 				setWizardSuccess(true);

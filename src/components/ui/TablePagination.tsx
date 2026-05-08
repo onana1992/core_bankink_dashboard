@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 
 export interface TablePaginationProps {
@@ -40,6 +41,7 @@ export default function TablePagination({
 	onSizeChange,
 	className = ""
 }: TablePaginationProps) {
+	const { t } = useTranslation();
 	const total = Number(totalElements) || 0;
 	const pages = Math.max(0, Number(totalPages) || 0);
 	if (total === 0 && pages <= 1 && !sizeOptions?.length) return null;
@@ -53,12 +55,16 @@ export default function TablePagination({
 		<div className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 ${className}`}>
 			<div className="flex items-center gap-4 flex-wrap">
 				<p className="text-sm text-gray-700">
-					Affichage de <span className="font-medium">{from}</span> à <span className="font-medium">{to}</span> sur{" "}
-					<span className="font-medium">{total.toLocaleString()}</span> {resultsLabel}
+					{t("tablePagination.range", {
+						from,
+						to,
+						total: total.toLocaleString(),
+						resultsLabel
+					})}
 				</p>
 				{sizeOptions && size !== undefined && onSizeChange && (
 					<div className="flex items-center gap-2">
-						<label className="text-sm text-gray-600">Taille de page</label>
+						<label className="text-sm text-gray-600">{t("tablePagination.pageSize")}</label>
 						<select
 							className="px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={size}
@@ -84,7 +90,7 @@ export default function TablePagination({
 							disabled={!hasPrevious}
 							className="px-3 py-1 text-sm"
 						>
-							Premier
+							{t("tablePagination.first")}
 						</Button>
 					)}
 					<Button
@@ -94,10 +100,10 @@ export default function TablePagination({
 						disabled={!hasPrevious}
 						className="px-3 py-1 text-sm"
 					>
-						Précédent
+						{t("tablePagination.previous")}
 					</Button>
 					<span className="px-4 py-1 text-sm text-gray-700 whitespace-nowrap">
-						Page {page + 1} sur {pages}
+						{t("tablePagination.pageOf", { current: page + 1, total: pages })}
 					</span>
 					<Button
 						variant="outline"
@@ -106,7 +112,7 @@ export default function TablePagination({
 						disabled={!hasNext}
 						className="px-3 py-1 text-sm"
 					>
-						Suivant
+						{t("tablePagination.next")}
 					</Button>
 					{showFirstLast && (
 						<Button
@@ -116,7 +122,7 @@ export default function TablePagination({
 							disabled={!hasNext}
 							className="px-3 py-1 text-sm"
 						>
-							Dernier
+							{t("tablePagination.last")}
 						</Button>
 					)}
 				</div>

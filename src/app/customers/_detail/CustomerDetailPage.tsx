@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import TablePagination from "@/components/ui/TablePagination";
 import Toast from "@/components/ui/Toast";
+import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
 import { customersApi, accountsApi } from "@/lib/api";
-import { kycOnboardingRiskShowsEngineMetadata } from "@/lib/kycOnboardingRiskDisplay";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
@@ -29,11 +31,15 @@ import type {
 	ComplianceTask,
 	ComplianceTaskStatus,
 	Customer,
+	AuditEvent,
 	Document,
 	DocumentType,
 	IdCardSide,
 	KycCheck,
+	KycCheckResult,
+	KycCheckType,
 	KycOnboardingRiskAssessmentResponse,
+	PagedResponse,
 	RelatedPerson,
 	RelatedPersonRole,
 	Account,
@@ -108,6 +114,83 @@ function customerToBusinessProfileForm(c: Customer): BusinessProfileFormData {
 		fundsSource: c.fundsSource ?? "",
 		accountOpeningPurpose: c.accountOpeningPurpose ?? ""
 	};
+}
+
+function sanitizeReviewerNote(raw?: string | null): string | null {
+	if (!raw) return null;
+	const note = raw.trim();
+	if (!note) return null;
+	// Hide legacy technical marker previously used to store ID card side.
+	if (note.startsWith("ID_CARD_SIDE:")) return null;
+	return note;
+}
+
+const KYC_COMPLIANCE_CHECKS_PAGE_SIZE = 20;
+const DOSSIER_TIMELINE_PAGE_SIZE = 15;
+
+function kycCheckResultBadgeVariant(result: KycCheckResult): "success" | "danger" | "warning" {
+	if (result === "PASS") return "success";
+	if (result === "FAIL") return "danger";
+	return "warning";
+}
+
+function kycCheckResultLabel(t: TFunction, result: KycCheckResult): string {
+	const key = `customer.detail.kyc.checkResult.${result}`;
+	const lbl = t(key);
+	return lbl === key ? result : lbl;
+}
+
+function kycCheckTypeRowAccent(type: KycCheckType): string {
+	switch (type) {
+		case "SANCTIONS_SCREENING":
+		case "PEP_SCREENING":
+			return "border-l-[3px] border-l-rose-500";
+		case "ID_VERIFICATION":
+			return "border-l-[3px] border-l-sky-600";
+		case "ADDRESS_VALIDATION":
+			return "border-l-[3px] border-l-violet-500";
+		default:
+			return "border-l-[3px] border-l-slate-300";
+	}
+}
+
+function translatedCustomerStatus(t: TFunction, status: Customer["status"]): string {
+	const key = `customer.statuses.${status}`;
+	const lbl = t(key);
+	return lbl === key ? status : lbl;
+}
+
+type DossierTimelineBadge = "customer" | "kyc" | "task" | "document";
+type DossierTimelineRow = { id: string; at: number; badge: DossierTimelineBadge; title: string; detail?: string };
+
+function dossierTimelineBadgeVariant(badge: DossierTimelineBadge): "neutral" | "success" | "warning" | "danger" | "info" {
+	switch (badge) {
+		case "customer":
+			return "neutral";
+		case "kyc":
+			return "info";
+		case "task":
+			return "warning";
+		case "document":
+			return "success";
+		default:
+			return "neutral";
+	}
+}
+
+function dossierTimelineRowAccent(badge: DossierTimelineBadge): string {
+	switch (badge) {
+		case "customer":
+			return "border-l-[3px] border-l-slate-600";
+		case "kyc":
+			return "border-l-[3px] border-l-sky-600";
+		case "task":
+			return "border-l-[3px] border-l-amber-500";
+		case "document":
+			return "border-l-[3px] border-l-emerald-600";
+		default:
+			return "border-l-[3px] border-l-slate-300";
+	}
 }
 
 export function CustomerDetailPage({ expectedType }: { expectedType: CustomerType }) {
@@ -185,11 +268,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	/** Même règle que l’API : vérification ou rejet KYC final uniquement si les 3 revues sont APPROVED. */
 	const canFinalizeKyc = customer != null && customer.status === "PENDING_REVIEW" && kycAllLineReviewsApproved;
 
-	const kycShowsDroolsEngineMeta = useMemo(
-		() => kycOnboardingRisk != null && kycOnboardingRiskShowsEngineMetadata(kycOnboardingRisk),
-		[kycOnboardingRisk]
-	);
-
 	// RelatedPerson states
 	const [rpForm, setRpForm] = useState<AddRelatedPersonRequest>({
 		role: "UBO",
@@ -251,6 +329,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [decisionPanelScreeningBusy, setDecisionPanelScreeningBusy] = useState(false);
 	const [eddInstruction, setEddInstruction] = useState("");
 	const [taskResolution, setTaskResolution] = useState<Record<number, string>>({});
+	const [complianceInnerTab, setComplianceInnerTab] = useState<
+		"screening" | "data" | "tasks" | "timeline" | "auditTrail"
+	>("screening");
+	const KYC_AUDIT_TRAIL_PAGE_SIZE = 15;
+	const [kycAuditTrailPage, setKycAuditTrailPage] = useState(0);
+	const [kycAuditTrailPaged, setKycAuditTrailPaged] = useState<PagedResponse<AuditEvent> | null>(null);
+	const [kycAuditTrailLoading, setKycAuditTrailLoading] = useState(false);
 
 	const loadComplianceData = async () => {
 		if (!id) return;
@@ -283,11 +368,94 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		return { hasListScreening, latestSanctions, latestPep };
 	}, [kycChecks]);
 
-	/** Checks listes / KYC : nécessaires au panneau Décision (screening + score) dès que le dossier est en revue. */
+	const listScreeningHasReviewOutcome = useMemo(() => {
+		const s = listScreeningPresence.latestSanctions?.result;
+		const p = listScreeningPresence.latestPep?.result;
+		return s === "REVIEW" || p === "REVIEW";
+	}, [listScreeningPresence.latestSanctions?.result, listScreeningPresence.latestPep?.result]);
+
+	/** Change à chaque nouveau contrôle sanctions/PEP (simulation, relance stub, etc.) pour recalculer le score moteur. */
+	const screeningChecksFingerprint = useMemo(() => {
+		const list = kycChecks.filter(c => c.type === "SANCTIONS_SCREENING" || c.type === "PEP_SCREENING");
+		if (list.length === 0) return "";
+		return list
+			.map(c => `${c.id}:${c.result}:${c.checkedAt ?? ""}`)
+			.sort()
+			.join("|");
+	}, [kycChecks]);
+
+	const sortedKycChecksForCompliance = useMemo(() => {
+		return [...kycChecks].sort((a, b) => {
+			const ta = a.checkedAt ? new Date(a.checkedAt).getTime() : 0;
+			const tb = b.checkedAt ? new Date(b.checkedAt).getTime() : 0;
+			if (tb !== ta) return tb - ta;
+			return b.id - a.id;
+		});
+	}, [kycChecks]);
+
+	const [kycComplianceChecksPage, setKycComplianceChecksPage] = useState(0);
 	useEffect(() => {
-		if (!id || customer?.status !== "PENDING_REVIEW") return;
+		const totalPages = Math.max(1, Math.ceil(kycChecks.length / KYC_COMPLIANCE_CHECKS_PAGE_SIZE));
+		const maxPage = totalPages - 1;
+		setKycComplianceChecksPage(p => (p > maxPage ? maxPage : p));
+	}, [kycChecks.length]);
+
+	const kycCompliancePaginated = useMemo(() => {
+		const start = kycComplianceChecksPage * KYC_COMPLIANCE_CHECKS_PAGE_SIZE;
+		return sortedKycChecksForCompliance.slice(start, start + KYC_COMPLIANCE_CHECKS_PAGE_SIZE);
+	}, [sortedKycChecksForCompliance, kycComplianceChecksPage]);
+
+	/**
+	 * Contrôles / tâches conformité : nécessaires au panneau décision KYC si dossier en revue,
+	 * et à l’onglet Conformité pour tous les statuts (sinon liste vide tant que « Actualiser » n’est pas utilisé).
+	 */
+	useEffect(() => {
+		if (!id || !customer || customer.id !== id) return;
+		const needForKycDecision = customer.status === "PENDING_REVIEW";
+		const onComplianceTab = activeTab === "compliance";
+		if (!needForKycDecision && !onComplianceTab) return;
 		void loadComplianceData();
-	}, [id, customer?.status]);
+	}, [id, customer?.id, customer?.status, activeTab]);
+
+	useEffect(() => {
+		if (activeTab !== "compliance") {
+			setComplianceInnerTab("screening");
+		}
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (!id || Number.isNaN(id)) return;
+		if (activeTab !== "compliance" || complianceInnerTab !== "auditTrail") return;
+		let cancelled = false;
+		setKycAuditTrailLoading(true);
+		(async () => {
+			try {
+				const res = await customersApi.getKycAuditTimeline(id, {
+					page: kycAuditTrailPage,
+					size: KYC_AUDIT_TRAIL_PAGE_SIZE
+				});
+				if (!cancelled) {
+					setKycAuditTrailPaged(res);
+				}
+			} catch (e) {
+				if (!cancelled) {
+					setKycAuditTrailPaged(null);
+					const errMsg = e instanceof Error ? e.message : String(e);
+					setToast({
+						message: errMsg ? `${t("customer.detail.compliance.auditTrail.loadError")} — ${errMsg}` : t("customer.detail.compliance.auditTrail.loadError"),
+						type: "error"
+					});
+				}
+			} finally {
+				if (!cancelled) {
+					setKycAuditTrailLoading(false);
+				}
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [id, activeTab, complianceInnerTab, kycAuditTrailPage, t]);
 
 	useEffect(() => {
 		if (!id || Number.isNaN(id)) {
@@ -320,7 +488,132 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		return () => {
 			cancelled = true;
 		};
-	}, [id, customer?.id, customer?.status, verifyPep, listScreeningPresence.hasListScreening]);
+	}, [
+		id,
+		customer?.id,
+		customer?.status,
+		verifyPep,
+		listScreeningPresence.hasListScreening,
+		screeningChecksFingerprint
+	]);
+
+	const dossierTimelineRows = useMemo((): DossierTimelineRow[] => {
+		if (!customer) return [];
+		const rows: DossierTimelineRow[] = [];
+		const isoToMs = (s?: string | null) => {
+			if (!s) return NaN;
+			const n = Date.parse(s);
+			return Number.isFinite(n) ? n : NaN;
+		};
+		const push = (rowId: string, at: number, badge: DossierTimelineBadge, title: string, detail?: string) => {
+			if (!Number.isFinite(at)) return;
+			rows.push({ id: rowId, at, badge, title, detail });
+		};
+
+		if (customer.createdAt) {
+			push(`cust-created`, isoToMs(customer.createdAt), "customer", t("customer.detail.timeline.kind.customer_created"));
+		}
+		if (customer.updatedAt && customer.updatedAt !== customer.createdAt) {
+			push(`cust-upd`, isoToMs(customer.updatedAt), "customer", t("customer.detail.timeline.kind.customer_updated"));
+		}
+		if (customer.lastRiskAssessmentAt) {
+			const scoreDetail =
+				typeof customer.riskScore === "number"
+					? `${t("customer.detail.generalInfo.riskScore")}: ${customer.riskScore}/100`
+					: undefined;
+			push(
+				`cust-risk`,
+				isoToMs(customer.lastRiskAssessmentAt),
+				"customer",
+				t("customer.detail.timeline.kind.risk_assessment"),
+				scoreDetail
+			);
+		}
+		if (customer.lastAmlRekycRequestedAt) {
+			push(
+				`cust-rekyc`,
+				isoToMs(customer.lastAmlRekycRequestedAt),
+				"customer",
+				t("customer.detail.timeline.kind.rekyc_requested"),
+				customer.rekycPendingReason?.trim() || undefined
+			);
+		}
+
+		for (const k of kycChecks) {
+			const at = isoToMs(k.checkedAt);
+			if (!Number.isFinite(at)) continue;
+			const tk = `customer.detail.compliance.checkType.${k.type}`;
+			const tl = t(tk);
+			const typeDisp = tl === tk ? k.type : tl;
+			push(
+				`kyc-${k.id}`,
+				at,
+				"kyc",
+				t("customer.detail.timeline.kind.kyc_check", { type: typeDisp, result: kycCheckResultLabel(t, k.result) }),
+				k.provider?.trim() || undefined
+			);
+		}
+
+		for (const task of complianceTasks) {
+			const createdMs = isoToMs(task.createdAt);
+			if (Number.isFinite(createdMs)) {
+				push(
+					`task-c-${task.id}`,
+					createdMs,
+					"task",
+					t("customer.detail.timeline.kind.task_created", { type: task.taskType, status: task.status }),
+					task.instruction?.trim() || undefined
+				);
+			}
+			if (task.resolvedAt) {
+				const rm = isoToMs(task.resolvedAt);
+				if (Number.isFinite(rm)) {
+					push(
+						`task-r-${task.id}`,
+						rm,
+						"task",
+						t("customer.detail.timeline.kind.task_resolved", { type: task.taskType, status: task.status }),
+						task.resolutionNote?.trim() || undefined
+					);
+				}
+			}
+		}
+
+		for (const d of documents) {
+			const typeK = `customer.detail.documents.types.${d.type}`;
+			const typeL = t(typeK);
+			const typeDisp = typeL === typeK ? d.type : typeL;
+			const up = isoToMs(d.uploadedAt);
+			if (Number.isFinite(up)) {
+				push(`doc-u-${d.id}`, up, "document", t("customer.detail.timeline.kind.document_uploaded", { type: typeDisp }));
+			}
+			if (d.reviewedAt) {
+				const rv = isoToMs(d.reviewedAt);
+				if (Number.isFinite(rv)) {
+					push(
+						`doc-r-${d.id}`,
+						rv,
+						"document",
+						t("customer.detail.timeline.kind.document_reviewed", { type: typeDisp, status: d.status })
+					);
+				}
+			}
+		}
+
+		return rows.sort((a, b) => b.at - a.at);
+	}, [customer, kycChecks, complianceTasks, documents, t, locale, i18n.language]);
+
+	const [dossierTimelinePage, setDossierTimelinePage] = useState(0);
+	useEffect(() => {
+		const totalPages = Math.max(1, Math.ceil(dossierTimelineRows.length / DOSSIER_TIMELINE_PAGE_SIZE));
+		const maxPage = totalPages - 1;
+		setDossierTimelinePage(p => (p > maxPage ? maxPage : p));
+	}, [dossierTimelineRows.length]);
+
+	const dossierTimelinePaginated = useMemo(() => {
+		const start = dossierTimelinePage * DOSSIER_TIMELINE_PAGE_SIZE;
+		return dossierTimelineRows.slice(start, start + DOSSIER_TIMELINE_PAGE_SIZE);
+	}, [dossierTimelineRows, dossierTimelinePage]);
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -920,6 +1213,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					? {
 							...(docType === "ID_CARD" ? { idCardSide } : {}),
 							identityDocumentNumber: identityDocNumber.trim(),
+							identityDocumentIssuingCountry: customer?.nationality ?? undefined,
 							identityDocumentExpiresOn: identityDocExpiresOn.trim()
 						}
 					: undefined;
@@ -1210,6 +1504,53 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		}
 	}
 
+	async function simulateScreeningCheck(
+		type: "SANCTIONS_SCREENING" | "PEP_SCREENING",
+		result: KycCheckResult,
+		source: "decision-panel" | "compliance-tab"
+	) {
+		if (!id) return;
+		const useDecisionPanelBusy = source === "decision-panel";
+		if (useDecisionPanelBusy) {
+			setDecisionPanelScreeningBusy(true);
+		} else {
+			setComplianceAction(`simulate-${type}-${result}`);
+		}
+		try {
+			await customersApi.createKycCheck(id, {
+				type,
+				result,
+				provider: "ui-simulator",
+				rawJson: JSON.stringify({
+					source: "ui-simulator",
+					simulated: true,
+					screeningType: type,
+					result,
+					at: new Date().toISOString()
+				})
+			});
+			await loadComplianceData();
+			const typeTk = `customer.detail.compliance.checkType.${type}`;
+			const typeTl = t(typeTk);
+			const typeDisp = typeTl === typeTk ? type : typeTl;
+			setToast({
+				message: t("customer.detail.kyc.workflow.stepScreening.simulationDone", {
+					type: typeDisp,
+					result: kycCheckResultLabel(t, result)
+				}),
+				type: "success"
+			});
+		} catch (e) {
+			setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+		} finally {
+			if (useDecisionPanelBusy) {
+				setDecisionPanelScreeningBusy(false);
+			} else {
+				setComplianceAction(null);
+			}
+		}
+	}
+
 	async function openDocument(documentId: number) {
 		if (!id) return;
 		try {
@@ -1365,6 +1706,56 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								)}
 							</div>
 							<p className="mt-1.5 text-sm text-slate-600 sm:text-base">{t("customer.detail.subtitle")}</p>
+							{customer && (
+								<div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200/90 bg-slate-50/85 px-4 py-3 ring-1 ring-slate-900/[0.03]">
+									<div className="flex flex-wrap items-center gap-2">
+										<span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+											{t("customer.detail.headerStrip.dossierStatus")}
+										</span>
+										<Badge variant={statusBadgeVariant(customer.status)} className="gap-0 text-xs font-medium">
+											<span>{translatedCustomerStatus(t, customer.status)}</span>
+											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
+												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+											</span>
+										</Badge>
+									</div>
+									<div className="hidden h-4 w-px bg-slate-200 sm:block" aria-hidden />
+									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.clientId")}</span>
+										<span className="rounded-md bg-white px-2 py-0.5 font-mono ring-1 ring-slate-200">{customer.id}</span>
+									</div>
+									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.typeLabel")}</span>
+										<span className="rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200">
+											{t(`customer.types.${customer.type}`)}
+										</span>
+									</div>
+									{typeof customer.riskScore === "number" && (
+										<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.riskScore")}</span>
+											<Badge variant={riskBadgeVariant(customer.riskScore)} className="text-[11px]">
+												{customer.riskScore}/100
+											</Badge>
+										</div>
+									)}
+									{customer.lastRiskAssessmentAt && (
+										<div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-600">
+											<span className="font-medium text-slate-500 shrink-0">
+												{t("customer.detail.headerStrip.lastRiskAt")}
+											</span>
+											<span className="truncate tabular-nums">
+												{new Date(customer.lastRiskAssessmentAt).toLocaleString(locale)}
+											</span>
+										</div>
+									)}
+									<div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+										<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.pepLabel")}</span>
+										<Badge variant={customer.pepFlag ? "danger" : "success"} className="text-[11px]">
+											{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
+										</Badge>
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 					<div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
@@ -1416,7 +1807,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 				<div className="min-h-[280px] bg-gradient-to-b from-white via-white to-slate-50/40 p-6 sm:p-8">
 				{activeTab === "dossier" && customer && (
-					<div className="space-y-10">
+					<div className="space-y-6">
 					<div className="space-y-6">
 						<div
 							className={
@@ -2385,7 +2776,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						<div className="grid gap-6 md:grid-cols-2">
 							{/* Carte Adresses */}
 							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+								<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 									<div className="flex items-center gap-3">
 										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2394,8 +2785,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											</svg>
 										</div>
 										<div>
-											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.title")}</h2>
-											<p className="text-xs text-slate-500">{t("customer.detail.addresses.subtitle")}</p>
+											<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.addresses.title")}</h2>
+											<p className="text-sm text-slate-500">{t("customer.detail.addresses.subtitle")}</p>
 										</div>
 									</div>
 								</div>
@@ -2539,7 +2930,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 							{/* Formulaire Ajouter une adresse */}
 							<form onSubmit={submitAddress} className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-								<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+								<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 									<div className="flex items-center gap-3">
 										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2547,7 +2938,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											</svg>
 										</div>
 										<div>
-											<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.addresses.add")}</h2>
+											<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.addresses.add")}</h2>
 											<p className="text-xs text-slate-500">{t("customer.detail.addresses.addSubtitle")}</p>
 										</div>
 									</div>
@@ -2633,7 +3024,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<div className="space-y-6">
 						{/* Section Related Persons */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 								<div className="flex items-center gap-3">
 									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2641,8 +3032,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</svg>
 									</div>
 									<div>
-										<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.relatedPersons.title")}</h2>
-										<p className="text-xs text-slate-500">{t("customer.detail.relatedPersons.subtitle")}</p>
+										<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.relatedPersons.title")}</h2>
+										<p className="text-sm text-slate-500">{t("customer.detail.relatedPersons.subtitle")}</p>
 									</div>
 								</div>
 							</div>
@@ -2913,7 +3304,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						{/* Carte Selfie améliorée */}
 			{customer && (
 				<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-					<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+					<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 						<div className="flex items-center gap-3">
 							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
 								<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2921,8 +3312,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.photo.title")}</h2>
-								<p className="text-xs text-slate-500">{t("customer.detail.photo.subtitle")}</p>
+								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.photo.title")}</h2>
+								<p className="text-sm text-slate-500">{t("customer.detail.photo.subtitle")}</p>
 							</div>
 						</div>
 					</div>
@@ -3014,8 +3405,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 						{/* Informations principales */}
 						{/* Carte Informations générales */}
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04] mb-6">
-					<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+					<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-3">
 								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
@@ -3024,7 +3415,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									</svg>
 								</div>
 								<div>
-									<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.generalInfo.title")}</h2>
+									<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.generalInfo.title")}</h2>
 									<p className="text-xs text-slate-500">{t("customer.detail.generalInfo.subtitle")}</p>
 								</div>
 							</div>
@@ -3348,9 +3739,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											{/* KYC & Conformité */}
 											<div className="space-y-3">
 												<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-													<dt className="text-sm font-medium text-slate-600">Statut</dt>
+													<dt className="text-sm font-medium text-slate-600">{t("common.status")}</dt>
 													<dd>
-														<Badge variant={statusBadgeVariant(customer.status)}>{customer.status}</Badge>
+														<Badge variant={statusBadgeVariant(customer.status)} className="text-xs font-medium">
+															<span>{translatedCustomerStatus(t, customer.status)}</span>
+															<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
+																{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+															</span>
+														</Badge>
 													</dd>
 												</div>
 												{typeof customer.riskScore === "number" && (
@@ -3535,7 +3931,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						{/* En-tête */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
 							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-								<h2 className="text-xl font-semibold tracking-tight text-black">{t("customer.detail.documents.title")}</h2>
+								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.documents.title")}</h2>
 								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.documents.subtitle")}</p>
 							</div>
 						</div>
@@ -3745,10 +4141,10 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															</div>
 														)}
 													</div>
-													{doc.reviewerNote && (
+													{sanitizeReviewerNote(doc.reviewerNote) && (
 														<div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 p-3">
 															<p className="text-xs font-medium text-black mb-0.5">{t("customer.detail.documents.reviewerNote")}</p>
-															<p className="text-xs text-slate-800">{doc.reviewerNote}</p>
+															<p className="text-xs text-slate-800">{sanitizeReviewerNote(doc.reviewerNote)}</p>
 														</div>
 													)}
 												</div>
@@ -3789,7 +4185,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						{/* En-tête */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
 							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-								<h2 className="text-xl font-semibold tracking-tight text-black">{t("customer.detail.kyc.title")}</h2>
+								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.title")}</h2>
 								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.kyc.subtitle")}</p>
 							</div>
 						</div>
@@ -3858,10 +4254,10 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						</div>
 
 						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
-						<div className="overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-white via-slate-50/40 to-indigo-50/[0.35] shadow-sm ring-1 ring-slate-900/[0.05]">
-							<div className="border-b border-indigo-100/90 bg-gradient-to-r from-indigo-50/90 via-white to-white px-5 py-4 md:px-6">
-								<h3 className="text-base font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.decisionPanel.title")}</h3>
-								<p className="text-xs text-slate-600 mt-1 max-w-3xl">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
+						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.decisionPanel.title")}</h2>
+								<p className="mt-0.5 max-w-3xl text-sm text-slate-500">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
 							</div>
 							<div className="p-5 md:p-6 space-y-8">
 								{/* Synthèse statut dossier */}
@@ -3873,8 +4269,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												{t(`customer.statuses.${customer.status}`)}
 											</p>
 										</div>
-										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 text-xs font-medium px-3 py-1">
-											{customer.status}
+										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 px-3 py-1 text-xs font-medium">
+											<span>{translatedCustomerStatus(t, customer.status)}</span>
+											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-75">
+												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+											</span>
 										</Badge>
 									</div>
 								</section>
@@ -3939,6 +4338,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												) : null}
 											</div>
 											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
+											{listScreeningPresence.hasListScreening && listScreeningHasReviewOutcome ? (
+												<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.workflow.stepScreening.reviewOutcomeHint")}
+												</p>
+											) : null}
 											{customer.status === "PENDING_REVIEW" && complianceLoading && kycChecks.length === 0 ? (
 												<p className="text-xs text-slate-500">{t("customer.detail.kyc.workflow.stepScreening.loading")}</p>
 											) : null}
@@ -3965,7 +4369,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																	}
 																	className="text-[10px]"
 																>
-																	{listScreeningPresence.latestSanctions.result}
+																	{kycCheckResultLabel(t, listScreeningPresence.latestSanctions.result)}
 																</Badge>
 																<span className="text-[11px] text-slate-500">
 																	{listScreeningPresence.latestSanctions.checkedAt
@@ -3991,7 +4395,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																	}
 																	className="text-[10px]"
 																>
-																	{listScreeningPresence.latestPep.result}
+																	{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
 																</Badge>
 																<span className="text-[11px] text-slate-500">
 																	{listScreeningPresence.latestPep.checkedAt
@@ -4004,26 +4408,60 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</div>
 											) : null}
 											{customer.status === "PENDING_REVIEW" ? (
-												<Button
-													size="sm"
-													variant="outline"
-													disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null}
-													onClick={async () => {
-														if (!id) return;
-														setDecisionPanelScreeningBusy(true);
-														try {
-															await customersApi.runListScreening(id);
-															await loadComplianceData();
-															setToast({ message: t("customer.detail.kyc.workflow.stepScreening.rescreenDone"), type: "success" });
-														} catch (e) {
-															setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-														} finally {
-															setDecisionPanelScreeningBusy(false);
-														}
-													}}
-												>
-													{decisionPanelScreeningBusy ? "…" : t("customer.detail.kyc.workflow.stepScreening.rescreening")}
-												</Button>
+												<div className="space-y-3">
+													<Button
+														size="sm"
+														variant="outline"
+														disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null}
+														onClick={async () => {
+															if (!id) return;
+															setDecisionPanelScreeningBusy(true);
+															try {
+																await customersApi.runListScreening(id);
+																await loadComplianceData();
+																setToast({ message: t("customer.detail.kyc.workflow.stepScreening.rescreenDone"), type: "success" });
+															} catch (e) {
+																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+															} finally {
+																setDecisionPanelScreeningBusy(false);
+															}
+														}}
+													>
+														{decisionPanelScreeningBusy ? "…" : t("customer.detail.kyc.workflow.stepScreening.rescreening")}
+													</Button>
+													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+														<p className="text-[11px] font-medium text-slate-700 mb-2">
+															{t("customer.detail.kyc.workflow.stepScreening.simulateSanctions")}
+														</p>
+														<div className="flex flex-wrap gap-2">
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "PASS", "decision-panel")}>
+																{kycCheckResultLabel(t, "PASS")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "REVIEW", "decision-panel")}>
+																{kycCheckResultLabel(t, "REVIEW")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "FAIL", "decision-panel")}>
+																{kycCheckResultLabel(t, "FAIL")}
+															</Button>
+														</div>
+													</div>
+													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+														<p className="text-[11px] font-medium text-slate-700 mb-2">
+															{t("customer.detail.kyc.workflow.stepScreening.simulatePep")}
+														</p>
+														<div className="flex flex-wrap gap-2">
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "PASS", "decision-panel")}>
+																{kycCheckResultLabel(t, "PASS")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "REVIEW", "decision-panel")}>
+																{kycCheckResultLabel(t, "REVIEW")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "FAIL", "decision-panel")}>
+																{kycCheckResultLabel(t, "FAIL")}
+															</Button>
+														</div>
+													</div>
+												</div>
 											) : null}
 										</div>
 									</div>
@@ -4066,27 +4504,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</div>
 											) : null}
 											<div className="min-w-0 max-w-3xl">
+												{(customer.status === "PENDING_REVIEW" || kycOnboardingRisk != null) && (
 												<div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
-													<div className="mb-3 flex flex-wrap items-center gap-2">
-														<h5 className="text-xs font-semibold uppercase tracking-wide text-slate-700">
-															{t("customer.detail.kyc.onboardingRisk.title")}
-														</h5>
-														{kycOnboardingRisk != null && kycShowsDroolsEngineMeta ? (
-															<span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-900 ring-1 ring-indigo-200/80">
-																{t("customer.detail.kyc.onboardingRisk.engineBadge.drools")}
-															</span>
-														) : null}
-														<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-															{t("customer.detail.kyc.onboardingRisk.phasePill")}
-														</span>
-													</div>
-													<p className="mb-2 text-[11px] leading-snug text-slate-600">{t("customer.detail.kyc.onboardingRisk.subtitle")}</p>
-													{kycOnboardingRisk != null && !kycShowsDroolsEngineMeta ? (
-														<p className="mb-4 rounded-md border border-amber-200/80 bg-amber-50/80 px-2 py-1.5 text-[10px] leading-snug text-amber-950">
-															{t("customer.detail.kyc.onboardingRisk.metadataPartialHint")}
-														</p>
-													) : null}
-													{customer.status === "PENDING_REVIEW" && kycOnboardingRisk ? (
+													{kycOnboardingRisk ? (
 														<>
 															<div className="mb-4 flex flex-wrap items-stretch gap-3">
 																<div
@@ -4157,10 +4577,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														</p>
 													) : customer.status === "PENDING_REVIEW" && listScreeningPresence.hasListScreening && !kycOnboardingRisk ? (
 														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineLoading")}</p>
-													) : (
-														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineWhenPending")}</p>
-													)}
+													) : null}
 												</div>
+												)}
 											</div>
 										</div>
 									</div>
@@ -4263,13 +4682,94 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				{activeTab === "compliance" && customer && (
 					<div className="space-y-6">
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-								<div>
-									<h2 className="text-xl font-semibold tracking-tight text-black">{t("customer.detail.compliance.title")}</h2>
-									<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.compliance.subtitle")}</p>
+							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+								<h2 id="compliance-tab-title" className="text-xl font-semibold tracking-tight text-slate-900">
+									{t("customer.detail.compliance.title")}
+								</h2>
+								<p className="mt-0.5 max-w-prose text-sm text-slate-500">
+									{t("customer.detail.compliance.subtitle")}
+								</p>
+							</div>
+							<nav
+								role="tablist"
+								aria-label={t("customer.detail.compliance.subTabs.aria")}
+								className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-white px-6"
+							>
+								{(["screening", "data", "tasks", "auditTrail"] as const).map(tid => (
+									<button
+										key={tid}
+										type="button"
+										role="tab"
+										id={`compliance-subtab-${tid}`}
+										aria-selected={complianceInnerTab === tid}
+										aria-controls={`compliance-subpanel-${tid}`}
+										tabIndex={complianceInnerTab === tid ? 0 : -1}
+										onClick={() => {
+											if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
+												setKycAuditTrailPage(0);
+											}
+											setComplianceInnerTab(tid);
+										}}
+										className={`relative shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-t-lg ${
+											complianceInnerTab === tid
+												? "-mb-px border-indigo-600 text-indigo-900"
+												: "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"
+										}`}
+									>
+										{t(`customer.detail.compliance.subTabs.${tid}`)}
+									</button>
+								))}
+							</nav>
+						</div>
+
+						{complianceInnerTab === "screening" && (
+					<div
+						className="space-y-6"
+						role="tabpanel"
+						id="compliance-subpanel-screening"
+						aria-labelledby="compliance-subtab-screening"
+					>
+						<section className="overflow-hidden rounded-xl border border-indigo-200/55 bg-gradient-to-br from-indigo-50/40 via-white to-white shadow-md shadow-indigo-100/40 ring-1 ring-slate-900/[0.04]">
+							<div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+								<div className="min-w-0 flex-1 space-y-4">
+									<div className="flex flex-wrap items-center gap-2 sm:gap-3">
+										<Badge variant={statusBadgeVariant(customer.status)} className="text-xs font-medium">
+											<span>{translatedCustomerStatus(t, customer.status)}</span>
+											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
+												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+											</span>
+										</Badge>
+										<span className="text-xs text-slate-400" aria-hidden>
+											|
+										</span>
+										<span className="text-xs text-slate-700">
+											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.typeLabel")}:</span>{" "}
+											{t(`customer.types.${customer.type}`)}
+										</span>
+										{typeof customer.riskScore === "number" && (
+											<>
+												<span className="text-xs text-slate-400" aria-hidden>
+													|
+												</span>
+												<span className="text-xs text-slate-700">
+													<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.riskScore")}:</span>{" "}
+													{customer.riskScore}/100
+												</span>
+											</>
+										)}
+										<span className="text-xs text-slate-400" aria-hidden>
+											|
+										</span>
+										<span className="text-xs text-slate-700">
+											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.pepLabel")}:</span>{" "}
+											{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
+										</span>
+									</div>
+									<p className="text-xs leading-relaxed text-slate-500">{t("customer.detail.compliance.summaryStripSubtitle")}</p>
 								</div>
-								<div className="flex gap-2">
+								<div className="flex shrink-0 flex-wrap items-stretch gap-2 border-t border-indigo-200/35 pt-4 sm:items-center lg:flex-col lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
 									<Button
+										className="min-h-9 justify-center lg:min-w-[12.5rem]"
 										size="sm"
 										variant="outline"
 										disabled={complianceLoading || complianceAction !== null}
@@ -4288,12 +4788,103 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									>
 										{complianceAction === "screen" ? "…" : t("customer.detail.compliance.runScreening")}
 									</Button>
-									<Button size="sm" variant="outline" disabled={complianceLoading} onClick={() => void loadComplianceData()}>
+									<Button
+										className="min-h-9 justify-center lg:min-w-[12.5rem]"
+										size="sm"
+										variant="outline"
+										disabled={complianceLoading}
+										onClick={() => void loadComplianceData()}
+									>
 										{t("customer.detail.compliance.refresh")}
 									</Button>
 								</div>
 							</div>
-						</div>
+						</section>
+
+						<section className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/80 px-5 py-4">
+								<h3 className="text-sm font-semibold tracking-tight text-slate-900">
+									{t("customer.detail.compliance.screeningBlockTitle")}
+								</h3>
+								<p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600">
+									{t("customer.detail.compliance.screeningBlockHint")}
+								</p>
+							</div>
+							<div className="p-5">
+								<div className="rounded-xl border border-slate-200/90 bg-gradient-to-br from-slate-50/90 to-white p-4 sm:p-5 ring-1 ring-slate-900/[0.02]">
+									<p className="text-xs font-semibold tracking-tight text-slate-900">
+										{t("customer.detail.compliance.simulatorBlockTitle")}
+									</p>
+									<p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600">
+										{t("customer.detail.compliance.simulatorBlockHint")}
+									</p>
+									<div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2">
+										<div>
+											<p className="mb-2 text-xs font-medium text-slate-700">
+												{t("customer.detail.kyc.workflow.stepScreening.simulateSanctions")}
+											</p>
+											<div className="flex flex-wrap gap-2">
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "PASS", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "PASS")}
+												</Button>
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "REVIEW", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "REVIEW")}
+												</Button>
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "FAIL", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "FAIL")}
+												</Button>
+											</div>
+										</div>
+										<div>
+											<p className="mb-2 text-xs font-medium text-slate-700">
+												{t("customer.detail.kyc.workflow.stepScreening.simulatePep")}
+											</p>
+											<div className="flex flex-wrap gap-2">
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("PEP_SCREENING", "PASS", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "PASS")}
+												</Button>
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("PEP_SCREENING", "REVIEW", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "REVIEW")}
+												</Button>
+												<Button
+													size="sm"
+													variant="outline"
+													disabled={complianceLoading || complianceAction !== null}
+													onClick={() => void simulateScreeningCheck("PEP_SCREENING", "FAIL", "compliance-tab")}
+												>
+													{kycCheckResultLabel(t, "FAIL")}
+												</Button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</section>
 
 						{(customer.rekycPendingReason || customer.lastAmlRekycRequestedAt) && (
 							<div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -4306,145 +4897,406 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								{customer.rekycPendingReason && <p className="text-sm text-amber-900">{customer.rekycPendingReason}</p>}
 							</div>
 						)}
+					</div>
+					)}
 
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-3">
-								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.compliance.checksTitle")}</h3>
+					{complianceInnerTab === "data" && (
+						<div
+							className="space-y-4"
+							role="tabpanel"
+							id="compliance-subpanel-data"
+							aria-labelledby="compliance-subtab-data"
+						>
+						<section className="space-y-4" aria-labelledby="compliance-dossier-tracking">
+							<h3
+								id="compliance-dossier-tracking"
+								className="px-0.5 text-sm font-semibold tracking-tight text-slate-900"
+							>
+								{t("customer.detail.compliance.dossierTrackingTitle")}
+							</h3>
+							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/60 px-5 py-4">
+								<div>
+									<h3 className="text-sm font-semibold tracking-tight text-slate-900">
+										{t("customer.detail.compliance.checksTitle")}
+									</h3>
+									<p className="mt-0.5 text-xs text-slate-500">{t("customer.detail.compliance.checksSubtitle")}</p>
+								</div>
+								{kycChecks.length > 0 && !complianceLoading ? (
+									<Badge variant="neutral" className="shrink-0 text-[11px] font-medium tabular-nums">
+										{t("customer.detail.compliance.checksTotal", { count: kycChecks.length })}
+									</Badge>
+								) : null}
 							</div>
-							<div className="p-4 overflow-x-auto">
-								{complianceLoading ? (
-									<p className="text-sm text-slate-500">{t("customer.detail.loading")}</p>
-								) : kycChecks.length === 0 ? (
-									<p className="text-sm text-slate-500">{t("customer.detail.compliance.emptyChecks")}</p>
-								) : (
-									<table className="min-w-full text-sm">
-										<thead>
-											<tr className="text-left text-slate-600 border-b">
-												<th className="py-2 pr-4">{t("customer.detail.compliance.type")}</th>
-												<th className="py-2 pr-4">{t("customer.detail.compliance.result")}</th>
-												<th className="py-2 pr-4">{t("customer.detail.compliance.at")}</th>
-											</tr>
-										</thead>
-										<tbody>
-											{kycChecks.map(c => (
-												<tr key={c.id} className="border-b border-slate-100">
-													<td className="py-2 pr-4 font-medium">{c.type}</td>
-													<td className="py-2 pr-4">{c.result}</td>
-													<td className="py-2 pr-4 text-slate-600">
-														{c.checkedAt ? new Date(c.checkedAt).toLocaleString(locale) : "—"}
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
-								)}
-							</div>
-						</div>
 
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-5 py-3">
-								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.compliance.tasksTitle")}</h3>
-								<div className="flex flex-wrap items-end gap-2">
-									<Input
-										className="w-56 h-9 text-xs"
-										placeholder={t("customer.detail.compliance.instruction")}
-										value={eddInstruction}
-										onChange={e => setEddInstruction(e.target.value)}
+							{complianceLoading ? (
+								<div className="flex items-center gap-3 px-5 py-10 text-sm text-slate-500">
+									<span
+										className="inline-block size-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"
+										aria-hidden
 									/>
-									<Button
-										size="sm"
-										disabled={complianceAction !== null || !eddInstruction.trim()}
-										onClick={async () => {
-											setComplianceAction("edd");
-											try {
-												await customersApi.createComplianceTask(id, { taskType: "EDD_REVIEW", instruction: eddInstruction.trim() });
-												setEddInstruction("");
-												await loadComplianceData();
-												setToast({ message: t("customer.detail.compliance.eddCreated"), type: "success" });
-											} catch (e) {
-												setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-											} finally {
-												setComplianceAction(null);
-											}
-										}}
-									>
-										{complianceAction === "edd" ? "…" : t("customer.detail.compliance.createEdd")}
-									</Button>
+									{t("customer.detail.loading")}
+								</div>
+							) : kycChecks.length === 0 ? (
+								<div className="px-5 py-10 text-center">
+									<p className="text-sm font-medium text-slate-700">{t("customer.detail.compliance.emptyChecksTitle")}</p>
+									<p className="mt-1 text-xs text-slate-500">{t("customer.detail.compliance.emptyChecks")}</p>
+								</div>
+							) : (
+								<>
+									<div className="overflow-x-auto">
+										<table className="min-w-full divide-y divide-slate-200 text-sm">
+											<thead className="bg-slate-50/95">
+												<tr>
+													<th
+														scope="col"
+														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.compliance.columnId")}
+													</th>
+													<th
+														scope="col"
+														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.compliance.type")}
+													</th>
+													<th
+														scope="col"
+														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.compliance.result")}
+													</th>
+													<th
+														scope="col"
+														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.compliance.columnProvider")}
+													</th>
+													<th
+														scope="col"
+														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600 min-w-[9.5rem]"
+													>
+														{t("customer.detail.compliance.at")}
+													</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-slate-100 bg-white">
+												{kycCompliancePaginated.map((c, rowIdx) => {
+													const rowNumber =
+														kycComplianceChecksPage * KYC_COMPLIANCE_CHECKS_PAGE_SIZE + rowIdx + 1;
+													const typeKey = `customer.detail.compliance.checkType.${c.type}`;
+													const typeLabel = t(typeKey);
+													const displayType = typeLabel === typeKey ? c.type : typeLabel;
+													const provider = c.provider?.trim() || "—";
+													return (
+														<tr
+															key={c.id}
+															className={`${kycCheckTypeRowAccent(c.type)} transition-colors hover:bg-slate-50/90`}
+														>
+															<td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500 tabular-nums">
+																{rowNumber}
+															</td>
+															<td className="px-4 py-3">
+																<span className="font-medium text-slate-900">{displayType}</span>
+															</td>
+															<td className="whitespace-nowrap px-4 py-3">
+																<Badge variant={kycCheckResultBadgeVariant(c.result)} className="text-[10px]">
+																	{kycCheckResultLabel(t, c.result)}
+																</Badge>
+															</td>
+															<td className="max-w-[10rem] px-4 py-3 text-xs text-slate-600" title={provider}>
+																<span className="line-clamp-2 break-words">{provider}</span>
+															</td>
+															<td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600">
+																{c.checkedAt ? new Date(c.checkedAt).toLocaleString(locale) : "—"}
+															</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+									<TablePagination
+										page={kycComplianceChecksPage}
+										pageSize={KYC_COMPLIANCE_CHECKS_PAGE_SIZE}
+										totalPages={Math.max(1, Math.ceil(sortedKycChecksForCompliance.length / KYC_COMPLIANCE_CHECKS_PAGE_SIZE))}
+										totalElements={sortedKycChecksForCompliance.length}
+										onPageChange={setKycComplianceChecksPage}
+										resultsLabel={t("customer.detail.compliance.paginationResultsLabel")}
+										showFirstLast
+										className="border-t border-slate-200 bg-slate-50/80 rounded-none px-4 sm:px-5"
+									/>
+								</>
+							)}
+							</div>
+						</section>
+						</div>
+					)}
+
+					{complianceInnerTab === "tasks" && (
+						<div
+							className="space-y-4"
+							role="tabpanel"
+							id="compliance-subpanel-tasks"
+							aria-labelledby="compliance-subtab-tasks"
+						>
+							<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+								<div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/90 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+									<h3 className="shrink-0 text-sm font-semibold text-slate-800">{t("customer.detail.compliance.tasksTitle")}</h3>
+									<div className="flex flex-1 flex-col gap-2 min-w-[12rem] sm:min-w-0 sm:max-w-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+										<Input
+											className="h-9 w-full text-xs sm:min-w-0 sm:flex-1"
+											placeholder={t("customer.detail.compliance.instruction")}
+											value={eddInstruction}
+											onChange={e => setEddInstruction(e.target.value)}
+										/>
+										<Button
+											size="sm"
+											disabled={complianceAction !== null || !eddInstruction.trim()}
+											onClick={async () => {
+												setComplianceAction("edd");
+												try {
+													await customersApi.createComplianceTask(id, { taskType: "EDD_REVIEW", instruction: eddInstruction.trim() });
+													setEddInstruction("");
+													await loadComplianceData();
+													setToast({ message: t("customer.detail.compliance.eddCreated"), type: "success" });
+												} catch (e) {
+													setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+												} finally {
+													setComplianceAction(null);
+												}
+											}}
+										>
+											{complianceAction === "edd" ? "…" : t("customer.detail.compliance.createEdd")}
+										</Button>
+									</div>
+								</div>
+								<div className="p-4 space-y-3">
+									{complianceLoading ? (
+										<p className="text-sm text-slate-500">{t("customer.detail.loading")}</p>
+									) : complianceTasks.length === 0 ? (
+										<p className="text-sm text-slate-500">{t("customer.detail.compliance.emptyTasks")}</p>
+									) : (
+										complianceTasks.map(task => (
+											<div key={task.id} className="rounded-lg border border-slate-200 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+												<div>
+													<div className="flex items-center gap-2">
+														<Badge variant={task.status === "OPEN" ? "warning" : "success"}>{task.taskType}</Badge>
+														<span className="text-xs text-slate-500">{task.status}</span>
+													</div>
+													{task.instruction && <p className="text-sm text-slate-600 mt-1">{task.instruction}</p>}
+												</div>
+												{task.status === "OPEN" && (
+													<div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+														<Input
+															className="w-full sm:w-48 h-9 text-xs"
+															placeholder={t("customer.detail.compliance.resolution")}
+															value={taskResolution[task.id] ?? ""}
+															onChange={e => setTaskResolution(prev => ({ ...prev, [task.id]: e.target.value }))}
+														/>
+														<Button
+															size="sm"
+															disabled={complianceAction !== null}
+															onClick={async () => {
+																setComplianceAction("done-" + task.id);
+																try {
+																	await customersApi.patchComplianceTask(id, task.id, {
+																		status: "DONE" as ComplianceTaskStatus,
+																		resolutionNote: taskResolution[task.id]?.trim() || undefined
+																	});
+																	await loadComplianceData();
+																	setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
+																} catch (e) {
+																	setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+																} finally {
+																	setComplianceAction(null);
+																}
+															}}
+														>
+															{t("customer.detail.compliance.markDone")}
+														</Button>
+														<Button
+															size="sm"
+															variant="outline"
+															disabled={complianceAction !== null}
+															onClick={async () => {
+																setComplianceAction("cx-" + task.id);
+																try {
+																	await customersApi.patchComplianceTask(id, task.id, {
+																		status: "CANCELLED" as ComplianceTaskStatus,
+																		resolutionNote: taskResolution[task.id]?.trim() || undefined
+																	});
+																	await loadComplianceData();
+																	setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
+																} catch (e) {
+																	setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+																} finally {
+																	setComplianceAction(null);
+																}
+															}}
+														>
+															{t("customer.detail.compliance.cancel")}
+														</Button>
+													</div>
+												)}
+											</div>
+										))
+									)}
 								</div>
 							</div>
-							<div className="p-4 space-y-3">
-								{complianceLoading ? (
-									<p className="text-sm text-slate-500">{t("customer.detail.loading")}</p>
-								) : complianceTasks.length === 0 ? (
-									<p className="text-sm text-slate-500">{t("customer.detail.compliance.emptyTasks")}</p>
-								) : (
-									complianceTasks.map(task => (
-										<div key={task.id} className="rounded-lg border border-slate-200 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-											<div>
-												<div className="flex items-center gap-2">
-													<Badge variant={task.status === "OPEN" ? "warning" : "success"}>{task.taskType}</Badge>
-													<span className="text-xs text-slate-500">{task.status}</span>
-												</div>
-												{task.instruction && <p className="text-sm text-slate-600 mt-1">{task.instruction}</p>}
-											</div>
-											{task.status === "OPEN" && (
-												<div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-													<Input
-														className="w-full sm:w-48 h-9 text-xs"
-														placeholder={t("customer.detail.compliance.resolution")}
-														value={taskResolution[task.id] ?? ""}
-														onChange={e => setTaskResolution(prev => ({ ...prev, [task.id]: e.target.value }))}
-													/>
-													<Button
-														size="sm"
-														disabled={complianceAction !== null}
-														onClick={async () => {
-															setComplianceAction("done-" + task.id);
-															try {
-																await customersApi.patchComplianceTask(id, task.id, {
-																	status: "DONE" as ComplianceTaskStatus,
-																	resolutionNote: taskResolution[task.id]?.trim() || undefined
-																});
-																await loadComplianceData();
-																setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
-															} catch (e) {
-																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-															} finally {
-																setComplianceAction(null);
-															}
-														}}
-													>
-														{t("customer.detail.compliance.markDone")}
-													</Button>
-													<Button
-														size="sm"
-														variant="outline"
-														disabled={complianceAction !== null}
-														onClick={async () => {
-															setComplianceAction("cx-" + task.id);
-															try {
-																await customersApi.patchComplianceTask(id, task.id, {
-																	status: "CANCELLED" as ComplianceTaskStatus,
-																	resolutionNote: taskResolution[task.id]?.trim() || undefined
-																});
-																await loadComplianceData();
-																setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
-															} catch (e) {
-																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-															} finally {
-																setComplianceAction(null);
-															}
-														}}
-													>
-														{t("customer.detail.compliance.cancel")}
-													</Button>
-												</div>
-											)}
-										</div>
-									))
-								)}
-							</div>
 						</div>
+					)}
+
+					{complianceInnerTab === "timeline" && (
+						<div
+							className="space-y-4"
+							role="tabpanel"
+							id="compliance-subpanel-timeline"
+							aria-labelledby="compliance-subtab-timeline"
+						>
+						<section className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]" aria-labelledby="compliance-events-heading">
+							<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
+								<h3 id="compliance-events-heading" className="text-sm font-semibold tracking-tight text-slate-900">
+									{t("customer.detail.timeline.title")}
+								</h3>
+								<p className="mt-1 text-xs text-slate-500 leading-relaxed">{t("customer.detail.timeline.subtitle")}</p>
+							</div>
+							{dossierTimelineRows.length === 0 ? (
+								<p className="px-5 py-8 text-center text-sm text-slate-500">{t("customer.detail.timeline.empty")}</p>
+							) : (
+								<>
+									<div className="overflow-x-auto">
+										<table className="min-w-full divide-y divide-slate-200 text-sm">
+											<thead className="bg-slate-50/95">
+												<tr>
+													<th
+														scope="col"
+														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.timeline.columnRank")}
+													</th>
+													<th
+														scope="col"
+														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.timeline.columnWhen")}
+													</th>
+													<th
+														scope="col"
+														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.timeline.columnCategory")}
+													</th>
+													<th
+														scope="col"
+														className="min-w-[12rem] px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.timeline.columnSummary")}
+													</th>
+													<th
+														scope="col"
+														className="min-w-[10rem] px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
+													>
+														{t("customer.detail.timeline.columnDetail")}
+													</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-slate-100 bg-white">
+												{dossierTimelinePaginated.map((entry, rowIdx) => {
+													const rowNumber = dossierTimelinePage * DOSSIER_TIMELINE_PAGE_SIZE + rowIdx + 1;
+													return (
+														<tr
+															key={entry.id}
+															className={`${dossierTimelineRowAccent(entry.badge)} transition-colors hover:bg-slate-50/90`}
+														>
+															<td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500 tabular-nums">
+																{rowNumber}
+															</td>
+															<td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-slate-600">
+																<time dateTime={new Date(entry.at).toISOString()}>
+																	{new Date(entry.at).toLocaleString(locale)}
+																</time>
+															</td>
+															<td className="whitespace-nowrap px-4 py-3">
+																<Badge
+																	variant={dossierTimelineBadgeVariant(entry.badge)}
+																	className="text-[10px] font-medium uppercase tracking-wide"
+																>
+																	{t(`customer.detail.timeline.badge.${entry.badge}`)}
+																</Badge>
+															</td>
+															<td className="max-w-md px-4 py-3">
+																<p className="font-medium leading-snug text-slate-900">{entry.title}</p>
+															</td>
+															<td className="max-w-sm px-4 py-3 text-xs leading-relaxed text-slate-600">
+																{entry.detail ? (
+																	<span className="line-clamp-3 break-words">{entry.detail}</span>
+																) : (
+																	<span className="text-slate-400">—</span>
+																)}
+															</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+									<TablePagination
+										page={dossierTimelinePage}
+										pageSize={DOSSIER_TIMELINE_PAGE_SIZE}
+										totalPages={Math.max(1, Math.ceil(dossierTimelineRows.length / DOSSIER_TIMELINE_PAGE_SIZE))}
+										totalElements={dossierTimelineRows.length}
+										onPageChange={setDossierTimelinePage}
+										resultsLabel={t("customer.detail.timeline.paginationResultsLabel")}
+										showFirstLast
+										className="border-t border-slate-200 bg-slate-50/80 rounded-none px-4 sm:px-5"
+									/>
+								</>
+							)}
+						</section>
+						</div>
+					)}
+
+					{complianceInnerTab === "auditTrail" && (
+						<div
+							className="space-y-4"
+							role="tabpanel"
+							id="compliance-subpanel-auditTrail"
+							aria-labelledby="compliance-subtab-auditTrail"
+						>
+							<section
+								className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]"
+								aria-labelledby="compliance-audit-trail-heading"
+							>
+								<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
+									<h3 id="compliance-audit-trail-heading" className="text-sm font-semibold tracking-tight text-slate-900">
+										{t("customer.detail.compliance.auditTrail.title")}
+									</h3>
+									<p className="mt-1 text-xs text-slate-500 leading-relaxed">
+										{t("customer.detail.compliance.auditTrail.subtitle")}
+									</p>
+								</div>
+								<AuditEventsTable
+									events={kycAuditTrailPaged?.content ?? []}
+									loading={kycAuditTrailLoading}
+									totalPages={Math.max(1, kycAuditTrailPaged?.totalPages ?? 1)}
+									totalElements={kycAuditTrailPaged?.totalElements ?? 0}
+									currentPage={kycAuditTrailPaged?.page ?? kycAuditTrailPage}
+									pageSize={kycAuditTrailPaged?.size ?? KYC_AUDIT_TRAIL_PAGE_SIZE}
+									resultsHeading={t("customer.detail.compliance.auditTrail.title")}
+									onPageChange={setKycAuditTrailPage}
+									onPageSizeChange={() => {
+										// Fixed page size in this panel.
+									}}
+									onEventDetails={(eventId) => router.push(`/audit/${eventId}`)}
+									onResourceTrace={(resourceType, resourceId) =>
+										router.push(`/audit?resourceType=${encodeURIComponent(resourceType)}&resourceId=${resourceId}`)
+									}
+									showUserColumn
+								/>
+							</section>
+						</div>
+					)}
 					</div>
 				)}
 
@@ -4452,7 +5304,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<div className="space-y-6">
 						{/* Section Comptes */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 via-white to-slate-50/90 px-6 py-4">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-3">
 							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
@@ -4461,8 +5313,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</svg>
 							</div>
 							<div>
-								<h2 className="text-lg font-semibold tracking-tight text-black">{t("customer.detail.accounts.title")}</h2>
-								<p className="text-xs text-slate-500">{t("customer.detail.accounts.subtitle")}</p>
+								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.accounts.title")}</h2>
+								<p className="text-sm text-slate-500">{t("customer.detail.accounts.subtitle")}</p>
 							</div>
 						</div>
 						<Button variant="outline" size="sm" onClick={load}>
