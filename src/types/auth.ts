@@ -1,4 +1,33 @@
 export type UserStatus = "ACTIVE" | "INACTIVE" | "LOCKED" | "EXPIRED";
+export const AUDIT_ACTION_CODES = [
+	"LOGIN",
+	"LOGOUT",
+	"CREATE",
+	"UPDATE",
+	"DELETE",
+	"READ",
+	"EXECUTE",
+	"REFRESH_TOKEN",
+	"KYC_CLIENT_CREATED",
+	"KYC_SUBMITTED",
+	"KYC_VERIFIED",
+	"KYC_REJECTED",
+	"KYC_CHECK_CREATED",
+	"KYC_LIST_SCREENING_RUN",
+	"KYC_SANCTIONS_SCREENING_RUN",
+	"KYC_PEP_SCREENING_RUN",
+	"KYC_RISK_ASSESSMENT_RUN",
+	"KYC_EMAIL_REVIEW_SET",
+	"KYC_PROFILE_REVIEW_SET",
+	"KYC_IDENTITY_REVIEW_SET",
+	"KYC_DOCUMENT_REVIEW_SET",
+	"KYC_CLIENT_PERSONAL_INFO_UPDATED",
+	"KYC_CLIENT_ADDRESS_ADDED",
+	"KYC_CLIENT_ADDRESS_UPDATED",
+	"KYC_COMPLIANCE_TASK_CREATED",
+	"KYC_COMPLIANCE_TASK_PATCHED"
+] as const;
+export type AuditActionCode = (typeof AUDIT_ACTION_CODES)[number];
 
 export interface User {
 	id: number;
@@ -38,7 +67,7 @@ export interface AuditEvent {
 		id: number;
 		username: string;
 	} | null;
-	action: string;
+	action: AuditActionCode | string;
 	resourceType: string;
 	resourceId?: number | null;
 	details?: string | null;
