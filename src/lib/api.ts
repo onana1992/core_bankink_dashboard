@@ -12,6 +12,7 @@ import type {
 	KycCheckResult,
 	KycCheckType,
 	CustomerContactUniquenessResponse,
+	CustomerIdentityDocumentUniquenessResponse,
 	KycGeographyRiskResponse,
 	KycOnboardingRiskAssessmentResponse,
 	KycRiskRunItem,
@@ -472,6 +473,26 @@ export const customersApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<CustomerContactUniquenessResponse>(res);
+	},
+
+	async checkIdentityDocumentUniqueness(params: {
+		documentType: "ID_CARD" | "PASSPORT";
+		documentNumber: string;
+		issuingCountry: string;
+	}): Promise<CustomerIdentityDocumentUniquenessResponse> {
+		const usp = new URLSearchParams();
+		usp.set("documentType", params.documentType);
+		usp.set("documentNumber", params.documentNumber.trim());
+		const cc = params.issuingCountry.trim().toUpperCase().slice(0, 2);
+		usp.set("issuingCountry", cc);
+		const res = await fetchWithAutoRefresh(
+			`${API_BASE}/api/ops/customers/uniqueness/identity-document?${usp.toString()}`,
+			{
+				headers: getAuthHeaders(),
+				cache: "no-store"
+			}
+		);
+		return handleJsonResponse<CustomerIdentityDocumentUniquenessResponse>(res);
 	},
 
 	async get(id: number | string): Promise<Customer> {

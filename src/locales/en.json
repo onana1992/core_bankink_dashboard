@@ -183,6 +183,20 @@
 		"new": "New Customer",
 		"newPerson": "New individual",
 		"newCompany": "New company",
+		"onboardingHub": {
+			"title": "New customer dossier",
+			"subtitle": "Unified OPS flow: same structure, adapted steps.",
+			"back": "Customer list",
+			"personTitle": "Natural person",
+			"personDesc": "Identity, contact, KYC profile, address, proofs, and go / no‑go gates before submission.",
+			"businessTitle": "Legal entity",
+			"businessDesc": "Entity, seats, governance, finances, representative ID — consistent with OPS.",
+			"openPerson": "Start — natural person",
+			"openBusiness": "Start — company",
+			"restoreTitle": "Resume draft?",
+			"restoreHint": "Saved data exists in this browser.",
+			"draftFooter": "Auto-saved while typing. Re‑select attachment files after resuming."
+		},
 		"wizard": {
 			"backToList": "Back to customer list",
 			"title": "New customer",
@@ -230,6 +244,8 @@
 				"idDocumentFileRequired": "Identity document file is required.",
 				"idRectoRequired": "National ID card front (recto) image is required.",
 				"identityDocumentNumberRequired": "Identity document number is required.",
+				"identityIssuingCountryRequired": "Issuing country (ISO-2) must be chosen from the list.",
+				"identityDocumentDuplicate": "This document (type, number, country) already exists for another customer.",
 				"identityDocumentExpiresRequired": "Identity document expiry date is required.",
 				"identityDocumentExpiresInvalid": "Invalid expiry date.",
 				"identityDocumentNumberTooLong": "Identity document number must be at most 64 characters.",
@@ -382,7 +398,30 @@
 				"proofOfAddressFileSelected": "Selected file",
 				"proofOfAddressFormatsLine": "PDF, JPEG, PNG — 10 MB max.",
 				"identityNumber": "Document number",
-				"identityExpires": "Expiry date"
+				"identityExpires": "Expiry date",
+				"identityIssuingCountryLabel": "Issuing country (ISO-2)",
+				"identityIssuingCountryHint": "With type + number, used for KYC duplicate detection.",
+				"identityIssuingSameAsNationality": "Match declared nationality"
+			},
+			"precheck": {
+				"title": "Go / no‑go summary",
+				"subtitle": "Resolve any failed check before submitting.",
+				"contact": "Email / phone uniqueness",
+				"doc": "ID anti-duplicate (type, number, country)",
+				"ok": "OK",
+				"fail": "Blocked",
+				"pending": "Checking…",
+				"nogoBanner": "Creation is blocked while a gate fails.",
+				"retryHint": "Adjust the fields then return here."
+			},
+			"kycPreview": {
+				"title": "Early KYC readout",
+				"geographyRisk": "Geography exposure",
+				"points": "Points",
+				"proposedScore": "Displayed score",
+				"band": "Risk band",
+				"decision": "Decision",
+				"blockedWarn": "Dossier created: compliance follow-up advised."
 			},
 			"recap": {
 				"title": "Summary",

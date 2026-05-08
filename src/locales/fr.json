@@ -183,6 +183,20 @@
 		"new": "Nouveau client",
 		"newPerson": "Nouvelle personne physique",
 		"newCompany": "Nouvelle entreprise",
+		"onboardingHub": {
+			"title": "Nouveau dossier client",
+			"subtitle": "Flux OPS unifié : même structure, étapes adaptées.",
+			"back": "Liste des clients",
+			"personTitle": "Personne physique",
+			"personDesc": "Identité, coordonnées, profil KYC, adresse, justificatifs et jalons go / no‑go avant envoi.",
+			"businessTitle": "Personne morale",
+			"businessDesc": "Entité, sièges, gouvernance, finances, pièce du représentant — aligné OPS.",
+			"openPerson": "Démarrer — personne physique",
+			"openBusiness": "Démarrer — entreprise",
+			"restoreTitle": "Reprendre un brouillon ?",
+			"restoreHint": "Des données ont été enregistrées dans ce navigateur.",
+			"draftFooter": "Sauvegarde automatique pendant la saisie. Sélectionnez à nouveau les fichiers joints après reprise."
+		},
 		"wizard": {
 			"backToList": "Retour à la liste des clients",
 			"title": "Nouveau client",
@@ -230,6 +244,8 @@
 				"idDocumentFileRequired": "Le fichier de pièce d'identité est requis.",
 				"idRectoRequired": "Le recto de la carte d'identité (image) est obligatoire.",
 				"identityDocumentNumberRequired": "Le numéro de la pièce d'identité est obligatoire.",
+				"identityIssuingCountryRequired": "Le pays de délivrance (ISO-2) de la pièce est obligatoire et doit figurer dans la liste des pays.",
+				"identityDocumentDuplicate": "Cette combinaison type / numéro / pays existe déjà pour un autre client.",
 				"identityDocumentExpiresRequired": "La date d'expiration de la pièce d'identité est obligatoire.",
 				"identityDocumentExpiresInvalid": "Date d'expiration invalide.",
 				"identityDocumentNumberTooLong": "Le numéro ne doit pas dépasser 64 caractères.",
@@ -382,7 +398,30 @@
 				"proofOfAddressFileSelected": "Fichier sélectionné",
 				"proofOfAddressFormatsLine": "PDF, JPEG, PNG — 10 Mo max.",
 				"identityNumber": "Numéro de la pièce",
-				"identityExpires": "Date d'expiration"
+				"identityExpires": "Date d'expiration",
+				"identityIssuingCountryLabel": "Pays de délivrance (ISO-2)",
+				"identityIssuingCountryHint": "Combiné avec le type et le numéro pour l’anti-doublon KYC.",
+				"identityIssuingSameAsNationality": "Aligner sur la nationalité déclarée"
+			},
+			"precheck": {
+				"title": "Synthèse go / no‑go",
+				"subtitle": "Ces contrôles doivent être validés avant l’envoi au serveur.",
+				"contact": "Unicité email / téléphone",
+				"doc": "Anti-doublon pièce (type, numéro, pays)",
+				"ok": "OK",
+				"fail": "Bloqué",
+				"pending": "À vérifier…",
+				"nogoBanner": "La création n’est pas autorisée tant qu’un contrôle échoue.",
+				"retryHint": "Modifiez les champs concernés puis revenez au récapitulatif."
+			},
+			"kycPreview": {
+				"title": "Contrôle préalable KYC",
+				"geographyRisk": "Risque géographique",
+				"points": "Points",
+				"proposedScore": "Score affiché",
+				"band": "Bandeau",
+				"decision": "Décision",
+				"blockedWarn": "Dossier créé : escalation conformité recommandée."
 			},
 			"recap": {
 				"title": "Récapitulatif",

@@ -304,4 +304,8 @@ export interface CustomerContactUniquenessResponse {
 	phoneUnique: boolean;
 }
 
+export interface CustomerIdentityDocumentUniquenessResponse {
+	unique: boolean;
+}
+
 

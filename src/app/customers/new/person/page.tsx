@@ -1,14 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
 import { composeInternationalPhone, getPhoneDialSelectOptions } from "@/lib/phoneCountryDialOptions";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import { customersApi } from "@/lib/api";
+import {
+	clearPersonDraft,
+	loadPersonDraft,
+	savePersonDraft,
+	type PersonWizardDraftSnap
+} from "@/lib/onboardingPersonDraft";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import {
 	isPersonIncomeSourceValue,
@@ -16,7 +22,8 @@ import {
 	PERSON_INCOME_SOURCE_VALUES,
 	PERSON_PROFESSION_VALUES
 } from "@/types/personProfileOptions";
-import type { AddAddressRequest, CreateCustomerRequest, UpdateCustomerRequest } from "@/types";
+import type { AddressType, AddAddressRequest, CreateCustomerRequest, UpdateCustomerRequest } from "@/types";
+import type { KycGeographyRiskResponse, KycOnboardingRiskAssessmentResponse } from "@/types/customer";
 import {
 	CITY_MAX_LEN,
 	CITY_MIN_LEN,
@@ -46,21 +53,8 @@ const POSTAL_CODE_REGEX = /^[A-Za-z0-9\s\-]{2,30}$/;
 
 const RECAP_STEP_INDEX = 5;
 
-/** Nombre total d'étapes du parcours (inclut le récapitulatif). */
-function formStepCount(): number {
-	return RECAP_STEP_INDEX + 1;
-}
-
 function lastFormStepIndex(): number {
 	return RECAP_STEP_INDEX;
-}
-
-/** Clé i18n sous `customer.wizard.steps.*` */
-function stepTranslationKey(step: number): string {
-	const base = ["identity", "contact", "profile", "address", "documents"] as const;
-	if (step >= 0 && step <= 4) return base[step];
-	if (step === 5) return "recap";
-	return "done";
 }
 
 function genderLabel(t: (k: string) => string, v: string): string {
@@ -146,10 +140,149 @@ export default function NewCustomerPage() {
 	const [passportFile, setPassportFile] = useState<File | null>(null);
 	const [selfieFile, setSelfieFile] = useState<File | null>(null);
 	const [poaFile, setPoaFile] = useState<File | null>(null);
+	const [identityIssuingCountry, setIdentityIssuingCountry] = useState("");
+	const [precheck, setPrecheck] = useState<{ loading: boolean; contact: boolean | null; doc: boolean | null }>({
+		loading: false,
+		contact: null,
+		doc: null
+	});
+	const [kycOutcome, setKycOutcome] = useState<{
+		geo: KycGeographyRiskResponse | null;
+		risk: KycOnboardingRiskAssessmentResponse | null;
+	} | null>(null);
+	const draftRestoredRef = useRef(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const maxStep = useMemo(() => lastFormStepIndex(), []);
+
+	const shellSteps = useMemo(
+		() =>
+			(["identity", "contact", "profile", "address", "documents", "recap"] as const).map((k, i) => ({
+				id: `${k}-${i}`,
+				title: t(`customer.wizard.steps.${k}`)
+			})),
+		[t]
+	);
+
+	useEffect(() => {
+		const n = profile.nationality.trim().toUpperCase().slice(0, 2);
+		if (/^[A-Z]{2}$/.test(n)) {
+			setIdentityIssuingCountry(prev => (prev.trim() ? prev : n));
+		}
+	}, [profile.nationality]);
+
+	useEffect(() => {
+		if (draftRestoredRef.current) return;
+		draftRestoredRef.current = true;
+		const draft = loadPersonDraft();
+		if (!draft) return;
+		if (!window.confirm(`${t("customer.onboardingHub.restoreTitle")}\n${t("customer.onboardingHub.restoreHint")}`)) {
+			return;
+		}
+		setStep(draft.step);
+		setIdentity({
+			type: "PERSON",
+			displayName: draft.identity.displayName ?? "",
+			firstName: draft.identity.firstName ?? "",
+			lastName: draft.identity.lastName ?? "",
+			email: draft.identity.email ?? "",
+			phone: draft.identity.phone
+		});
+		setProfile(draft.profile);
+		setPhoneDialIso2(draft.phoneDialIso2);
+		setPhoneNational(draft.phoneNational);
+		const at = draft.address.type;
+		const resolvedType: AddressType =
+			at === "BUSINESS" || at === "MAILING" || at === "RESIDENTIAL" ? at : "RESIDENTIAL";
+		setAddress({
+			...draft.address,
+			type: resolvedType,
+			line2: draft.address.line2 ?? "",
+			state: draft.address.state ?? "",
+			postalCode: draft.address.postalCode ?? ""
+		});
+		setIdDocType(draft.idDocType);
+		setIdentityDocumentNumber(draft.identityDocumentNumber);
+		setIdentityDocumentExpiresOn(draft.identityDocumentExpiresOn);
+		setIdentityIssuingCountry(draft.identityIssuingCountry);
+	}, [t]);
+
+	useEffect(() => {
+		if (wizardSuccess) return;
+		const timer = window.setTimeout(() => {
+			const snap: PersonWizardDraftSnap = {
+				step,
+				identity,
+				profile,
+				phoneDialIso2,
+				phoneNational,
+				address,
+				idDocType,
+				identityDocumentNumber,
+				identityDocumentExpiresOn,
+				identityIssuingCountry,
+				fileNames: {
+					idRecto: idRectoFile?.name,
+					idVerso: idVersoFile?.name,
+					passport: passportFile?.name,
+					selfie: selfieFile?.name,
+					poa: poaFile?.name
+				}
+			};
+			savePersonDraft(snap);
+		}, 550);
+		return () => window.clearTimeout(timer);
+	}, [
+		step,
+		wizardSuccess,
+		identity,
+		profile,
+		phoneDialIso2,
+		phoneNational,
+		address,
+		idDocType,
+		identityDocumentNumber,
+		identityDocumentExpiresOn,
+		identityIssuingCountry,
+		idRectoFile,
+		idVersoFile,
+		passportFile,
+		selfieFile,
+		poaFile
+	]);
+
+	async function runRecapPrecheck() {
+		setPrecheck({ loading: true, contact: null, doc: null });
+		try {
+			const email = identity.email?.trim() ?? "";
+			const phone = composeInternationalPhone(phoneDialIso2, phoneNational).trim();
+			const contactCheck = await customersApi.checkContactUniqueness({ email, phone });
+			const contactOk = Boolean(contactCheck.emailUnique && contactCheck.phoneUnique);
+
+			const issuing = identityIssuingCountry.trim().toUpperCase().slice(0, 2);
+			let docOk = true;
+			if (identityDocumentNumber.trim() && issuing.length === 2) {
+				const docRes = await customersApi.checkIdentityDocumentUniqueness({
+					documentType: idDocType,
+					documentNumber: identityDocumentNumber.trim(),
+					issuingCountry: issuing
+				});
+				docOk = Boolean(docRes.unique);
+			} else {
+				docOk = false;
+			}
+			setPrecheck({ loading: false, contact: contactOk, doc: docOk });
+		} catch {
+			setPrecheck({ loading: false, contact: false, doc: false });
+		}
+	}
+
+	useEffect(() => {
+		if (wizardSuccess || step !== RECAP_STEP_INDEX) return;
+		void runRecapPrecheck();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- seulement entrée récap
+	}, [step, wizardSuccess]);
 
 	function updateIdentity<K extends keyof CreateCustomerRequest>(key: K, value: CreateCustomerRequest[K]) {
 		setIdentity(prev => ({ ...prev, [key]: value }));
@@ -242,6 +375,10 @@ export default function NewCustomerPage() {
 		if (!identityDocumentNumber.trim()) return t("customer.wizard.validation.identityDocumentNumberRequired");
 		if (identityDocumentNumber.trim().length > IDENTITY_DOC_NUMBER_MAX) {
 			return t("customer.wizard.validation.identityDocumentNumberTooLong");
+		}
+		const issueCc = identityIssuingCountry.trim().toUpperCase().slice(0, 2);
+		if (!/^[A-Z]{2}$/.test(issueCc) || !nationalityOptions.some(o => o.code === issueCc)) {
+			return t("customer.wizard.validation.identityIssuingCountryRequired");
 		}
 		if (!identityDocumentExpiresOn.trim()) return t("customer.wizard.validation.identityDocumentExpiresRequired");
 		if (!parseIsoLocalDate(identityDocumentExpiresOn)) {
@@ -350,7 +487,7 @@ export default function NewCustomerPage() {
 
 		const idMeta = {
 			identityDocumentNumber: identityDocumentNumber.trim(),
-			identityDocumentIssuingCountry: profile.nationality.trim().toUpperCase(),
+			identityDocumentIssuingCountry: identityIssuingCountry.trim().toUpperCase().slice(0, 2),
 			identityDocumentExpiresOn: identityDocumentExpiresOn.trim()
 		};
 		if (idDocType === "ID_CARD") {
@@ -385,6 +522,10 @@ export default function NewCustomerPage() {
 				setError(err);
 				return;
 			}
+			if (precheck.loading || precheck.contact !== true || precheck.doc !== true) {
+				setError(t("customer.wizard.precheck.nogoBanner"));
+				return;
+			}
 			setSubmitting(true);
 			try {
 				const uniquenessError = await validateContactUniquenessBeforeSubmit();
@@ -392,9 +533,32 @@ export default function NewCustomerPage() {
 					setError(uniquenessError);
 					return;
 				}
+				const docRes = await customersApi.checkIdentityDocumentUniqueness({
+					documentType: idDocType,
+					documentNumber: identityDocumentNumber.trim(),
+					issuingCountry: identityIssuingCountry.trim().toUpperCase().slice(0, 2)
+				});
+				if (!docRes.unique) {
+					setError(t("customer.wizard.validation.identityDocumentDuplicate"));
+					await runRecapPrecheck();
+					return;
+				}
 				const id = await submitAllCustomer();
+				let geo: KycGeographyRiskResponse | null = null;
+				let risk: KycOnboardingRiskAssessmentResponse | null = null;
+				try {
+					[geo, risk] = await Promise.all([
+						customersApi.getKycGeographyRisk(id),
+						customersApi.getKycRiskAssessment(id, {})
+					]);
+				} catch {
+					geo = null;
+					risk = null;
+				}
+				setKycOutcome({ geo, risk });
 				setCreatedCustomerId(id);
 				setWizardSuccess(true);
+				clearPersonDraft();
 			} catch (e: unknown) {
 				setError(e instanceof Error ? e.message : t("customer.wizard.validation.genericError"));
 			} finally {
@@ -409,9 +573,28 @@ export default function NewCustomerPage() {
 		setStep(s => Math.max(0, s - 1));
 	}
 
-	const progress = ((step + 1) / formStepCount()) * 100;
-	const currentStepKey = stepTranslationKey(step);
 	const isRecapStep = step === RECAP_STEP_INDEX;
+
+	function PrecheckRow({ label, state }: { label: string; state: boolean | null }) {
+		const loading = precheck.loading;
+		let tone = "border-slate-200 bg-white text-slate-600";
+		let badge = t("customer.wizard.precheck.pending");
+		if (loading) {
+			badge = t("customer.wizard.precheck.pending");
+		} else if (state === true) {
+			tone = "border-emerald-200 bg-emerald-50/90 text-emerald-900";
+			badge = t("customer.wizard.precheck.ok");
+		} else if (state === false) {
+			tone = "border-rose-200 bg-rose-50/90 text-rose-900";
+			badge = t("customer.wizard.precheck.fail");
+		}
+		return (
+			<div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm shadow-sm ring-1 ring-slate-900/[0.03] ${tone}`}>
+				<span className="font-medium">{label}</span>
+				<span className="tabular-nums font-semibold">{badge}</span>
+			</div>
+		);
+	}
 
 	function RecapRow({ label, value }: { label: string; value: string }) {
 		return (
@@ -423,41 +606,15 @@ export default function NewCustomerPage() {
 	}
 
 	return (
-		<div className="flex w-full min-h-[calc(100vh-7rem)] flex-col gap-6">
-			<div>
-				<Link href="/customers" className="text-blue-600 hover:text-blue-800 hover:underline text-sm mb-3 inline-flex items-center gap-1">
-					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-					</svg>
-					{t("customer.wizard.backToList")}
-				</Link>
-				<div className="flex items-center justify-between flex-wrap gap-2">
-					<div>
-						<h1 className="text-3xl font-bold text-gray-900">{t("customer.wizard.titlePerson")}</h1>
-						<p className="text-gray-600 mt-1">{t("customer.wizard.subtitlePerson")}</p>
-					</div>
-					<Link href="/customers/new/business" className="text-sm text-blue-600 hover:underline shrink-0">
-						{t("customer.wizard.linkCompanyWizard")}
-					</Link>
-				</div>
-			</div>
-
-			{!wizardSuccess && (
-				<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-					<div className="flex justify-between text-sm text-gray-600 mb-2">
-						<span>
-							{t("customer.wizard.stepProgress", {
-								current: step + 1,
-								total: formStepCount()
-							})}
-						</span>
-						<span className="font-medium text-gray-900">{t(`customer.wizard.steps.${currentStepKey}`)}</span>
-					</div>
-					<div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-						<div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
-					</div>
-				</div>
-			)}
+		<OnboardingShell
+			title={t("customer.wizard.titlePerson")}
+			subtitle={t("customer.wizard.subtitlePerson")}
+			backHref="/customers"
+			backLabel={t("customer.wizard.backToList")}
+			steps={shellSteps}
+			activeStepIndex={step}
+		>
+			<p className="text-xs text-slate-500">{t("customer.onboardingHub.draftFooter")}</p>
 
 			{error && (
 				<div className="bg-red-50 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded flex items-center gap-2">
@@ -834,6 +991,37 @@ export default function NewCustomerPage() {
 										/>
 									</div>
 								</div>
+								<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+									<div className="min-w-0 grow sm:max-w-md">
+										<label className="mb-1 block text-sm font-medium text-gray-700">
+											{t("customer.wizard.documents.identityIssuingCountryLabel")} <span className="text-red-500">*</span>
+										</label>
+										<select
+											className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-400/35 focus:border-slate-500 focus:ring-2"
+											value={identityIssuingCountry}
+											onChange={e => setIdentityIssuingCountry(e.target.value)}
+										>
+											<option value="">{t("customer.wizard.profile.selectFromList")}</option>
+											{nationalityOptions.map(o => (
+												<option key={o.code} value={o.code}>
+													{o.label}
+												</option>
+											))}
+										</select>
+										<p className="mt-1 text-xs text-slate-500">{t("customer.wizard.documents.identityIssuingCountryHint")}</p>
+									</div>
+									<Button
+										type="button"
+										variant="outline"
+										className="shrink-0 text-sm"
+										onClick={() => {
+											const n = profile.nationality.trim().toUpperCase().slice(0, 2);
+											if (/^[A-Z]{2}$/.test(n)) setIdentityIssuingCountry(n);
+										}}
+									>
+										{t("customer.wizard.documents.identityIssuingSameAsNationality")}
+									</Button>
+								</div>
 								{idDocType === "ID_CARD" ? (
 									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 										<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
@@ -1178,6 +1366,10 @@ export default function NewCustomerPage() {
 						<dl className="rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2">
 							<RecapRow label={t("customer.wizard.recap.idDocumentType")} value={idDocTypeLabel(t, idDocType)} />
 							<RecapRow label={t("customer.wizard.recap.identityDocumentNumber")} value={identityDocumentNumber.trim()} />
+							<RecapRow
+								label={t("customer.wizard.documents.identityIssuingCountryLabel")}
+								value={formatNationalityLabel(identityIssuingCountry, i18n.language)}
+							/>
 							<RecapRow label={t("customer.wizard.recap.identityDocumentExpiresOn")} value={identityDocumentExpiresOn.trim()} />
 							{idDocType === "ID_CARD" ? (
 								<>
@@ -1191,26 +1383,84 @@ export default function NewCustomerPage() {
 							<RecapRow label={t("customer.wizard.recap.proofOfAddressFile")} value={poaFile?.name ?? ""} />
 						</dl>
 					</section>
+
+					<section className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-5 shadow-sm ring-1 ring-slate-900/[0.04]">
+						<div className="flex flex-wrap items-start justify-between gap-3">
+							<div className="min-w-0">
+								<h3 className="text-sm font-semibold tracking-tight text-slate-900">{t("customer.wizard.precheck.title")}</h3>
+								<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.precheck.subtitle")}</p>
+							</div>
+							<Button type="button" variant="outline" size="sm" disabled={precheck.loading} onClick={() => void runRecapPrecheck()}>
+								{t("common.refresh")}
+							</Button>
+						</div>
+						<p className="mt-3 text-xs text-slate-500">{t("customer.wizard.precheck.retryHint")}</p>
+						<div className="mt-4 grid gap-2 sm:grid-cols-2">
+							<PrecheckRow label={t("customer.wizard.precheck.contact")} state={precheck.contact} />
+							<PrecheckRow label={t("customer.wizard.precheck.doc")} state={precheck.doc} />
+						</div>
+					</section>
 				</div>
 			)}
 
 			{wizardSuccess && createdCustomerId != null && (
-				<div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4 text-center">
-					<div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-						<svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-						</svg>
+				<div className="space-y-6">
+					<div className="rounded-2xl border border-slate-200/90 bg-white p-6 text-center shadow-sm ring-1 ring-slate-900/[0.04]">
+						<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+							<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+							</svg>
+						</div>
+						<h2 className="mt-4 text-xl font-semibold text-slate-900">{t("customer.wizard.complete.title")}</h2>
+						<p className="mt-2 text-sm text-slate-600">{t("customer.wizard.complete.message")}</p>
+						<div className="mt-6 flex flex-wrap justify-center gap-3">
+							<Button type="button" onClick={() => router.push(customerDetailPath(createdCustomerId, "PERSON"))}>
+								{t("customer.wizard.complete.openRecord")}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => router.push("/customers")}>
+								{t("customer.wizard.complete.backToList")}
+							</Button>
+						</div>
 					</div>
-					<h2 className="text-xl font-semibold text-gray-900">{t("customer.wizard.complete.title")}</h2>
-					<p className="text-gray-600 text-sm">{t("customer.wizard.complete.message")}</p>
-					<div className="flex flex-wrap justify-center gap-3 pt-2">
-						<Button type="button" onClick={() => router.push(customerDetailPath(createdCustomerId, "PERSON"))}>
-							{t("customer.wizard.complete.openRecord")}
-						</Button>
-						<Button type="button" variant="outline" onClick={() => router.push("/customers")}>
-							{t("customer.wizard.complete.backToList")}
-						</Button>
-					</div>
+
+					{kycOutcome && (kycOutcome.geo || kycOutcome.risk) ? (
+						<div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-left shadow-sm">
+							<h3 className="text-sm font-semibold text-slate-900">{t("customer.wizard.kycPreview.title")}</h3>
+							<div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+								{kycOutcome.geo ? (
+									<div className="rounded-xl border border-white bg-white px-4 py-3 shadow-sm">
+										<div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+											{t("customer.wizard.kycPreview.geographyRisk")}
+										</div>
+										<div className="mt-1 tabular-nums text-slate-900">
+											{t("customer.wizard.kycPreview.points")}: {kycOutcome.geo.geographyRiskPoints ?? "—"}
+										</div>
+									</div>
+								) : null}
+								{kycOutcome.risk ? (
+									<div className="rounded-xl border border-white bg-white px-4 py-3 shadow-sm sm:col-span-2">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+												{t("customer.wizard.kycPreview.decision")}
+											</span>
+											<span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-semibold text-white">
+												{kycOutcome.risk.riskBand ?? "—"}
+											</span>
+											{kycOutcome.risk.decision ? (
+												<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-800">{kycOutcome.risk.decision}</span>
+											) : null}
+										</div>
+										<p className="mt-2 text-xs text-slate-600 tabular-nums">
+											{t("customer.wizard.kycPreview.proposedScore")}: {kycOutcome.risk.proposedRiskScore ?? "—"}
+										</p>
+										{kycOutcome.risk.blocked ? (
+											<p className="mt-3 text-xs font-medium text-amber-900">{t("customer.wizard.kycPreview.blockedWarn")}</p>
+										) : null}
+									</div>
+								) : null}
+							</div>
+						</div>
+					) : null}
 				</div>
 			)}
 
@@ -1233,6 +1483,6 @@ export default function NewCustomerPage() {
 					</div>
 				</div>
 			)}
-		</div>
+		</OnboardingShell>
 	);
 }

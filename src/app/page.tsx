@@ -335,7 +335,7 @@ export default function Dashboard() {
 				<h2 className="text-lg font-semibold mb-4">{t("dashboard.quickActions.title")}</h2>
 				<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 					<Link
-						href="/customers/new"
+						href="/customers/new/person"
 						className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
 					>
 						<Users className="w-8 h-8 text-blue-600 mb-2" />

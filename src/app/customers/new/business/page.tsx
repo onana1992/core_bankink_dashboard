@@ -1,16 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import OnboardingShell from "@/components/onboarding/OnboardingShell";
 import { customersApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
 import { ANNUAL_REVENUE_BAND_OPTIONS, LEGAL_FORM_OPTIONS } from "@/data/legalFormOptions";
+import {
+	IDENTITY_DOC_NUMBER_MAX,
+	isFileSizeOk,
+	isImageOrPdfFile,
+	MAX_UPLOAD_BYTES,
+	parseIsoLocalDate,
+	isIsoDateAtLeastDaysAhead,
+	isIsoDateStrictlyFuture,
+	MIN_ID_VALIDITY_DAYS
+} from "@/lib/personOnboardingValidation";
 import type { AddAddressRequest, AddRelatedPersonRequest, CreateCustomerRequest, UpdateCustomerRequest } from "@/types";
+import type { KycGeographyRiskResponse, KycOnboardingRiskAssessmentResponse } from "@/types/customer";
 
 const PHONE_REGEX = /^[+]?[0-9\s\-()]+$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -116,6 +127,16 @@ export default function NewBusinessCustomerPage() {
 	const [idDocType, setIdDocType] = useState<"ID_CARD" | "PASSPORT">("ID_CARD");
 	const [identityDocumentNumber, setIdentityDocumentNumber] = useState("");
 	const [identityDocumentExpiresOn, setIdentityDocumentExpiresOn] = useState("");
+	const [identityIssuingCountry, setIdentityIssuingCountry] = useState("");
+	const [precheck, setPrecheck] = useState<{ loading: boolean; contact: boolean | null; doc: boolean | null }>({
+		loading: false,
+		contact: null,
+		doc: null
+	});
+	const [kycOutcome, setKycOutcome] = useState<{
+		geo: KycGeographyRiskResponse | null;
+		risk: KycOnboardingRiskAssessmentResponse | null;
+	} | null>(null);
 	const [idRectoFile, setIdRectoFile] = useState<File | null>(null);
 	const [idVersoFile, setIdVersoFile] = useState<File | null>(null);
 	const [passportFile, setPassportFile] = useState<File | null>(null);
@@ -123,6 +144,54 @@ export default function NewBusinessCustomerPage() {
 	function isImageFile(f: File | null): boolean {
 		return f != null && (f.type?.startsWith("image/") ?? false);
 	}
+
+	const shellSteps = useMemo(
+		() =>
+			STEP_KEYS.map((k, i) => ({
+				id: `${k}-${i}`,
+				title: t(`customer.wizard.business.steps.${k}`)
+			})),
+		[t]
+	);
+
+	useEffect(() => {
+		const tr = entity.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
+		if (/^[A-Z]{2}$/.test(tr) && nationalityOptions.some(o => o.code === tr)) {
+			setIdentityIssuingCountry(prev => (prev.trim() ? prev : tr));
+		}
+	}, [entity.taxResidenceCountry, nationalityOptions]);
+
+	async function runRecapPrecheck() {
+		setPrecheck({ loading: true, contact: null, doc: null });
+		try {
+			const email = contact.email.trim();
+			const phone = contact.phone.trim();
+			const contactCheck = await customersApi.checkContactUniqueness({ email, phone });
+			const contactOk = Boolean(contactCheck.emailUnique && contactCheck.phoneUnique);
+
+			const issuing = identityIssuingCountry.trim().toUpperCase().slice(0, 2);
+			let docOk = true;
+			if (identityDocumentNumber.trim() && issuing.length === 2) {
+				const docRes = await customersApi.checkIdentityDocumentUniqueness({
+					documentType: idDocType,
+					documentNumber: identityDocumentNumber.trim(),
+					issuingCountry: issuing
+				});
+				docOk = Boolean(docRes.unique);
+			} else {
+				docOk = false;
+			}
+			setPrecheck({ loading: false, contact: contactOk, doc: docOk });
+		} catch {
+			setPrecheck({ loading: false, contact: false, doc: false });
+		}
+	}
+
+	useEffect(() => {
+		if (wizardSuccess || step !== RECAP_STEP) return;
+		void runRecapPrecheck();
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- précontrôle à l’entrée du récap uniquement
+	}, [step, wizardSuccess]);
 
 	function validateCountry(code: string): boolean {
 		const c = code.trim().toUpperCase().slice(0, 2);
@@ -193,16 +262,64 @@ export default function NewBusinessCustomerPage() {
 		}
 		if (s === 7) {
 			if (!identityDocumentNumber.trim()) return t("customer.wizard.validation.identityDocumentNumberRequired");
+			if (identityDocumentNumber.trim().length > IDENTITY_DOC_NUMBER_MAX) {
+				return t("customer.wizard.validation.identityDocumentNumberTooLong");
+			}
+			const issueCc = identityIssuingCountry.trim().toUpperCase().slice(0, 2);
+			if (!/^[A-Z]{2}$/.test(issueCc) || !nationalityOptions.some(o => o.code === issueCc)) {
+				return t("customer.wizard.validation.identityIssuingCountryRequired");
+			}
 			if (!identityDocumentExpiresOn.trim()) return t("customer.wizard.validation.identityDocumentExpiresRequired");
-			if (Number.isNaN(Date.parse(identityDocumentExpiresOn))) return t("customer.wizard.validation.identityDocumentExpiresInvalid");
+			if (!parseIsoLocalDate(identityDocumentExpiresOn)) {
+				return t("customer.wizard.validation.identityDocumentExpiresInvalid");
+			}
+			if (!isIsoDateStrictlyFuture(identityDocumentExpiresOn)) {
+				return t("customer.wizard.validation.identityDocumentExpiresPast");
+			}
+			if (!isIsoDateAtLeastDaysAhead(identityDocumentExpiresOn, MIN_ID_VALIDITY_DAYS)) {
+				return t("customer.wizard.validation.identityDocumentExpiresTooSoon");
+			}
+			const tooLarge = (f: File | null) => f != null && !isFileSizeOk(f, MAX_UPLOAD_BYTES);
 			if (!statutesFile) return t("customer.wizard.business.validation.statutesRequired");
+			if (tooLarge(statutesFile) || tooLarge(kbisFile) || tooLarge(poaFile)) {
+				return t("customer.wizard.validation.uploadFileTooLarge");
+			}
 			if (!poaFile) return t("customer.wizard.validation.proofOfAddressFileRequired");
+			if (!isImageOrPdfFile(poaFile)) return t("customer.wizard.validation.proofOfAddressFileTypeInvalid");
 			if (idDocType === "ID_CARD") {
 				if (!idRectoFile || !isImageFile(idRectoFile)) return t("customer.wizard.validation.idRectoRequired");
+				if (tooLarge(idRectoFile) || tooLarge(idVersoFile)) return t("customer.wizard.validation.uploadFileTooLarge");
 				if (idVersoFile && !isImageFile(idVersoFile)) return t("customer.wizard.validation.idCardImageRequired");
 			} else {
 				if (!passportFile) return t("customer.wizard.validation.passportFileRequired");
+				if (!isImageOrPdfFile(passportFile)) return t("customer.wizard.validation.passportFileTypeInvalid");
+				if (tooLarge(passportFile)) return t("customer.wizard.validation.uploadFileTooLarge");
 			}
+		}
+		return null;
+	}
+
+	function validateAllBusiness(): string | null {
+		for (let s = 0; s <= 7; s++) {
+			const err = validateStep(s);
+			if (err) return err;
+		}
+		return null;
+	}
+
+	async function validateContactUniquenessBeforeSubmit(): Promise<string | null> {
+		const uniqueness = await customersApi.checkContactUniqueness({
+			email: contact.email.trim(),
+			phone: contact.phone.trim()
+		});
+		if (!uniqueness.emailUnique && !uniqueness.phoneUnique) {
+			return t("customer.wizard.validation.emailAndPhoneAlreadyExists");
+		}
+		if (!uniqueness.emailUnique) {
+			return t("customer.wizard.validation.emailAlreadyExists");
+		}
+		if (!uniqueness.phoneUnique) {
+			return t("customer.wizard.validation.phoneAlreadyExists");
 		}
 		return null;
 	}
@@ -346,14 +463,45 @@ export default function NewBusinessCustomerPage() {
 			setStep(s => s + 1);
 			return;
 		}
-		const err = validateStep(7);
-		if (err) {
-			setError(err);
+		const errAgg = validateAllBusiness();
+		if (errAgg) {
+			setError(errAgg);
+			return;
+		}
+		if (precheck.loading || precheck.contact !== true || precheck.doc !== true) {
+			setError(t("customer.wizard.precheck.nogoBanner"));
 			return;
 		}
 		setSubmitting(true);
 		try {
+			const uniquenessError = await validateContactUniquenessBeforeSubmit();
+			if (uniquenessError) {
+				setError(uniquenessError);
+				return;
+			}
+			const docRes = await customersApi.checkIdentityDocumentUniqueness({
+				documentType: idDocType,
+				documentNumber: identityDocumentNumber.trim(),
+				issuingCountry: identityIssuingCountry.trim().toUpperCase().slice(0, 2)
+			});
+			if (!docRes.unique) {
+				setError(t("customer.wizard.validation.identityDocumentDuplicate"));
+				await runRecapPrecheck();
+				return;
+			}
 			const newId = await submitAll();
+			let geo: KycGeographyRiskResponse | null = null;
+			let risk: KycOnboardingRiskAssessmentResponse | null = null;
+			try {
+				[geo, risk] = await Promise.all([
+					customersApi.getKycGeographyRisk(newId),
+					customersApi.getKycRiskAssessment(newId, {})
+				]);
+			} catch {
+				geo = null;
+				risk = null;
+			}
+			setKycOutcome({ geo, risk });
 			setCreatedCustomerId(newId);
 			setWizardSuccess(true);
 		} catch (e: unknown) {
@@ -369,8 +517,30 @@ export default function NewBusinessCustomerPage() {
 		setStep(s => s - 1);
 	}
 
-	const progress = ((step + 1) / (RECAP_STEP + 1)) * 100;
-	const stepKey = STEP_KEYS[step] ?? "recap";
+	function idDocLabel(v: "ID_CARD" | "PASSPORT"): string {
+		return v === "PASSPORT" ? t("customer.wizard.documents.passport") : t("customer.wizard.documents.idCardShort");
+	}
+
+	function PrecheckRow({ label, state }: { label: string; state: boolean | null }) {
+		const loading = precheck.loading;
+		let tone = "border-slate-200 bg-white text-slate-600";
+		let badge = t("customer.wizard.precheck.pending");
+		if (loading) {
+			badge = t("customer.wizard.precheck.pending");
+		} else if (state === true) {
+			tone = "border-emerald-200 bg-emerald-50/90 text-emerald-900";
+			badge = t("customer.wizard.precheck.ok");
+		} else if (state === false) {
+			tone = "border-rose-200 bg-rose-50/90 text-rose-900";
+			badge = t("customer.wizard.precheck.fail");
+		}
+		return (
+			<div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm shadow-sm ring-1 ring-slate-900/[0.03] ${tone}`}>
+				<span className="font-medium">{label}</span>
+				<span className="tabular-nums font-semibold">{badge}</span>
+			</div>
+		);
+	}
 
 	function RecapRow({ label, value }: { label: string; value: string }) {
 		return (
@@ -382,39 +552,14 @@ export default function NewBusinessCustomerPage() {
 	}
 
 	return (
-		<div className="flex w-full min-h-[calc(100vh-7rem)] flex-col gap-6">
-			<div>
-				<Link href="/customers" className="text-blue-600 hover:text-blue-800 hover:underline text-sm mb-3 inline-flex items-center gap-1">
-					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-					</svg>
-					{t("customer.wizard.backToList")}
-				</Link>
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<div>
-						<h1 className="text-3xl font-bold text-gray-900">{t("customer.wizard.business.title")}</h1>
-						<p className="text-gray-600 mt-1">{t("customer.wizard.business.subtitle")}</p>
-					</div>
-					<Link href="/customers/new" className="text-sm text-blue-600 hover:underline">
-						{t("customer.wizard.business.linkPersonWizard")}
-					</Link>
-				</div>
-			</div>
-
-			{!wizardSuccess && (
-				<div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-					<div className="flex justify-between text-sm text-gray-600 mb-2">
-						<span>
-							{t("customer.wizard.stepProgress", { current: step + 1, total: RECAP_STEP + 1 })}
-						</span>
-						<span className="font-medium text-gray-900">{t(`customer.wizard.business.steps.${stepKey}`)}</span>
-					</div>
-					<div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-						<div className="h-full bg-blue-600 transition-all duration-300 rounded-full" style={{ width: `${progress}%` }} />
-					</div>
-				</div>
-			)}
-
+		<OnboardingShell
+			title={t("customer.wizard.business.title")}
+			subtitle={t("customer.wizard.business.subtitle")}
+			backHref="/customers"
+			backLabel={t("customer.wizard.backToList")}
+			steps={shellSteps}
+			activeStepIndex={step}
+		>
 			{error && (
 				<div className="bg-red-50 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded flex items-center gap-2">
 					<svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -846,11 +991,27 @@ export default function NewBusinessCustomerPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
 								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityNumber")} *</label>
-								<input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={identityDocumentNumber} onChange={e => setIdentityDocumentNumber(e.target.value)} maxLength={64} />
+								<Input value={identityDocumentNumber} onChange={e => setIdentityDocumentNumber(e.target.value)} maxLength={IDENTITY_DOC_NUMBER_MAX} />
 							</div>
 							<div>
 								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityExpires")} *</label>
-								<input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" value={identityDocumentExpiresOn} onChange={e => setIdentityDocumentExpiresOn(e.target.value)} />
+								<Input type="date" value={identityDocumentExpiresOn} onChange={e => setIdentityDocumentExpiresOn(e.target.value)} />
+							</div>
+							<div className="md:col-span-2">
+								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityIssuingCountryLabel")} *</label>
+								<select
+									className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+									value={identityIssuingCountry}
+									onChange={e => setIdentityIssuingCountry(e.target.value)}
+								>
+									<option value="">{t("customer.wizard.profile.nationalityPlaceholder")}</option>
+									{nationalityOptions.map(opt => (
+										<option key={opt.code} value={opt.code}>
+											{opt.label} ({opt.code})
+										</option>
+									))}
+								</select>
+								<p className="mt-1 text-xs text-slate-500">{t("customer.wizard.documents.identityIssuingCountryHint")}</p>
 							</div>
 						</div>
 						{idDocType === "ID_CARD" ? (
@@ -863,7 +1024,12 @@ export default function NewBusinessCustomerPage() {
 						) : (
 							<div>
 								<label className="block text-xs text-gray-600">{t("customer.wizard.documents.passportScan")} *</label>
-								<input type="file" className="text-sm w-full" onChange={e => setPassportFile(e.target.files?.[0] ?? null)} />
+								<input
+									type="file"
+									accept="image/*,application/pdf"
+									className="text-sm w-full"
+									onChange={e => setPassportFile(e.target.files?.[0] ?? null)}
+								/>
 							</div>
 						)}
 					</div>
@@ -907,24 +1073,96 @@ export default function NewBusinessCustomerPage() {
 							<RecapRow label={t("customer.wizard.business.documents.statutes")} value={statutesFile?.name ?? ""} />
 							<RecapRow label={t("customer.wizard.business.documents.kbisOptional")} value={kbisFile?.name ?? ""} />
 							<RecapRow label={t("customer.wizard.business.documents.proofOfSeat")} value={poaFile?.name ?? ""} />
-							<RecapRow label={t("customer.wizard.recap.idDocumentType")} value={idDocType} />
+							<RecapRow label={t("customer.wizard.recap.idDocumentType")} value={idDocLabel(idDocType)} />
+							<RecapRow label={t("customer.wizard.recap.identityDocumentNumber")} value={identityDocumentNumber.trim()} />
+							<RecapRow
+								label={t("customer.wizard.documents.identityIssuingCountryLabel")}
+								value={formatNationalityLabel(identityIssuingCountry, i18n.language)}
+							/>
+							<RecapRow label={t("customer.wizard.recap.identityDocumentExpiresOn")} value={identityDocumentExpiresOn.trim()} />
 						</dl>
+					</section>
+
+					<section className="rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-5 shadow-sm ring-1 ring-slate-900/[0.04]">
+						<div className="flex flex-wrap items-start justify-between gap-3">
+							<div className="min-w-0">
+								<h3 className="text-sm font-semibold tracking-tight text-slate-900">{t("customer.wizard.precheck.title")}</h3>
+								<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.precheck.subtitle")}</p>
+							</div>
+							<Button type="button" variant="outline" size="sm" disabled={precheck.loading} onClick={() => void runRecapPrecheck()}>
+								{t("common.refresh")}
+							</Button>
+						</div>
+						<p className="mt-3 text-xs text-slate-500">{t("customer.wizard.precheck.retryHint")}</p>
+						<div className="mt-4 grid gap-2 sm:grid-cols-2">
+							<PrecheckRow label={t("customer.wizard.precheck.contact")} state={precheck.contact} />
+							<PrecheckRow label={t("customer.wizard.precheck.doc")} state={precheck.doc} />
+						</div>
+						{precheck.loading ? (
+							<p className="mt-3 text-xs text-slate-500">{t("customer.wizard.precheck.pending")}</p>
+						) : null}
 					</section>
 				</div>
 			)}
 
 			{wizardSuccess && createdCustomerId != null && (
-				<div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4 text-center">
-					<h2 className="text-xl font-semibold text-gray-900">{t("customer.wizard.complete.title")}</h2>
-					<p className="text-gray-600 text-sm">{t("customer.wizard.complete.message")}</p>
-					<div className="flex flex-wrap justify-center gap-3 pt-2">
-						<Button type="button" onClick={() => router.push(customerDetailPath(createdCustomerId, "BUSINESS"))}>
-							{t("customer.wizard.complete.openRecord")}
-						</Button>
-						<Button type="button" variant="outline" onClick={() => router.push("/customers")}>
-							{t("customer.wizard.complete.backToList")}
-						</Button>
+				<div className="space-y-6">
+					<div className="rounded-2xl border border-slate-200/90 bg-white p-6 text-center shadow-sm ring-1 ring-slate-900/[0.04]">
+						<div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+							<svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+							</svg>
+						</div>
+						<h2 className="mt-4 text-xl font-semibold text-slate-900">{t("customer.wizard.complete.title")}</h2>
+						<p className="mt-2 text-sm text-slate-600">{t("customer.wizard.complete.message")}</p>
+						<div className="mt-6 flex flex-wrap justify-center gap-3">
+							<Button type="button" onClick={() => router.push(customerDetailPath(createdCustomerId, "BUSINESS"))}>
+								{t("customer.wizard.complete.openRecord")}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => router.push("/customers")}>
+								{t("customer.wizard.complete.backToList")}
+							</Button>
+						</div>
 					</div>
+
+					{kycOutcome && (kycOutcome.geo || kycOutcome.risk) ? (
+						<div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 text-left shadow-sm">
+							<h3 className="text-sm font-semibold text-slate-900">{t("customer.wizard.kycPreview.title")}</h3>
+							<div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+								{kycOutcome.geo ? (
+									<div className="rounded-xl border border-white bg-white px-4 py-3 shadow-sm">
+										<div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+											{t("customer.wizard.kycPreview.geographyRisk")}
+										</div>
+										<div className="mt-1 tabular-nums text-slate-900">
+											{t("customer.wizard.kycPreview.points")}: {kycOutcome.geo.geographyRiskPoints ?? "—"}
+										</div>
+									</div>
+								) : null}
+								{kycOutcome.risk ? (
+									<div className="rounded-xl border border-white bg-white px-4 py-3 shadow-sm sm:col-span-2">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+												{t("customer.wizard.kycPreview.decision")}
+											</span>
+											<span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-semibold text-white">
+												{kycOutcome.risk.riskBand ?? "—"}
+											</span>
+											{kycOutcome.risk.decision ? (
+												<span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-800">{kycOutcome.risk.decision}</span>
+											) : null}
+										</div>
+										<p className="mt-2 text-xs text-slate-600 tabular-nums">
+											{t("customer.wizard.kycPreview.proposedScore")}: {kycOutcome.risk.proposedRiskScore ?? "—"}
+										</p>
+										{kycOutcome.risk.blocked ? (
+											<p className="mt-3 text-xs font-medium text-amber-900">{t("customer.wizard.kycPreview.blockedWarn")}</p>
+										) : null}
+									</div>
+								) : null}
+							</div>
+						</div>
+					) : null}
 				</div>
 			)}
 
@@ -945,6 +1183,6 @@ export default function NewBusinessCustomerPage() {
 					</Button>
 				</div>
 			)}
-		</div>
+		</OnboardingShell>
 	);
 }
