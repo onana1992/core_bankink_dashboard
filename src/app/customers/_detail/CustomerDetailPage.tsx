@@ -30,8 +30,6 @@ import type {
 	AddAddressRequest,
 	AddRelatedPersonRequest,
 	Address,
-	ComplianceTask,
-	ComplianceTaskStatus,
 	Customer,
 	AuditEvent,
 	Document,
@@ -128,7 +126,10 @@ function sanitizeReviewerNote(raw?: string | null): string | null {
 }
 
 const KYC_COMPLIANCE_CHECKS_PAGE_SIZE = 20;
-const DOSSIER_TIMELINE_PAGE_SIZE = 15;
+
+/** Sous-onglets conformité : 1 Revue KYC, 2 Screening PEP & Sanctions, 3 Décision KYC, 4 Piste d'audit KYC. */
+const COMPLIANCE_INNER_SUBTAB_ORDER = ["review", "screeningChecks", "decision", "auditTrail"] as const;
+type ComplianceInnerTab = (typeof COMPLIANCE_INNER_SUBTAB_ORDER)[number];
 
 function kycCheckResultBadgeVariant(result: KycCheckResult): "success" | "danger" | "warning" {
 	if (result === "PASS") return "success";
@@ -166,39 +167,6 @@ function documentReviewStatusLabel(t: TFunction, status: string): string {
 	const key = `customer.detail.profileDetail.reviewStatus.${status}`;
 	const lbl = t(key);
 	return lbl === key ? status : lbl;
-}
-
-type DossierTimelineBadge = "customer" | "kyc" | "task" | "document";
-type DossierTimelineRow = { id: string; at: number; badge: DossierTimelineBadge; title: string; detail?: string };
-
-function dossierTimelineBadgeVariant(badge: DossierTimelineBadge): "neutral" | "success" | "warning" | "danger" | "info" {
-	switch (badge) {
-		case "customer":
-			return "neutral";
-		case "kyc":
-			return "info";
-		case "task":
-			return "warning";
-		case "document":
-			return "success";
-		default:
-			return "neutral";
-	}
-}
-
-function dossierTimelineRowAccent(badge: DossierTimelineBadge): string {
-	switch (badge) {
-		case "customer":
-			return "border-l-[3px] border-l-slate-600";
-		case "kyc":
-			return "border-l-[3px] border-l-sky-600";
-		case "task":
-			return "border-l-[3px] border-l-amber-500";
-		case "document":
-			return "border-l-[3px] border-l-emerald-600";
-		default:
-			return "border-l-[3px] border-l-slate-300";
-	}
 }
 
 export function CustomerDetailPage({ expectedType }: { expectedType: CustomerType }) {
@@ -292,6 +260,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 
 	// État pour gérer les onglets
 	const [activeTab, setActiveTab] = useState<string>("overview");
+	const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
 	// État pour l'édition du détail du profil
 	const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -330,13 +299,10 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	];
 
 	const [kycChecks, setKycChecks] = useState<KycCheck[]>([]);
-	const [complianceTasks, setComplianceTasks] = useState<ComplianceTask[]>([]);
 	const [complianceLoading, setComplianceLoading] = useState(false);
 	const [complianceAction, setComplianceAction] = useState<string | null>(null);
 	const [decisionPanelScreeningBusy, setDecisionPanelScreeningBusy] = useState(false);
-	const [eddInstruction, setEddInstruction] = useState("");
-	const [taskResolution, setTaskResolution] = useState<Record<number, string>>({});
-	type ComplianceInnerTab = "review" | "screeningChecks" | "tasks" | "timeline" | "auditTrail";
+	const [showListScreeningCard, setShowListScreeningCard] = useState(false);
 
 	const [complianceInnerTab, setComplianceInnerTab] = useState<ComplianceInnerTab>("screeningChecks");
 	const prevWorklistComplianceRef = useRef<{ tab: string; customerId?: number }>({
@@ -352,9 +318,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		if (!id) return;
 		setComplianceLoading(true);
 		try {
-			const [checks, tasks] = await Promise.all([customersApi.listKycChecks(id), customersApi.listComplianceTasks(id)]);
+			const checks = await customersApi.listKycChecks(id);
 			setKycChecks(checks);
-			setComplianceTasks(tasks);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
 		} finally {
@@ -444,6 +409,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	}, [activeTab, customer?.id]);
 
 	useEffect(() => {
+		if (activeTab !== "pieces") setShowDocumentUpload(false);
+	}, [activeTab]);
+
+	useEffect(() => {
+		if (complianceInnerTab !== "screeningChecks") setShowListScreeningCard(false);
+	}, [complianceInnerTab]);
+
+	useEffect(() => {
 		if (!id || Number.isNaN(id)) return;
 		if (activeTab !== "compliance" || complianceInnerTab !== "auditTrail") return;
 		let cancelled = false;
@@ -516,124 +489,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		listScreeningPresence.hasListScreening,
 		screeningChecksFingerprint
 	]);
-
-	const dossierTimelineRows = useMemo((): DossierTimelineRow[] => {
-		if (!customer) return [];
-		const rows: DossierTimelineRow[] = [];
-		const isoToMs = (s?: string | null) => {
-			if (!s) return NaN;
-			const n = Date.parse(s);
-			return Number.isFinite(n) ? n : NaN;
-		};
-		const push = (rowId: string, at: number, badge: DossierTimelineBadge, title: string, detail?: string) => {
-			if (!Number.isFinite(at)) return;
-			rows.push({ id: rowId, at, badge, title, detail });
-		};
-
-		if (customer.createdAt) {
-			push(`cust-created`, isoToMs(customer.createdAt), "customer", t("customer.detail.timeline.kind.customer_created"));
-		}
-		if (customer.updatedAt && customer.updatedAt !== customer.createdAt) {
-			push(`cust-upd`, isoToMs(customer.updatedAt), "customer", t("customer.detail.timeline.kind.customer_updated"));
-		}
-		if (customer.lastRiskAssessmentAt) {
-			const scoreDetail =
-				typeof customer.riskScore === "number"
-					? `${t("customer.detail.generalInfo.riskScore")}: ${customer.riskScore}/100`
-					: undefined;
-			push(
-				`cust-risk`,
-				isoToMs(customer.lastRiskAssessmentAt),
-				"customer",
-				t("customer.detail.timeline.kind.risk_assessment"),
-				scoreDetail
-			);
-		}
-		if (customer.lastAmlRekycRequestedAt) {
-			push(
-				`cust-rekyc`,
-				isoToMs(customer.lastAmlRekycRequestedAt),
-				"customer",
-				t("customer.detail.timeline.kind.rekyc_requested"),
-				customer.rekycPendingReason?.trim() || undefined
-			);
-		}
-
-		for (const k of kycChecks) {
-			const at = isoToMs(k.checkedAt);
-			if (!Number.isFinite(at)) continue;
-			const tk = `customer.detail.compliance.checkType.${k.type}`;
-			const tl = t(tk);
-			const typeDisp = tl === tk ? k.type : tl;
-			push(
-				`kyc-${k.id}`,
-				at,
-				"kyc",
-				t("customer.detail.timeline.kind.kyc_check", { type: typeDisp, result: kycCheckResultLabel(t, k.result) }),
-				k.provider?.trim() || undefined
-			);
-		}
-
-		for (const task of complianceTasks) {
-			const createdMs = isoToMs(task.createdAt);
-			if (Number.isFinite(createdMs)) {
-				push(
-					`task-c-${task.id}`,
-					createdMs,
-					"task",
-					t("customer.detail.timeline.kind.task_created", { type: task.taskType, status: task.status }),
-					task.instruction?.trim() || undefined
-				);
-			}
-			if (task.resolvedAt) {
-				const rm = isoToMs(task.resolvedAt);
-				if (Number.isFinite(rm)) {
-					push(
-						`task-r-${task.id}`,
-						rm,
-						"task",
-						t("customer.detail.timeline.kind.task_resolved", { type: task.taskType, status: task.status }),
-						task.resolutionNote?.trim() || undefined
-					);
-				}
-			}
-		}
-
-		for (const d of documents) {
-			const typeK = `customer.detail.documents.types.${d.type}`;
-			const typeL = t(typeK);
-			const typeDisp = typeL === typeK ? d.type : typeL;
-			const up = isoToMs(d.uploadedAt);
-			if (Number.isFinite(up)) {
-				push(`doc-u-${d.id}`, up, "document", t("customer.detail.timeline.kind.document_uploaded", { type: typeDisp }));
-			}
-			if (d.reviewedAt) {
-				const rv = isoToMs(d.reviewedAt);
-				if (Number.isFinite(rv)) {
-					push(
-						`doc-r-${d.id}`,
-						rv,
-						"document",
-						t("customer.detail.timeline.kind.document_reviewed", { type: typeDisp, status: d.status })
-					);
-				}
-			}
-		}
-
-		return rows.sort((a, b) => b.at - a.at);
-	}, [customer, kycChecks, complianceTasks, documents, t, locale, i18n.language]);
-
-	const [dossierTimelinePage, setDossierTimelinePage] = useState(0);
-	useEffect(() => {
-		const totalPages = Math.max(1, Math.ceil(dossierTimelineRows.length / DOSSIER_TIMELINE_PAGE_SIZE));
-		const maxPage = totalPages - 1;
-		setDossierTimelinePage(p => (p > maxPage ? maxPage : p));
-	}, [dossierTimelineRows.length]);
-
-	const dossierTimelinePaginated = useMemo(() => {
-		const start = dossierTimelinePage * DOSSIER_TIMELINE_PAGE_SIZE;
-		return dossierTimelineRows.slice(start, start + DOSSIER_TIMELINE_PAGE_SIZE);
-	}, [dossierTimelineRows, dossierTimelinePage]);
 
 	function statusBadgeVariant(status: Customer["status"]): "neutral" | "success" | "warning" | "danger" | "info" {
 		switch (status) {
@@ -1243,6 +1098,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setIdentityDocNumber("");
 			setIdentityDocExpiresOn("");
 			setToast({ message: t("customer.detail.documents.uploaded"), type: "success" });
+			setShowDocumentUpload(false);
 		} catch (e: any) {
 			const errorMessage = e?.message ?? t("customer.detail.documents.uploadError");
 			setError(errorMessage);
@@ -1749,7 +1605,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				}
 			/>
 
-			{customer && (
+			{customer && expectedType === "BUSINESS" && (
 				<div className={`${OPS_CARD_SHELL} px-4 py-3 sm:px-5 sm:py-4`}>
 					<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
 						<div className="flex flex-wrap items-center gap-2">
@@ -1847,7 +1703,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								variant="outline"
 								onClick={() => {
 									setActiveTab("compliance");
-									setComplianceInnerTab("review");
+									setComplianceInnerTab("decision");
 								}}
 							>
 								{t("customer.detail.headerDecision.openRejectSection")}
@@ -1862,17 +1718,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								}}
 							>
 								{t("customer.detail.headerDecision.openScreening")}
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									setActiveTab("compliance");
-									setComplianceInnerTab("tasks");
-								}}
-							>
-								{t("customer.detail.headerDecision.openCreateTask")}
 							</Button>
 							<Button
 								type="button"
@@ -1910,7 +1755,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					))}
 				</nav>
 
-				<div className="min-h-[280px] bg-ops-surface p-6 sm:p-8">
+				<div className="min-h-[280px] bg-ops-surface p-4 sm:p-6 lg:p-8">
 				{activeTab === "dossier" && customer && (
 					<div className="space-y-6">
 					<div className="space-y-6">
@@ -2859,22 +2704,20 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<div className="space-y-6">
 						<div className="grid gap-6 md:grid-cols-2">
 							{/* Carte Adresses */}
-							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-								<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<div className={OPS_CARD_SHELL}>
+								<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center gap-3`}>
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
+											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
 											</svg>
 										</div>
-										<div>
-											<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.addresses.title")}</h2>
-											<p className="text-sm text-slate-500">{t("customer.detail.addresses.subtitle")}</p>
+										<div className="min-w-0">
+											<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.addresses.title")}</h2>
+											<p className="mt-0.5 text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.addresses.subtitle")}</p>
 										</div>
-									</div>
 								</div>
-								<div className="p-6">
+								<div className="p-6 sm:p-8">
 									{addresses.length === 0 ? (
 										<div className="text-sm text-slate-500 py-4">{t("customer.detail.addresses.none")}</div>
 									) : (
@@ -3013,21 +2856,19 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 
 							{/* Formulaire Ajouter une adresse */}
-							<form onSubmit={submitAddress} className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-								<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-									<div className="flex items-center gap-3">
-										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<form onSubmit={submitAddress} className={OPS_CARD_SHELL}>
+								<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center gap-3`}>
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
+											<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 											</svg>
 										</div>
-										<div>
-											<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.addresses.add")}</h2>
-											<p className="text-xs text-slate-500">{t("customer.detail.addresses.addSubtitle")}</p>
+										<div className="min-w-0">
+											<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.addresses.add")}</h2>
+											<p className="mt-0.5 text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.addresses.addSubtitle")}</p>
 										</div>
-									</div>
 								</div>
-								<div className="p-6 space-y-4">
+								<div className="space-y-4 p-6 sm:p-8">
 									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 										<div>
 											<label className="block text-sm mb-1">{t("common.type")}</label>
@@ -3107,21 +2948,19 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					{expectedType === "BUSINESS" && (
 					<div className="space-y-6">
 						{/* Section Related Persons */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-								<div className="flex items-center gap-3">
-									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-										</svg>
-									</div>
-									<div>
-										<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.relatedPersons.title")}</h2>
-										<p className="text-sm text-slate-500">{t("customer.detail.relatedPersons.subtitle")}</p>
-									</div>
+						<div className={OPS_CARD_SHELL}>
+							<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center gap-3`}>
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
+									<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+									</svg>
+								</div>
+								<div className="min-w-0">
+									<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.relatedPersons.title")}</h2>
+									<p className="mt-0.5 text-xs text-ops-fg-muted">{t("customer.detail.relatedPersons.subtitle")}</p>
 								</div>
 							</div>
-							<div className="p-6">
+							<div className="p-6 sm:p-8">
 								{/* Formulaire d'ajout */}
 								<div className="border-b border-slate-200 pb-4 mb-4">
 									<h3 className="text-sm font-semibold text-slate-600 mb-3">
@@ -3386,9 +3225,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 						)}
 						{/* Photo + informations générales (carte unique) */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-					<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-						<div className="flex items-center justify-between gap-4">
+						<div className={OPS_CARD_SHELL}>
+					<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
 							<div className="flex min-w-0 items-center gap-3">
 								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
 									<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -3405,9 +3243,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									{t("customer.detail.generalInfo.edit")}
 								</Button>
 							)}
-						</div>
 					</div>
-					<div className="p-6">
+					<div className="p-6 sm:p-8">
 						{loading && <div className="text-sm text-slate-500 text-center py-4">{t("common.loading")}</div>}
 						{customer && !selfieUrl ? (
 							<div className="mb-6 border-b border-ops-border pb-6">
@@ -3931,24 +3768,47 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
-				{activeTab === "pieces" && (
-					<div className="space-y-6">
-						{/* En-tête */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.documents.title")}</h2>
-								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.documents.subtitle")}</p>
+												{activeTab === "pieces" && (
+					<div className={OPS_CARD_SHELL}>
+						<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
+							<div className="flex min-w-0 flex-1 items-start gap-3">
+								<div
+									className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ops-fg-muted text-white sm:flex"
+									aria-hidden
+								>
+									<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={1.75}
+											d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+										/>
+									</svg>
+								</div>
+								<div className="min-w-0">
+									<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.documents.title")}</h2>
+									<p className="mt-1 text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.documents.subtitle")}</p>
+								</div>
 							</div>
+							{showDocumentUpload ? (
+								<Button variant="outline" size="sm" type="button" onClick={() => setShowDocumentUpload(false)} className="shrink-0">
+									{t("customer.detail.documents.closeUpload")}
+								</Button>
+							) : (
+								<Button variant="outline" size="sm" type="button" onClick={() => setShowDocumentUpload(true)} className="shrink-0">
+									{t("customer.detail.documents.newButton")}
+								</Button>
+							)}
 						</div>
-
-						{/* Carte Upload */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
-								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.documents.upload")}</h3>
-							</div>
-							<div className="p-6">
-								<form onSubmit={submitDocument} className="space-y-4">
-									{(docType === "ID_CARD" || docType === "PASSPORT") && (
+						<div className="space-y-8 p-6 sm:p-8">
+							{showDocumentUpload ? (
+								<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+									<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
+										<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.documents.upload")}</h3>
+									</div>
+									<div className="p-6">
+										<form onSubmit={submitDocument} className="space-y-4">
+										{(docType === "ID_CARD" || docType === "PASSPORT") && (
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100">
 											<div>
 												<label className="block text-sm font-medium text-slate-600 mb-1.5">
@@ -4053,17 +3913,15 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												{docSubmitting ? t("customer.detail.documents.uploading") : t("customer.detail.documents.uploadButton")}
 											</Button>
 										</div>
+									</div>										</form>
 									</div>
-								</form>
+								</div>
+							) : null}
+						<div className="overflow-hidden rounded-ops-lg border border-ops-border bg-ops-surface-muted/30">
+							<div className="border-b border-ops-border bg-ops-surface-muted/50 px-4 py-3 sm:px-5">
+								<h3 className="text-sm font-semibold text-ops-fg">{t("customer.detail.documents.saved")}</h3>
 							</div>
-						</div>
-
-						{/* Carte Liste des documents */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
-								<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.documents.saved")}</h3>
-							</div>
-							<div className="p-6">
+							<div className="p-6 sm:p-8">
 								{documents.length === 0 ? (
 									<div className="text-center py-12 text-slate-500">
 										<svg className="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4136,13 +3994,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{doc.uploadedAt && (
 															<div className="flex items-center gap-2">
 																<span className="text-slate-400">{t("customer.detail.documents.uploadedAt")}:</span>
-																<span>{new Date(doc.uploadedAt).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+																<span>{new Date(doc.uploadedAt).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
 															</div>
 														)}
 														{doc.reviewedAt && (
 															<div className="flex items-center gap-2">
 																<span className="text-slate-400">{t("customer.detail.documents.reviewedAt")}:</span>
-																<span>{new Date(doc.reviewedAt).toLocaleDateString("fr-FR", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+																<span>{new Date(doc.reviewedAt).toLocaleDateString(locale, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
 															</div>
 														)}
 													</div>
@@ -4182,71 +4040,94 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								)}
 							</div>
 						</div>
+						</div>
 					</div>
 				)}
 
+
 				{activeTab === "compliance" && customer && (
-					<div className="space-y-6">
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-								<h2 id="compliance-tab-title" className="text-xl font-semibold tracking-tight text-slate-900">
-									{t("customer.detail.compliance.title")}
-								</h2>
-								<p className="mt-0.5 max-w-prose text-sm text-slate-500">
-									{t("customer.detail.compliance.subtitle")}
-								</p>
+					<div className={OPS_CARD_SHELL}>
+						<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
+							<div className="flex min-w-0 flex-1 items-start gap-3">
+								<div
+									className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ops-fg-muted text-white sm:flex"
+									aria-hidden
+								>
+									<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={1.75}
+											d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+										/>
+									</svg>
+								</div>
+								<div className="min-w-0">
+									<h2 id="compliance-tab-title" className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">
+										{t("customer.detail.compliance.title")}
+									</h2>
+									<p className="mt-0.5 max-w-prose text-xs text-ops-fg-muted sm:text-sm">
+										{t("customer.detail.compliance.subtitle")}
+									</p>
+								</div>
 							</div>
-							<nav
-								role="tablist"
-								aria-label={t("customer.detail.compliance.subTabs.aria")}
-								className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-white px-6"
-							>
-								{(["review", "screeningChecks", "tasks", "timeline", "auditTrail"] as const).map(tid => (
-									<button
-										key={tid}
-										type="button"
-										role="tab"
-										id={`compliance-subtab-${tid}`}
-										aria-selected={complianceInnerTab === tid}
-										aria-controls={`compliance-subpanel-${tid}`}
-										tabIndex={complianceInnerTab === tid ? 0 : -1}
-										onClick={() => {
-											if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
-												setKycAuditTrailPage(0);
-											}
-											setComplianceInnerTab(tid);
-										}}
-										className={`relative shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-t-lg ${
-											complianceInnerTab === tid
-												? "-mb-px border-indigo-600 text-indigo-900"
-												: "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"
-										}`}
-									>
-										{t(`customer.detail.compliance.subTabs.${tid}`)}
-									</button>
-								))}
-							</nav>
 						</div>
+						<nav
+							role="tablist"
+							aria-label={t("customer.detail.compliance.subTabs.aria")}
+							className="flex gap-1 overflow-x-auto border-b border-ops-border bg-ops-surface-muted px-2 py-2 sm:px-3"
+						>
+							{COMPLIANCE_INNER_SUBTAB_ORDER.map(tid => (
+								<button
+									key={tid}
+									type="button"
+									role="tab"
+									id={`compliance-subtab-${tid}`}
+									aria-selected={complianceInnerTab === tid}
+									aria-controls={`compliance-subpanel-${tid}`}
+									tabIndex={complianceInnerTab === tid ? 0 : -1}
+									onClick={() => {
+										if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
+											setKycAuditTrailPage(0);
+										}
+										setComplianceInnerTab(tid);
+									}}
+									className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${
+										complianceInnerTab === tid
+											? "bg-ops-surface text-ops-fg shadow-sm ring-1 ring-ops-border"
+											: "text-ops-fg-muted hover:bg-ops-surface hover:text-ops-fg"
+									}`}
+								>
+									{t(`customer.detail.compliance.subTabs.${tid}`)}
+								</button>
+							))}
+						</nav>
+						<div className="space-y-6 p-4 sm:p-6 lg:p-8">
 
 				{complianceInnerTab === "review" && (
-					<div className="space-y-6">
-						{/* En-tête */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.title")}</h2>
-								<p className="text-sm text-slate-500 mt-0.5">{t("customer.detail.kyc.subtitle")}</p>
+					<div
+						className="space-y-6"
+						role="tabpanel"
+						id="compliance-subpanel-review"
+						aria-labelledby="compliance-subtab-review"
+					>
+						{/* En-tête — Informations personnelles / KYC */}
+						<div className={OPS_CARD_SHELL}>
+							<div className={OPS_CARD_HEADER}>
+								<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.kyc.title")}</h2>
+								<p className="mt-0.5 text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.subtitle")}</p>
 							</div>
 						</div>
 
 						{/* Grille: Revue email, Revue profil, Revue identité */}
 						<div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-								<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
-									<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.emailReview")}</h3>
+							<div className={OPS_CARD_SHELL}>
+								<div className={`${OPS_CARD_HEADER} px-5 py-3.5`}>
+									<h3 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.emailReview")}</h3>
 								</div>
-								<div className="p-5">
-									<div className="flex items-center justify-between mb-4">
-										<span className="text-xs text-slate-500">{t("customer.detail.kyc.currentStatus")}</span>
+								<div className="p-5 sm:p-6">
+									<div className="mb-4 flex items-center justify-between">
+										<span className="text-xs text-ops-fg-muted">{t("customer.detail.kyc.currentStatus")}</span>
 										<Badge variant={reviewStatusBadgeVariant(customer.emailReviewStatus)}>{reviewStatusLabel(customer.emailReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
@@ -4280,13 +4161,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</div>
 							</div>
 
-							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-								<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-3.5">
-									<h3 className="text-sm font-semibold text-slate-800">{t("customer.detail.kyc.identityReview")}</h3>
+							<div className={OPS_CARD_SHELL}>
+								<div className={`${OPS_CARD_HEADER} px-5 py-3.5`}>
+									<h3 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.identityReview")}</h3>
 								</div>
-								<div className="p-5">
-									<div className="flex items-center justify-between mb-4">
-										<span className="text-xs text-slate-500">{t("customer.detail.kyc.currentStatus")}</span>
+								<div className="p-5 sm:p-6">
+									<div className="mb-4 flex items-center justify-between">
+										<span className="text-xs text-ops-fg-muted">{t("customer.detail.kyc.currentStatus")}</span>
 										<Badge variant={reviewStatusBadgeVariant(customer.identityReviewStatus)}>{reviewStatusLabel(customer.identityReviewStatus)}</Badge>
 									</div>
 									<div className="flex gap-2">
@@ -4300,433 +4181,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</div>
 							</div>
 						</div>
-
-						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.kyc.decisionPanel.title")}</h2>
-								<p className="mt-0.5 max-w-3xl text-sm text-slate-500">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
-							</div>
-							<div className="p-5 md:p-6 space-y-8">
-								{/* Synthèse statut dossier */}
-								<section className="rounded-xl border border-slate-200/90 bg-white px-4 py-4 shadow-sm">
-									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-										<div>
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t("customer.detail.kyc.currentStatus")}</p>
-											<p className="text-lg font-semibold text-slate-900 mt-1">
-												{t(`customer.statuses.${customer.status}`)}
-											</p>
-										</div>
-										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 px-3 py-1 text-xs font-medium">
-											<span>{translatedCustomerStatus(t, customer.status)}</span>
-											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-75">
-												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
-											</span>
-										</Badge>
-									</div>
-								</section>
-
-								{/* Étape 1 — Revues ligne (résumé) */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
-											1
-										</div>
-										<div className="min-w-0 flex-1 space-y-3">
-											<div className="flex flex-wrap items-center gap-2">
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepA.title")}</h4>
-												{kycAllLineReviewsApproved ? (
-													<Badge variant="success" className="text-[10px] font-medium">
-														{t("customer.detail.kyc.workflow.stepA.badgeOk")}
-													</Badge>
-												) : null}
-											</div>
-											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepA.description")}</p>
-											<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-												{[
-													{ key: "email", label: t("customer.detail.kyc.emailReview"), s: customer.emailReviewStatus },
-													{ key: "profile", label: t("customer.detail.kyc.profileReview"), s: customer.profileReviewStatus },
-													{ key: "identity", label: t("customer.detail.kyc.identityReview"), s: customer.identityReviewStatus }
-												].map(row => (
-													<div
-														key={row.key}
-														className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2.5"
-													>
-														<span className="text-xs font-medium text-slate-700 truncate">{row.label}</span>
-														<Badge variant={reviewStatusBadgeVariant(row.s)} className="shrink-0 text-[10px]">
-															{reviewStatusLabel(row.s)}
-														</Badge>
-													</div>
-												))}
-											</div>
-											{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
-													{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
-												</p>
-											) : null}
-										</div>
-									</div>
-								</section>
-
-								<div className="border-t border-slate-200/80" aria-hidden />
-
-								{/* Étape 2 — Screening listes */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
-											2
-										</div>
-										<div className="min-w-0 flex-1 space-y-3">
-											<div className="flex flex-wrap items-center gap-2">
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepScreening.title")}</h4>
-												{listScreeningPresence.hasListScreening ? (
-													<Badge variant="success" className="text-[10px] font-medium">
-														{t("customer.detail.kyc.workflow.stepScreening.badgeOk")}
-													</Badge>
-												) : null}
-											</div>
-											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
-											{listScreeningPresence.hasListScreening && listScreeningHasReviewOutcome ? (
-												<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
-													{t("customer.detail.kyc.workflow.stepScreening.reviewOutcomeHint")}
-												</p>
-											) : null}
-											{customer.status === "PENDING_REVIEW" && complianceLoading && kycChecks.length === 0 ? (
-												<p className="text-xs text-slate-500">{t("customer.detail.kyc.workflow.stepScreening.loading")}</p>
-											) : null}
-											{customer.status === "PENDING_REVIEW" && !complianceLoading && !listScreeningPresence.hasListScreening ? (
-												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
-													{t("customer.detail.kyc.workflow.stepScreening.noneHint")}
-												</p>
-											) : null}
-											{listScreeningPresence.hasListScreening ? (
-												<div className="max-w-3xl space-y-2 rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
-													{listScreeningPresence.latestSanctions ? (
-														<div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-															<span className="text-xs font-medium text-slate-700">
-																{t("customer.detail.kyc.workflow.stepScreening.sanctions")}
-															</span>
-															<div className="flex flex-wrap items-center gap-2">
-																<Badge
-																	variant={
-																		listScreeningPresence.latestSanctions.result === "PASS"
-																			? "success"
-																			: listScreeningPresence.latestSanctions.result === "FAIL"
-																				? "danger"
-																				: "warning"
-																	}
-																	className="text-[10px]"
-																>
-																	{kycCheckResultLabel(t, listScreeningPresence.latestSanctions.result)}
-																</Badge>
-																<span className="text-[11px] text-slate-500">
-																	{listScreeningPresence.latestSanctions.checkedAt
-																		? new Date(listScreeningPresence.latestSanctions.checkedAt).toLocaleString(locale)
-																		: "—"}
-																</span>
-															</div>
-														</div>
-													) : null}
-													{listScreeningPresence.latestPep ? (
-														<div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-															<span className="text-xs font-medium text-slate-700">
-																{t("customer.detail.kyc.workflow.stepScreening.pep")}
-															</span>
-															<div className="flex flex-wrap items-center gap-2">
-																<Badge
-																	variant={
-																		listScreeningPresence.latestPep.result === "PASS"
-																			? "success"
-																			: listScreeningPresence.latestPep.result === "FAIL"
-																				? "danger"
-																				: "warning"
-																	}
-																	className="text-[10px]"
-																>
-																	{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
-																</Badge>
-																<span className="text-[11px] text-slate-500">
-																	{listScreeningPresence.latestPep.checkedAt
-																		? new Date(listScreeningPresence.latestPep.checkedAt).toLocaleString(locale)
-																		: "—"}
-																</span>
-															</div>
-														</div>
-													) : null}
-												</div>
-											) : null}
-											{customer.status === "PENDING_REVIEW" ? (
-												<div className="space-y-3">
-													<Button
-														size="sm"
-														variant="outline"
-														disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null}
-														onClick={async () => {
-															if (!id) return;
-															setDecisionPanelScreeningBusy(true);
-															try {
-																await customersApi.runListScreening(id);
-																await loadComplianceData();
-																setToast({ message: t("customer.detail.kyc.workflow.stepScreening.rescreenDone"), type: "success" });
-															} catch (e) {
-																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-															} finally {
-																setDecisionPanelScreeningBusy(false);
-															}
-														}}
-													>
-														{decisionPanelScreeningBusy ? "…" : t("customer.detail.kyc.workflow.stepScreening.rescreening")}
-													</Button>
-													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-														<p className="text-[11px] font-medium text-slate-700 mb-2">
-															{t("customer.detail.kyc.workflow.stepScreening.simulateSanctions")}
-														</p>
-														<div className="flex flex-wrap gap-2">
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "PASS", "decision-panel")}>
-																{kycCheckResultLabel(t, "PASS")}
-															</Button>
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "REVIEW", "decision-panel")}>
-																{kycCheckResultLabel(t, "REVIEW")}
-															</Button>
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "FAIL", "decision-panel")}>
-																{kycCheckResultLabel(t, "FAIL")}
-															</Button>
-														</div>
-													</div>
-													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-														<p className="text-[11px] font-medium text-slate-700 mb-2">
-															{t("customer.detail.kyc.workflow.stepScreening.simulatePep")}
-														</p>
-														<div className="flex flex-wrap gap-2">
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "PASS", "decision-panel")}>
-																{kycCheckResultLabel(t, "PASS")}
-															</Button>
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "REVIEW", "decision-panel")}>
-																{kycCheckResultLabel(t, "REVIEW")}
-															</Button>
-															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "FAIL", "decision-panel")}>
-																{kycCheckResultLabel(t, "FAIL")}
-															</Button>
-														</div>
-													</div>
-												</div>
-											) : null}
-										</div>
-									</div>
-								</section>
-
-								<div className="border-t border-slate-200/80" aria-hidden />
-
-								{/* Étape 3 — Risque */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
-											3
-										</div>
-										<div className="min-w-0 flex-1 space-y-4">
-											<div>
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepB.title")}</h4>
-												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepB.description")}</p>
-											</div>
-											{customer.status === "PENDING_REVIEW" ? (
-												<div className="max-w-3xl rounded-xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm">
-													<p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-900">
-														{t("customer.detail.kyc.evaluationPep.title")}
-													</p>
-													<p className="mt-1 text-xs text-slate-700">{t("customer.detail.kyc.evaluationPep.hint")}</p>
-													<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-														<label className="flex cursor-pointer items-center gap-2 text-sm text-slate-900">
-															<input
-																type="checkbox"
-																checked={verifyPep}
-																onChange={e => setVerifyPep(e.target.checked)}
-																className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-															/>
-															<span>{t("customer.detail.kyc.evaluationPep.checkbox")}</span>
-														</label>
-														<span className="text-xs text-slate-600">
-															{t("customer.detail.kyc.evaluationPep.profileFlag")}{" "}
-															<strong>{customer.pepFlag ? t("customer.detail.kyc.evaluationPep.yes") : t("customer.detail.kyc.evaluationPep.no")}</strong>
-														</span>
-													</div>
-												</div>
-											) : null}
-											<div className="min-w-0 max-w-3xl">
-												{(customer.status === "PENDING_REVIEW" || kycOnboardingRisk != null) && (
-												<div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 text-sm shadow-sm">
-													{kycOnboardingRisk ? (
-														<>
-															<div className="mb-4 flex flex-wrap items-stretch gap-3">
-																<div
-																	className={`flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-lg border px-3 py-2.5 ${
-																		riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "danger"
-																			? "border-red-200/90 bg-red-50/60"
-																			: riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "warning"
-																				? "border-amber-200/90 bg-amber-50/50"
-																				: "border-emerald-200/90 bg-emerald-50/40"
-																	}`}
-																>
-																	<span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-																		{t("customer.detail.kyc.onboardingRisk.proposed")}
-																	</span>
-																	<div className="mt-0.5 flex items-baseline gap-0.5">
-																		<span className="text-2xl font-bold tabular-nums tracking-tight text-slate-900">
-																			{kycOnboardingRisk.proposedRiskScore}
-																		</span>
-																		<span className="text-xs font-medium text-slate-500">/100</span>
-																	</div>
-																</div>
-																<div className="flex min-w-[6.5rem] flex-col justify-center gap-1 rounded-lg border border-slate-200/90 bg-slate-50/80 px-3 py-2.5">
-																	<span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-																		{t("customer.detail.kyc.onboardingRisk.band")}
-																	</span>
-																	<Badge variant={onboardingRiskBandBadgeVariant(kycOnboardingRisk.riskBand)} className="w-fit text-[11px] font-semibold">
-																		{onboardingRiskBandLabel(kycOnboardingRisk.riskBand)}
-																	</Badge>
-																</div>
-															</div>
-
-															<div className="mb-4 rounded-lg border border-slate-200/80 bg-slate-50/50">
-																<div className="border-b border-slate-200/70 bg-white/90 px-3 py-1.5">
-																	<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
-																		{t("customer.detail.kyc.onboardingRisk.components")}
-																	</p>
-																</div>
-																<ul className="max-h-40 divide-y divide-slate-200/60 overflow-y-auto">
-																	{kycOnboardingRisk.components.map((c, i) => (
-																		<li key={`${c.code}-${i}`} className="px-3 py-2">
-																			<div className="flex flex-wrap items-baseline justify-between gap-2 gap-y-1">
-																				<div className="flex min-w-0 flex-1 items-center gap-2">
-																					<span className="shrink-0 rounded bg-slate-200/90 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-slate-800">
-																						{c.code}
-																					</span>
-																					<span className="truncate text-xs font-medium text-slate-800" title={c.label}>
-																						{c.label}
-																					</span>
-																				</div>
-																				<span className="shrink-0 rounded-md bg-slate-200/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-slate-800">
-																					{t("customer.detail.kyc.onboardingRisk.floorShort", { n: c.floorAfterComponent })}
-																				</span>
-																			</div>
-																			<p className="mt-1 break-words text-[11px] leading-snug text-slate-600">{c.detail}</p>
-																		</li>
-																	))}
-																</ul>
-															</div>
-
-															<p className="text-[10px] text-slate-500">
-																<span className="font-medium uppercase tracking-wide">{t("customer.detail.kyc.onboardingRisk.algorithm")}</span>{" "}
-																<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-800">{kycOnboardingRisk.algorithmVersion}</code>
-															</p>
-														</>
-													) : customer.status === "PENDING_REVIEW" && !listScreeningPresence.hasListScreening ? (
-														<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
-															{t("customer.detail.kyc.workflow.stepB.needScreeningFirst")}
-														</p>
-													) : customer.status === "PENDING_REVIEW" && listScreeningPresence.hasListScreening && !kycOnboardingRisk ? (
-														<p className="text-xs leading-relaxed text-slate-600">{t("customer.detail.kyc.workflow.stepB.engineLoading")}</p>
-													) : null}
-												</div>
-												)}
-											</div>
-										</div>
-									</div>
-								</section>
-
-								<div className="border-t border-slate-200/80" aria-hidden />
-
-								{/* Étape 4 — Décision finale */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-sm ring-2 ring-indigo-200/80">
-											4
-										</div>
-										<div className="min-w-0 flex-1 space-y-4">
-											<div>
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepC.title")}</h4>
-												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepC.description")}</p>
-											</div>
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0 md:divide-x md:divide-slate-200">
-												<div className="md:pr-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
-													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.verify.title")}</h5>
-													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.verify.descriptionNoManualScore")}</p>
-													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
-															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
-														</p>
-													) : null}
-													{kycOnboardingRisk?.blocked === true ? (
-														<p className="mb-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
-															{t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")}
-														</p>
-													) : null}
-													<Button
-														onClick={() => void doVerifyKyc()}
-														disabled={
-															kycSubmitting !== null ||
-															!canFinalizeKyc ||
-															!listScreeningPresence.hasListScreening ||
-															kycOnboardingRisk == null ||
-															kycOnboardingRisk.blocked === true
-														}
-														size="sm"
-														className="bg-emerald-600 text-white hover:bg-emerald-700"
-													>
-														{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
-													</Button>
-												</div>
-												<div className="md:pl-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
-													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.reject.title")}</h5>
-													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
-													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
-															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
-														</p>
-													) : null}
-													<label className="mb-2 block text-xs font-medium text-slate-700">{t("customer.detail.kyc.reject.reason")}</label>
-													<textarea
-														value={rejectionReason}
-														onChange={e => setRejectionReason(e.target.value)}
-														placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
-														className="mb-3 w-full resize-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs"
-														rows={3}
-													/>
-													<div className="flex flex-wrap gap-2">
-														<Button
-															size="sm"
-															variant="outline"
-															onClick={() => void doRejectKyc()}
-															disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
-															className="border-red-300 text-red-700 hover:bg-red-50"
-														>
-															{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
-														</Button>
-														<Button
-															size="sm"
-															variant="ghost"
-															onClick={() => setRejectionReason("")}
-															disabled={kycSubmitting !== null}
-														>
-															{t("customer.detail.generalInfo.cancel")}
-														</Button>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								</section>
-							</div>
-						</div>
-
-						{customer.rejectionReason && (
-							<div className="rounded-xl border border-red-200 bg-red-50 p-4">
-								<h3 className="text-sm font-semibold text-red-900 mb-2">{t("customer.detail.kyc.reject.previousReason")}</h3>
-								<p className="text-sm text-red-800">{customer.rejectionReason}</p>
-							</div>
-						)}
 					</div>
 				)}
-
 
 						{complianceInnerTab === "screeningChecks" && (
 					<div
@@ -4735,47 +4191,36 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						id="compliance-subpanel-screeningChecks"
 						aria-labelledby="compliance-subtab-screeningChecks"
 					>
-						<section className={OPS_CARD_SHELL}>
-							<div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
-								<div className="min-w-0 flex-1 space-y-4">
-									<div className="flex flex-wrap items-center gap-2 sm:gap-3">
-										<Badge variant={statusBadgeVariant(customer.status)} className="text-xs font-medium">
-											<span>{translatedCustomerStatus(t, customer.status)}</span>
-											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
-												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
-											</span>
-										</Badge>
-										<span className="text-xs text-slate-400" aria-hidden>
-											|
-										</span>
-										<span className="text-xs text-slate-700">
-											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.typeLabel")}:</span>{" "}
-											{t(`customer.types.${customer.type}`)}
-										</span>
-										{typeof customer.riskScore === "number" && (
-											<>
-												<span className="text-xs text-slate-400" aria-hidden>
-													|
-												</span>
-												<span className="text-xs text-slate-700">
-													<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.riskScore")}:</span>{" "}
-													{customer.riskScore}/100
-												</span>
-											</>
-										)}
-										<span className="text-xs text-slate-400" aria-hidden>
-											|
-										</span>
-										<span className="text-xs text-slate-700">
-											<span className="font-medium text-slate-500">{t("customer.detail.headerStrip.pepLabel")}:</span>{" "}
-											{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
-										</span>
-									</div>
-									<p className="text-xs leading-relaxed text-slate-500">{t("customer.detail.compliance.summaryStripSubtitle")}</p>
-								</div>
-								<div className="flex shrink-0 flex-wrap items-stretch gap-2 border-t border-indigo-200/35 pt-4 sm:items-center lg:flex-col lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+						<div className="flex flex-wrap items-center justify-between gap-3">
+							<div className="flex flex-wrap items-center gap-2">
+								<Button
+									type="button"
+									size="sm"
+									variant={showListScreeningCard ? "outline" : "default"}
+									onClick={() => setShowListScreeningCard(v => !v)}
+									aria-expanded={showListScreeningCard}
+								>
+									{showListScreeningCard
+										? t("customer.detail.compliance.listScreeningClose")
+										: t("customer.detail.compliance.newListScreening")}
+								</Button>
+								<Button type="button" size="sm" variant="outline" disabled={complianceLoading} onClick={() => void loadComplianceData()}>
+									{t("customer.detail.compliance.refresh")}
+								</Button>
+							</div>
+						</div>
+
+						{showListScreeningCard ? (
+						<section className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-4">
+								<h3 className="text-sm font-semibold tracking-tight text-slate-900">
+									{t("customer.detail.compliance.screeningBlockTitle")}
+								</h3>
+								<p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600">
+									{t("customer.detail.compliance.screeningBlockHint")}
+								</p>
+								<div className="mt-4 flex flex-wrap gap-2">
 									<Button
-										className="min-h-9 justify-center lg:min-w-[12.5rem]"
 										size="sm"
 										variant="outline"
 										disabled={complianceLoading || complianceAction !== null}
@@ -4794,27 +4239,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									>
 										{complianceAction === "screen" ? "…" : t("customer.detail.compliance.runScreening")}
 									</Button>
-									<Button
-										className="min-h-9 justify-center lg:min-w-[12.5rem]"
-										size="sm"
-										variant="outline"
-										disabled={complianceLoading}
-										onClick={() => void loadComplianceData()}
-									>
-										{t("customer.detail.compliance.refresh")}
-									</Button>
 								</div>
-							</div>
-						</section>
-
-						<section className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-5 py-4">
-								<h3 className="text-sm font-semibold tracking-tight text-slate-900">
-									{t("customer.detail.compliance.screeningBlockTitle")}
-								</h3>
-								<p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-600">
-									{t("customer.detail.compliance.screeningBlockHint")}
-								</p>
 							</div>
 							<div className="p-5">
 								<div className="rounded-lg border border-ops-border bg-ops-surface-muted p-4 sm:p-5">
@@ -4891,6 +4316,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</div>
 							</div>
 						</section>
+						) : null}
 
 						{(customer.rekycPendingReason || customer.lastAmlRekycRequestedAt) && (
 							<div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -4903,20 +4329,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								{customer.rekycPendingReason && <p className="text-sm text-amber-900">{customer.rekycPendingReason}</p>}
 							</div>
 						)}
-						<section className="space-y-4" aria-labelledby="compliance-dossier-tracking">
-							<h3
-								id="compliance-dossier-tracking"
-								className="px-0.5 text-sm font-semibold tracking-tight text-slate-900"
-							>
-								{t("customer.detail.compliance.dossierTrackingTitle")}
-							</h3>
-							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
+						<section className={OPS_CARD_SHELL} aria-labelledby="compliance-dossier-tracking">
 							<div className="flex flex-wrap items-start justify-between gap-3 border-b border-ops-border bg-ops-surface-muted px-5 py-4">
 								<div>
-									<h3 className="text-sm font-semibold tracking-tight text-slate-900">
+									<h3 id="compliance-dossier-tracking" className="text-sm font-semibold tracking-tight text-slate-900">
 										{t("customer.detail.compliance.checksTitle")}
 									</h3>
-									<p className="mt-0.5 text-xs text-slate-500">{t("customer.detail.compliance.checksSubtitle")}</p>
 								</div>
 								{kycChecks.length > 0 && !complianceLoading ? (
 									<Badge variant="neutral" className="shrink-0 text-[11px] font-medium tabular-nums">
@@ -5024,236 +4442,445 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									/>
 								</>
 							)}
-							</div>
 						</section>
 						</div>
 					)}
 
-					{complianceInnerTab === "tasks" && (
-						<div
-							className="space-y-4"
-							role="tabpanel"
-							id="compliance-subpanel-tasks"
-							aria-labelledby="compliance-subtab-tasks"
-						>
-							<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-								<div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/90 px-5 py-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
-									<h3 className="shrink-0 text-sm font-semibold text-slate-800">{t("customer.detail.compliance.tasksTitle")}</h3>
-									<div className="flex flex-1 flex-col gap-2 min-w-[12rem] sm:min-w-0 sm:max-w-md sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-										<Input
-											className="h-9 w-full text-xs sm:min-w-0 sm:flex-1"
-											placeholder={t("customer.detail.compliance.instruction")}
-											value={eddInstruction}
-											onChange={e => setEddInstruction(e.target.value)}
-										/>
-										<Button
-											size="sm"
-											disabled={complianceAction !== null || !eddInstruction.trim()}
-											onClick={async () => {
-												setComplianceAction("edd");
-												try {
-													await customersApi.createComplianceTask(id, { taskType: "EDD_REVIEW", instruction: eddInstruction.trim() });
-													setEddInstruction("");
-													await loadComplianceData();
-													setToast({ message: t("customer.detail.compliance.eddCreated"), type: "success" });
-												} catch (e) {
-													setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-												} finally {
-													setComplianceAction(null);
-												}
-											}}
-										>
-											{complianceAction === "edd" ? "…" : t("customer.detail.compliance.createEdd")}
-										</Button>
+				{complianceInnerTab === "decision" && (
+					<div
+						className="space-y-6"
+						role="tabpanel"
+						id="compliance-subpanel-decision"
+						aria-labelledby="compliance-subtab-decision"
+					>
+						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
+						<div className={OPS_CARD_SHELL}>
+							<div className={OPS_CARD_HEADER}>
+								<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.kyc.decisionPanel.title")}</h2>
+								<p className="mt-0.5 max-w-3xl text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
+							</div>
+							<div className="space-y-8 p-6 sm:p-8">
+								{/* Synthèse statut dossier */}
+								<section className="rounded-ops-lg border border-ops-border bg-ops-surface-muted/50 px-4 py-4 shadow-sm sm:px-5">
+									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+										<div>
+											<p className="text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">{t("customer.detail.kyc.currentStatus")}</p>
+											<p className="mt-1 text-lg font-semibold text-ops-fg">
+												{t(`customer.statuses.${customer.status}`)}
+											</p>
+										</div>
+										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 px-3 py-1 text-xs font-medium">
+											<span>{translatedCustomerStatus(t, customer.status)}</span>
+											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-75">
+												{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
+											</span>
+										</Badge>
 									</div>
-								</div>
-								<div className="p-4 space-y-3">
-									{complianceLoading ? (
-										<p className="text-sm text-slate-500">{t("customer.detail.loading")}</p>
-									) : complianceTasks.length === 0 ? (
-										<p className="text-sm text-slate-500">{t("customer.detail.compliance.emptyTasks")}</p>
-									) : (
-										complianceTasks.map(task => (
-											<div key={task.id} className="rounded-lg border border-slate-200 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-												<div>
-													<div className="flex items-center gap-2">
-														<Badge variant={task.status === "OPEN" ? "warning" : "success"}>{task.taskType}</Badge>
-														<span className="text-xs text-slate-500">{task.status}</span>
+								</section>
+
+								{/* Étape 1 — Revues ligne (résumé) */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+											1
+										</div>
+										<div className="min-w-0 flex-1 space-y-3">
+											<div className="flex flex-wrap items-center gap-2">
+												<h4 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.workflow.stepA.title")}</h4>
+												{kycAllLineReviewsApproved ? (
+													<Badge variant="success" className="text-[10px] font-medium">
+														{t("customer.detail.kyc.workflow.stepA.badgeOk")}
+													</Badge>
+												) : null}
+											</div>
+											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepA.description")}</p>
+											<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+												{[
+													{ key: "email", label: t("customer.detail.kyc.emailReview"), s: customer.emailReviewStatus },
+													{ key: "profile", label: t("customer.detail.kyc.profileReview"), s: customer.profileReviewStatus },
+													{ key: "identity", label: t("customer.detail.kyc.identityReview"), s: customer.identityReviewStatus }
+												].map(row => (
+													<div
+														key={row.key}
+														className="flex items-center justify-between gap-2 rounded-lg border border-ops-border bg-ops-surface-muted/60 px-3 py-2.5"
+													>
+														<span className="truncate text-xs font-medium text-ops-fg">{row.label}</span>
+														<Badge variant={reviewStatusBadgeVariant(row.s)} className="shrink-0 text-[10px]">
+															{reviewStatusLabel(row.s)}
+														</Badge>
 													</div>
-													{task.instruction && <p className="text-sm text-slate-600 mt-1">{task.instruction}</p>}
+												))}
+											</div>
+											{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+												</p>
+											) : null}
+										</div>
+									</div>
+								</section>
+
+								<div className="border-t border-ops-border" aria-hidden />
+
+								{/* Étape 2 — Screening listes */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+											2
+										</div>
+										<div className="min-w-0 flex-1 space-y-3">
+											<div className="flex flex-wrap items-center gap-2">
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepScreening.title")}</h4>
+												{listScreeningPresence.hasListScreening ? (
+													<Badge variant="success" className="text-[10px] font-medium">
+														{t("customer.detail.kyc.workflow.stepScreening.badgeOk")}
+													</Badge>
+												) : null}
+											</div>
+											<p className="text-xs text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
+											{listScreeningPresence.hasListScreening && listScreeningHasReviewOutcome ? (
+												<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.workflow.stepScreening.reviewOutcomeHint")}
+												</p>
+											) : null}
+											{customer.status === "PENDING_REVIEW" && complianceLoading && kycChecks.length === 0 ? (
+												<p className="text-xs text-slate-500">{t("customer.detail.kyc.workflow.stepScreening.loading")}</p>
+											) : null}
+											{customer.status === "PENDING_REVIEW" && !complianceLoading && !listScreeningPresence.hasListScreening ? (
+												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
+													{t("customer.detail.kyc.workflow.stepScreening.noneHint")}
+												</p>
+											) : null}
+											{listScreeningPresence.hasListScreening ? (
+												<div className="max-w-3xl space-y-2 rounded-ops-lg border border-ops-border bg-ops-surface px-4 py-3 text-sm text-ops-fg shadow-sm">
+													{listScreeningPresence.latestSanctions ? (
+														<div className="flex flex-wrap items-center justify-between gap-2 border-b border-ops-border pb-2">
+															<span className="text-xs font-medium text-ops-fg">
+																{t("customer.detail.kyc.workflow.stepScreening.sanctions")}
+															</span>
+															<div className="flex flex-wrap items-center gap-2">
+																<Badge
+																	variant={
+																		listScreeningPresence.latestSanctions.result === "PASS"
+																			? "success"
+																			: listScreeningPresence.latestSanctions.result === "FAIL"
+																				? "danger"
+																				: "warning"
+																	}
+																	className="text-[10px]"
+																>
+																	{kycCheckResultLabel(t, listScreeningPresence.latestSanctions.result)}
+																</Badge>
+																<span className="text-[11px] text-ops-fg-muted">
+																	{listScreeningPresence.latestSanctions.checkedAt
+																		? new Date(listScreeningPresence.latestSanctions.checkedAt).toLocaleString(locale)
+																		: "—"}
+																</span>
+															</div>
+														</div>
+													) : null}
+													{listScreeningPresence.latestPep ? (
+														<div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+															<span className="text-xs font-medium text-ops-fg">
+																{t("customer.detail.kyc.workflow.stepScreening.pep")}
+															</span>
+															<div className="flex flex-wrap items-center gap-2">
+																<Badge
+																	variant={
+																		listScreeningPresence.latestPep.result === "PASS"
+																			? "success"
+																			: listScreeningPresence.latestPep.result === "FAIL"
+																				? "danger"
+																				: "warning"
+																	}
+																	className="text-[10px]"
+																>
+																	{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
+																</Badge>
+																<span className="text-[11px] text-slate-500">
+																	{listScreeningPresence.latestPep.checkedAt
+																		? new Date(listScreeningPresence.latestPep.checkedAt).toLocaleString(locale)
+																		: "—"}
+																</span>
+															</div>
+														</div>
+													) : null}
 												</div>
-												{task.status === "OPEN" && (
-													<div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-														<Input
-															className="w-full sm:w-48 h-9 text-xs"
-															placeholder={t("customer.detail.compliance.resolution")}
-															value={taskResolution[task.id] ?? ""}
-															onChange={e => setTaskResolution(prev => ({ ...prev, [task.id]: e.target.value }))}
-														/>
-														<Button
-															size="sm"
-															disabled={complianceAction !== null}
-															onClick={async () => {
-																setComplianceAction("done-" + task.id);
-																try {
-																	await customersApi.patchComplianceTask(id, task.id, {
-																		status: "DONE" as ComplianceTaskStatus,
-																		resolutionNote: taskResolution[task.id]?.trim() || undefined
-																	});
-																	await loadComplianceData();
-																	setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
-																} catch (e) {
-																	setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-																} finally {
-																	setComplianceAction(null);
-																}
-															}}
-														>
-															{t("customer.detail.compliance.markDone")}
-														</Button>
+											) : null}
+											{customer.status === "PENDING_REVIEW" ? (
+												<div className="space-y-3">
+													<Button
+														size="sm"
+														variant="outline"
+														disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null}
+														onClick={async () => {
+															if (!id) return;
+															setDecisionPanelScreeningBusy(true);
+															try {
+																await customersApi.runListScreening(id);
+																await loadComplianceData();
+																setToast({ message: t("customer.detail.kyc.workflow.stepScreening.rescreenDone"), type: "success" });
+															} catch (e) {
+																setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+															} finally {
+																setDecisionPanelScreeningBusy(false);
+															}
+														}}
+													>
+														{decisionPanelScreeningBusy ? "…" : t("customer.detail.kyc.workflow.stepScreening.rescreening")}
+													</Button>
+													<div className="rounded-ops-md border border-ops-border bg-ops-surface-muted/60 p-3">
+														<p className="mb-2 text-[11px] font-medium text-ops-fg">
+															{t("customer.detail.kyc.workflow.stepScreening.simulateSanctions")}
+														</p>
+														<div className="flex flex-wrap gap-2">
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "PASS", "decision-panel")}>
+																{kycCheckResultLabel(t, "PASS")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "REVIEW", "decision-panel")}>
+																{kycCheckResultLabel(t, "REVIEW")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("SANCTIONS_SCREENING", "FAIL", "decision-panel")}>
+																{kycCheckResultLabel(t, "FAIL")}
+															</Button>
+														</div>
+													</div>
+													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+														<p className="text-[11px] font-medium text-slate-700 mb-2">
+															{t("customer.detail.kyc.workflow.stepScreening.simulatePep")}
+														</p>
+														<div className="flex flex-wrap gap-2">
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "PASS", "decision-panel")}>
+																{kycCheckResultLabel(t, "PASS")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "REVIEW", "decision-panel")}>
+																{kycCheckResultLabel(t, "REVIEW")}
+															</Button>
+															<Button size="sm" variant="outline" disabled={decisionPanelScreeningBusy || complianceLoading || kycSubmitting !== null} onClick={() => void simulateScreeningCheck("PEP_SCREENING", "FAIL", "decision-panel")}>
+																{kycCheckResultLabel(t, "FAIL")}
+															</Button>
+														</div>
+													</div>
+												</div>
+											) : null}
+										</div>
+									</div>
+								</section>
+
+								<div className="border-t border-ops-border" aria-hidden />
+
+								{/* Étape 3 — Risque */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+											3
+										</div>
+										<div className="min-w-0 flex-1 space-y-4">
+											<div>
+												<h4 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.workflow.stepB.title")}</h4>
+												<p className="mt-1 text-xs text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepB.description")}</p>
+											</div>
+											{customer.status === "PENDING_REVIEW" ? (
+												<div className="max-w-3xl rounded-xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm">
+													<p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-900">
+														{t("customer.detail.kyc.evaluationPep.title")}
+													</p>
+													<p className="mt-1 text-xs text-slate-700">{t("customer.detail.kyc.evaluationPep.hint")}</p>
+													<div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+														<label className="flex cursor-pointer items-center gap-2 text-sm text-slate-900">
+															<input
+																type="checkbox"
+																checked={verifyPep}
+																onChange={e => setVerifyPep(e.target.checked)}
+																className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+															/>
+															<span>{t("customer.detail.kyc.evaluationPep.checkbox")}</span>
+														</label>
+														<span className="text-xs text-slate-600">
+															{t("customer.detail.kyc.evaluationPep.profileFlag")}{" "}
+															<strong>{customer.pepFlag ? t("customer.detail.kyc.evaluationPep.yes") : t("customer.detail.kyc.evaluationPep.no")}</strong>
+														</span>
+													</div>
+												</div>
+											) : null}
+											<div className="min-w-0 max-w-3xl">
+												{(customer.status === "PENDING_REVIEW" || kycOnboardingRisk != null) && (
+												<div className="rounded-ops-lg border border-ops-border bg-ops-surface px-4 py-3 text-sm text-ops-fg shadow-sm">
+													{kycOnboardingRisk ? (
+														<>
+															<div className="mb-4 flex flex-wrap items-stretch gap-3">
+																<div
+																	className={`flex min-w-[7.5rem] flex-1 flex-col justify-center rounded-lg border px-3 py-2.5 ${
+																		riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "danger"
+																			? "border-red-200/90 bg-red-50/60"
+																			: riskBadgeVariant(kycOnboardingRisk.proposedRiskScore) === "warning"
+																				? "border-amber-200/90 bg-amber-50/50"
+																				: "border-emerald-200/90 bg-emerald-50/40"
+																	}`}
+																>
+																	<span className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+																		{t("customer.detail.kyc.onboardingRisk.proposed")}
+																	</span>
+																	<div className="mt-0.5 flex items-baseline gap-0.5">
+																		<span className="text-2xl font-bold tabular-nums tracking-tight text-slate-900">
+																			{kycOnboardingRisk.proposedRiskScore}
+																		</span>
+																		<span className="text-xs font-medium text-slate-500">/100</span>
+																	</div>
+																</div>
+																<div className="flex min-w-[6.5rem] flex-col justify-center gap-1 rounded-lg border border-ops-border bg-ops-surface-muted/60 px-3 py-2.5">
+																	<span className="text-[10px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+																		{t("customer.detail.kyc.onboardingRisk.band")}
+																	</span>
+																	<Badge variant={onboardingRiskBandBadgeVariant(kycOnboardingRisk.riskBand)} className="w-fit text-[11px] font-semibold">
+																		{onboardingRiskBandLabel(kycOnboardingRisk.riskBand)}
+																	</Badge>
+																</div>
+															</div>
+
+															<div className="mb-4 rounded-lg border border-slate-200/80 bg-slate-50/50">
+																<div className="border-b border-slate-200/70 bg-white/90 px-3 py-1.5">
+																	<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+																		{t("customer.detail.kyc.onboardingRisk.components")}
+																	</p>
+																</div>
+																<ul className="max-h-40 divide-y divide-slate-200/60 overflow-y-auto">
+																	{kycOnboardingRisk.components.map((c, i) => (
+																		<li key={`${c.code}-${i}`} className="px-3 py-2">
+																			<div className="flex flex-wrap items-baseline justify-between gap-2 gap-y-1">
+																				<div className="flex min-w-0 flex-1 items-center gap-2">
+																					<span className="shrink-0 rounded bg-ops-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ops-fg">
+																						{c.code}
+																					</span>
+																					<span className="truncate text-xs font-medium text-ops-fg" title={c.label}>
+																						{c.label}
+																					</span>
+																				</div>
+																				<span className="shrink-0 rounded-md bg-ops-surface-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ops-fg">
+																					{t("customer.detail.kyc.onboardingRisk.floorShort", { n: c.floorAfterComponent })}
+																				</span>
+																			</div>
+																			<p className="mt-1 break-words text-[11px] leading-snug text-ops-fg-muted">{c.detail}</p>
+																		</li>
+																	))}
+																</ul>
+															</div>
+
+															<p className="text-[10px] text-slate-500">
+																<span className="font-medium uppercase tracking-wide">{t("customer.detail.kyc.onboardingRisk.algorithm")}</span>{" "}
+																<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-800">{kycOnboardingRisk.algorithmVersion}</code>
+															</p>
+														</>
+													) : customer.status === "PENDING_REVIEW" && !listScreeningPresence.hasListScreening ? (
+														<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
+															{t("customer.detail.kyc.workflow.stepB.needScreeningFirst")}
+														</p>
+													) : customer.status === "PENDING_REVIEW" && listScreeningPresence.hasListScreening && !kycOnboardingRisk ? (
+														<p className="text-xs leading-relaxed text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepB.engineLoading")}</p>
+													) : null}
+												</div>
+												)}
+											</div>
+										</div>
+									</div>
+								</section>
+
+								<div className="border-t border-ops-border" aria-hidden />
+
+								{/* Étape 4 — Décision finale */}
+								<section>
+									<div className="flex flex-wrap items-start gap-3">
+										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+											4
+										</div>
+										<div className="min-w-0 flex-1 space-y-4">
+											<div>
+												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepC.title")}</h4>
+												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepC.description")}</p>
+											</div>
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0 md:divide-x md:divide-ops-border">
+												<div className="rounded-ops-lg border border-ops-border bg-ops-surface-muted/30 p-4 shadow-sm md:rounded-none md:border-0 md:bg-transparent md:p-0 md:pr-4 md:shadow-none">
+													<h5 className="mb-1 text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.verify.title")}</h5>
+													<p className="mb-3 text-xs text-ops-fg-muted">{t("customer.detail.kyc.verify.descriptionNoManualScore")}</p>
+													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+														</p>
+													) : null}
+													{kycOnboardingRisk?.blocked === true ? (
+														<p className="mb-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+															{t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")}
+														</p>
+													) : null}
+													<Button
+														onClick={() => void doVerifyKyc()}
+														disabled={
+															kycSubmitting !== null ||
+															!canFinalizeKyc ||
+															!listScreeningPresence.hasListScreening ||
+															kycOnboardingRisk == null ||
+															kycOnboardingRisk.blocked === true
+														}
+														size="sm"
+														className="bg-emerald-600 text-white hover:bg-emerald-700"
+													>
+														{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
+													</Button>
+												</div>
+												<div className="md:pl-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
+													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.reject.title")}</h5>
+													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
+													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
+														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
+														</p>
+													) : null}
+													<label className="mb-2 block text-xs font-medium text-ops-fg">{t("customer.detail.kyc.reject.reason")}</label>
+													<textarea
+														value={rejectionReason}
+														onChange={e => setRejectionReason(e.target.value)}
+														placeholder={t("customer.detail.kyc.reject.reasonPlaceholder")}
+														className="mb-3 w-full resize-none rounded-ops-md border border-ops-border bg-ops-surface px-2 py-1.5 text-xs text-ops-fg placeholder:text-ops-fg-muted focus:border-ops-ring focus:outline-none focus:ring-2 focus:ring-ops-ring/25"
+														rows={3}
+													/>
+													<div className="flex flex-wrap gap-2">
 														<Button
 															size="sm"
 															variant="outline"
-															disabled={complianceAction !== null}
-															onClick={async () => {
-																setComplianceAction("cx-" + task.id);
-																try {
-																	await customersApi.patchComplianceTask(id, task.id, {
-																		status: "CANCELLED" as ComplianceTaskStatus,
-																		resolutionNote: taskResolution[task.id]?.trim() || undefined
-																	});
-																	await loadComplianceData();
-																	setToast({ message: t("customer.detail.compliance.taskUpdated"), type: "success" });
-																} catch (e) {
-																	setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
-																} finally {
-																	setComplianceAction(null);
-																}
-															}}
+															onClick={() => void doRejectKyc()}
+															disabled={kycSubmitting !== null || !rejectionReason.trim() || !canFinalizeKyc}
+															className="border-red-300 text-red-700 hover:bg-red-50"
 														>
-															{t("customer.detail.compliance.cancel")}
+															{kycSubmitting === "reject" ? t("customer.detail.kyc.reject.rejecting") : t("customer.detail.kyc.reject.confirm")}
+														</Button>
+														<Button
+															size="sm"
+															variant="ghost"
+															onClick={() => setRejectionReason("")}
+															disabled={kycSubmitting !== null}
+														>
+															{t("customer.detail.generalInfo.cancel")}
 														</Button>
 													</div>
-												)}
+												</div>
 											</div>
-										))
-									)}
-								</div>
-							</div>
-						</div>
-					)}
-
-					{complianceInnerTab === "timeline" && (
-						<div
-							className="space-y-4"
-							role="tabpanel"
-							id="compliance-subpanel-timeline"
-							aria-labelledby="compliance-subtab-timeline"
-						>
-						<section className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card" aria-labelledby="compliance-events-heading">
-							<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
-								<h3 id="compliance-events-heading" className="text-sm font-semibold tracking-tight text-slate-900">
-									{t("customer.detail.timeline.title")}
-								</h3>
-								<p className="mt-1 text-xs text-slate-500 leading-relaxed">{t("customer.detail.timeline.subtitle")}</p>
-							</div>
-							{dossierTimelineRows.length === 0 ? (
-								<p className="px-5 py-8 text-center text-sm text-slate-500">{t("customer.detail.timeline.empty")}</p>
-							) : (
-								<>
-									<div className="overflow-x-auto">
-										<table className="min-w-full divide-y divide-slate-200 text-sm">
-											<thead className="bg-slate-50/95">
-												<tr>
-													<th
-														scope="col"
-														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
-														{t("customer.detail.timeline.columnRank")}
-													</th>
-													<th
-														scope="col"
-														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
-														{t("customer.detail.timeline.columnWhen")}
-													</th>
-													<th
-														scope="col"
-														className="whitespace-nowrap px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
-														{t("customer.detail.timeline.columnCategory")}
-													</th>
-													<th
-														scope="col"
-														className="min-w-[12rem] px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
-														{t("customer.detail.timeline.columnSummary")}
-													</th>
-													<th
-														scope="col"
-														className="min-w-[10rem] px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
-														{t("customer.detail.timeline.columnDetail")}
-													</th>
-												</tr>
-											</thead>
-											<tbody className="divide-y divide-slate-100 bg-white">
-												{dossierTimelinePaginated.map((entry, rowIdx) => {
-													const rowNumber = dossierTimelinePage * DOSSIER_TIMELINE_PAGE_SIZE + rowIdx + 1;
-													return (
-														<tr
-															key={entry.id}
-															className={`${dossierTimelineRowAccent(entry.badge)} transition-colors hover:bg-slate-50/90`}
-														>
-															<td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500 tabular-nums">
-																{rowNumber}
-															</td>
-															<td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-slate-600">
-																<time dateTime={new Date(entry.at).toISOString()}>
-																	{new Date(entry.at).toLocaleString(locale)}
-																</time>
-															</td>
-															<td className="whitespace-nowrap px-4 py-3">
-																<Badge
-																	variant={dossierTimelineBadgeVariant(entry.badge)}
-																	className="text-[10px] font-medium uppercase tracking-wide"
-																>
-																	{t(`customer.detail.timeline.badge.${entry.badge}`)}
-																</Badge>
-															</td>
-															<td className="max-w-md px-4 py-3">
-																<p className="font-medium leading-snug text-slate-900">{entry.title}</p>
-															</td>
-															<td className="max-w-sm px-4 py-3 text-xs leading-relaxed text-slate-600">
-																{entry.detail ? (
-																	<span className="line-clamp-3 break-words">{entry.detail}</span>
-																) : (
-																	<span className="text-slate-400">—</span>
-																)}
-															</td>
-														</tr>
-													);
-												})}
-											</tbody>
-										</table>
+										</div>
 									</div>
-									<TablePagination
-										page={dossierTimelinePage}
-										pageSize={DOSSIER_TIMELINE_PAGE_SIZE}
-										totalPages={Math.max(1, Math.ceil(dossierTimelineRows.length / DOSSIER_TIMELINE_PAGE_SIZE))}
-										totalElements={dossierTimelineRows.length}
-										onPageChange={setDossierTimelinePage}
-										resultsLabel={t("customer.detail.timeline.paginationResultsLabel")}
-										showFirstLast
-										className="border-t border-slate-200 bg-slate-50/80 rounded-none px-4 sm:px-5"
-									/>
-								</>
-							)}
-						</section>
+								</section>
+							</div>
 						</div>
-					)}
 
-					{complianceInnerTab === "auditTrail" && (
+						{customer.rejectionReason && (
+							<div className="rounded-xl border border-red-200 bg-red-50 p-4">
+								<h3 className="text-sm font-semibold text-red-900 mb-2">{t("customer.detail.kyc.reject.previousReason")}</h3>
+								<p className="text-sm text-red-800">{customer.rejectionReason}</p>
+							</div>
+						)}
+					</div>
+				)}
+
+
+						{complianceInnerTab === "auditTrail" && (
 						<div
 							className="space-y-4"
 							role="tabpanel"
@@ -5293,35 +4920,34 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</section>
 						</div>
 					)}
+						</div>
 					</div>
 				)}
 
 				{activeTab === "accounts" && (
 					<div className="space-y-6">
 						{/* Section Comptes */}
-						<div className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card">
-							<div className="border-b border-ops-border bg-ops-surface-muted px-6 py-5">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 ring-1 ring-slate-200/60">
-								<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<div className={OPS_CARD_SHELL}>
+							<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
+						<div className="flex min-w-0 items-center gap-3">
+							<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
+								<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
 								</svg>
 							</div>
-							<div>
-								<h2 className="text-xl font-semibold tracking-tight text-slate-900">{t("customer.detail.accounts.title")}</h2>
-								<p className="text-sm text-slate-500">{t("customer.detail.accounts.subtitle")}</p>
+							<div className="min-w-0">
+								<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.accounts.title")}</h2>
+								<p className="text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.accounts.subtitle")}</p>
 							</div>
 						</div>
-						<Button variant="outline" size="sm" onClick={load}>
+						<Button variant="outline" size="sm" onClick={load} className="shrink-0">
 							<svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
 							{t("common.refresh")}
 						</Button>
 					</div>
-				</div>
-				<div className="p-6">
+				<div className="p-6 sm:p-8">
 					{accounts.length === 0 ? (
 						<div className="text-sm text-slate-500 py-8 text-center">
 							<svg className="w-16 h-16 mx-auto text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

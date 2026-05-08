@@ -1958,6 +1958,27 @@ export const auditApi = {
 		return handleJsonResponse<import("@/types").PagedResponse<AuditEvent>>(res);
 	},
 
+	async getKycAuditEvents(params?: {
+		userId?: number;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<import("@/types").PagedResponse<AuditEvent>> {
+		const usp = new URLSearchParams();
+		if (params?.userId) usp.set("userId", String(params.userId));
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/kyc-events${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<import("@/types").PagedResponse<AuditEvent>>(res);
+	},
+
 	async getEvent(id: number): Promise<AuditEvent> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/events/${id}`, {
 			headers: getAuthHeaders(),

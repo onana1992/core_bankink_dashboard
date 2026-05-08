@@ -78,7 +78,6 @@ export function AuditEventsTable({
 									<th className={OPS_TH}>Action</th>
 									<th className={OPS_TH}>Ressource</th>
 									<th className={OPS_TH}>ID Ressource</th>
-									<th className={OPS_TH}>IP</th>
 									<th className={OPS_TH}>Actions</th>
 								</tr>
 							</thead>
@@ -117,7 +116,6 @@ export function AuditEventsTable({
 												"-"
 											)}
 										</td>
-										<td className={`${OPS_TD} font-mono text-ops-fg-muted`}>{event.ipAddress || "-"}</td>
 										<td className={OPS_TD}>
 											<Button onClick={() => onEventDetails(event.id)} variant="secondary" className="text-xs">
 												Détails

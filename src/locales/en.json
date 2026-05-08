@@ -4,6 +4,8 @@
 		"tailwindAdmin": "Tailwind Admin",
 		"dashboard": "Dashboard",
 		"clientsKyc": "Clients & KYC",
+		"clientDossiers": "Customer files",
+		"kycAuditTrail": "KYC audit log",
 		"clients": "Clients",
 		"kycChecks": "KYC Verification",
 		"productCatalog": "Product Catalog",
@@ -73,6 +75,16 @@
 		"loanApplications": "Loan applications",
 		"openLoan": "Open a loan",
 		"loanSimulation": "Loan simulation"
+	},
+	"kycAuditTrailPage": {
+		"title": "KYC audit log",
+		"subtitle": "KYC-related audit events across all customer files.",
+		"resultsHeading": "KYC events",
+		"linkGlobalAudit": "Full access audit",
+		"userIdPlaceholder": "User ID (optional)",
+		"fromDate": "From",
+		"toDate": "To",
+		"applyFilters": "Apply"
 	},
 	"topbar": {
 		"toggleSidebar": "Toggle sidebar"
@@ -695,34 +707,6 @@
 				"clientId": "Client ref.",
 				"statusCode": "({{code}})"
 			},
-			"timeline": {
-				"title": "File events",
-				"subtitle": "Synthetic view from KYC checks, documents, compliance tasks and dated milestones. This is not a legally binding audit log.",
-				"empty": "No dated events for this file.",
-				"paginationResultsLabel": "events",
-				"columnRank": "#",
-				"columnCategory": "Category",
-				"columnWhen": "Date & time",
-				"columnSummary": "Event",
-				"columnDetail": "Detail",
-				"badge": {
-					"customer": "Customer file",
-					"kyc": "KYC check",
-					"task": "Compliance task",
-					"document": "Supporting document"
-				},
-				"kind": {
-					"customer_created": "Customer record created",
-					"customer_updated": "Customer record updated",
-					"risk_assessment": "Onboarding risk assessment recorded",
-					"rekyc_requested": "AML/CFT re-KYC request recorded",
-					"kyc_check": "{{type}} · {{result}}",
-					"task_created": "Task created · {{type}} — {{status}}",
-					"task_resolved": "Task updated · {{type}} — {{status}}",
-					"document_uploaded": "Document uploaded · {{type}}",
-					"document_reviewed": "Document reviewed · {{type}} — {{status}}"
-				}
-			},
 			"tabs": {
 				"overview": "Overview",
 				"dossier": "Profile & KYC data",
@@ -792,30 +776,29 @@
 			},
 			"headerDecision": {
 				"title": "Decision & actions",
-				"hint": "Shortcuts to KYC review, screening/checks, compliance tasks and AML screens.",
-				"openReview": "Review & decision",
+				"hint": "Shortcuts to KYC review, screening/checks and AML screens.",
+				"openReview": "KYC review",
 				"openScreening": "Screening & checks",
-				"openTasks": "Compliance tasks",
 				"openAudit": "Audit trail",
 				"openAmlAlerts": "AML alerts",
 				"screeningSanctions": "Sanctions",
 				"screeningPep": "PEP",
-				"openRejectSection": "Go to rejection",
-				"openCreateTask": "Create task"
+				"openRejectSection": "KYC decision"
 			},
 			"compliance": {
 				"title": "Compliance and file monitoring",
-				"subtitle": "KYC checks, list screening (sanctions and PEP), compliance tasks and enhanced due diligence (EDD).",
+				"subtitle": "KYC checks, list screening (sanctions and PEP) and enhanced due diligence (EDD).",
 				"screeningBlockTitle": "List screening",
-				"screeningBlockHint": "Re-run sanctions and PEP list screening using the buttons below. Full check details are under « KYC checks ».",
+				"screeningBlockHint": "Re-run sanctions and PEP list screening using the buttons below. Recorded checks appear in the table below this panel.",
+				"newListScreening": "New screening",
+				"listScreeningClose": "Hide screening",
 				"subTabs": {
 					"aria": "Compliance areas for this file",
-					"review": "KYC review & decision",
-					"screeningChecks": "Screening & checks",
+					"review": "KYC review",
+					"decision": "KYC decision",
+					"screeningChecks": "Screening PEP & Sanctions",
 					"screening": "List screening",
 					"data": "KYC checks",
-					"tasks": "Compliance tasks",
-					"timeline": "Events",
 					"auditTrail": "KYC audit trail"
 				},
 				"auditTrail": {
@@ -862,15 +845,9 @@
 				"dossierTrackingTitle": "KYC checks",
 				"rekycBanner": "AML re-KYC context",
 				"checksTitle": "KYC checks",
-				"checksSubtitle": "Newest checks first.",
 				"checksTotal": "{{count}} recorded check(s)",
-				"tasksTitle": "Compliance tasks",
 				"runScreening": "Run list screening (stub)",
 				"refresh": "Refresh",
-				"createEdd": "Open EDD task",
-				"instruction": "Instruction",
-				"markDone": "Mark done",
-				"cancel": "Cancel task",
 				"type": "Type",
 				"status": "Status",
 				"result": "Outcome",
@@ -879,11 +856,7 @@
 				"columnProvider": "Provider",
 				"emptyChecksTitle": "No checks yet",
 				"emptyChecks": "No recorded checks.",
-				"emptyTasks": "No tasks.",
-				"resolution": "Resolution note (optional)",
 				"screeningDone": "List checks recorded.",
-				"eddCreated": "EDD task created.",
-				"taskUpdated": "Task updated.",
 				"paginationResultsLabel": "KYC checks",
 				"checkType": {
 					"ID_VERIFICATION": "ID verification",
@@ -953,6 +926,8 @@
 				"title": "Documents",
 				"subtitle": "KYC document management",
 				"upload": "Upload a document",
+				"newButton": "New",
+				"closeUpload": "Close",
 				"fileType": "Type",
 				"idCardSide": "ID card side",
 				"idCardSideRecto": "Front (recto)",

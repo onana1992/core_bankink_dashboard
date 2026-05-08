@@ -8,7 +8,6 @@ import { resolveApiExceptionMessage } from "@/lib/resolveApiException";
 import { AUDIT_ACTION_CODES, type AuditEvent, type User, type AuditStatisticsResponse } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { getAuditActionBadge } from "@/components/audit/AuditEventDetails";
 import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
 import {
 	OpsField,
@@ -164,10 +163,6 @@ function AuditPageContent() {
 		window.scrollTo({ top: 0, behavior: "smooth" });
 	}
 
-	function userIdFromStatsUsername(username: string): number | undefined {
-		return userList.find(u => u.username === username)?.id;
-	}
-
 	return (
 		<div className="space-y-6">
 			{/* Header */}
@@ -243,98 +238,6 @@ function AuditPageContent() {
 								</svg>
 							</div>
 						</div>
-					</div>
-				</div>
-			)}
-
-			{/* Graphiques de statistiques */}
-			{statistics && (
-				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-							<svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-							</svg>
-							Événements par action
-						</h3>
-						<div className="space-y-3">
-							{Object.entries(statistics.eventsByAction ?? {})
-								.sort(([, a], [, b]) => b - a)
-								.map(([action, count]) => (
-									<div key={action} className="flex items-center justify-between">
-										<div className="flex items-center gap-2 flex-1">
-											{getAuditActionBadge(action)}
-											<div className="flex-1 bg-gray-200 rounded-full h-2.5">
-												<div 
-													className="bg-blue-600 h-2.5 rounded-full transition-all"
-													style={{ width: `${((statistics.totalEvents ?? 0) > 0 ? (count / (statistics.totalEvents ?? 1)) : 0) * 100}%` }}
-												></div>
-											</div>
-										</div>
-										<span className="font-semibold text-gray-900 ml-4">{count.toLocaleString()}</span>
-									</div>
-								))}
-						</div>
-					</div>
-					<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-						<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-							<svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-							</svg>
-							Événements par type de ressource
-						</h3>
-						<div className="space-y-3">
-							{Object.entries(statistics.eventsByResourceType)
-								.sort(([, a], [, b]) => b - a)
-								.slice(0, 8)
-								.map(([resourceType, count]) => (
-									<div key={resourceType} className="flex items-center justify-between">
-										<span className="text-sm text-gray-700 font-medium">{resourceType}</span>
-										<span className="font-semibold text-gray-900">{count.toLocaleString()}</span>
-									</div>
-								))}
-						</div>
-					</div>
-				</div>
-			)}
-
-			{statistics && statistics.eventsByUser && Object.keys(statistics.eventsByUser).length > 0 && (
-				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-						<svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-						</svg>
-						Activité par utilisateur
-					</h3>
-					<p className="text-sm text-gray-600 mb-4">
-						Cliquez sur un nom pour ouvrir l&apos;historique d&apos;audit de cet utilisateur (pagination côté serveur).
-					</p>
-					<div className="space-y-2 max-h-64 overflow-y-auto">
-						{Object.entries(statistics.eventsByUser)
-							.sort(([, a], [, b]) => b - a)
-							.slice(0, 25)
-							.map(([username, count]) => {
-								const uid = userIdFromStatsUsername(username);
-								return (
-									<div key={username} className="flex items-center justify-between gap-3 py-1.5 border-b border-gray-100 last:border-0">
-										{uid !== undefined ? (
-											<button
-												type="button"
-												onClick={() => router.push(`/audit/user/${uid}`)}
-												className="text-sm text-left text-blue-600 hover:text-blue-800 hover:underline font-medium truncate"
-											>
-												{username}
-											</button>
-										) : (
-											<span className="text-sm text-gray-700 font-medium truncate" title={username}>
-												{username}
-												<span className="ml-2 text-xs font-normal text-gray-400">(ID inconnu dans la liste chargée)</span>
-											</span>
-										)}
-										<span className="text-sm font-semibold text-gray-900 shrink-0">{count.toLocaleString()}</span>
-									</div>
-								);
-							})}
 					</div>
 				</div>
 			)}

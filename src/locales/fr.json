@@ -4,6 +4,8 @@
 		"tailwindAdmin": "Administration Tailwind",
 		"dashboard": "Tableau de bord",
 		"clientsKyc": "Clients & KYC",
+		"clientDossiers": "Dossiers client",
+		"kycAuditTrail": "Piste d'audit KYC",
 		"clients": "Clients",
 		"kycChecks": "Vérification KYC",
 		"productCatalog": "Catalogue de produits",
@@ -73,6 +75,16 @@
 		"loanApplications": "Demandes de prêt",
 		"openLoan": "Ouvrir un prêt",
 		"loanSimulation": "Simulation de prêt"
+	},
+	"kycAuditTrailPage": {
+		"title": "Piste d'audit KYC",
+		"subtitle": "Historique des actions KYC sur l’ensemble des dossiers clients (événements d’audit métier).",
+		"resultsHeading": "Événements KYC",
+		"linkGlobalAudit": "Audit d’accès complet",
+		"userIdPlaceholder": "ID utilisateur (optionnel)",
+		"fromDate": "Du",
+		"toDate": "Au",
+		"applyFilters": "Appliquer"
 	},
 	"topbar": {
 		"toggleSidebar": "Basculer la barre latérale"
@@ -695,34 +707,6 @@
 				"clientId": "Réf. client",
 				"statusCode": "({{code}})"
 			},
-			"timeline": {
-				"title": "Événements du dossier",
-				"subtitle": "Vue synthétique à partir des contrôles KYC, des pièces, des tâches de conformité et des dates du dossier. Il ne s’agit pas d’un journal d’audit opposable.",
-				"empty": "Aucun événement daté pour ce dossier.",
-				"paginationResultsLabel": "événements",
-				"columnRank": "#",
-				"columnCategory": "Catégorie",
-				"columnWhen": "Date et heure",
-				"columnSummary": "Libellé",
-				"columnDetail": "Détail",
-				"badge": {
-					"customer": "Dossier client",
-					"kyc": "Contrôle KYC",
-					"task": "Tâche conformité",
-					"document": "Pièce justificative"
-				},
-				"kind": {
-					"customer_created": "Fiche client créée",
-					"customer_updated": "Fiche client mise à jour",
-					"risk_assessment": "Évaluation du risque (onboarding) enregistrée",
-					"rekyc_requested": "Demande de re-KYC LBC-FT enregistrée",
-					"kyc_check": "{{type}} · {{result}}",
-					"task_created": "Tâche créée · {{type}} — {{status}}",
-					"task_resolved": "Tâche mise à jour · {{type}} — {{status}}",
-					"document_uploaded": "Dépôt de pièce · {{type}}",
-					"document_reviewed": "Revue de pièce · {{type}} — {{status}}"
-				}
-			},
 			"tabs": {
 				"overview": "Aperçu",
 				"dossier": "Profil & données KYC",
@@ -792,30 +776,29 @@
 			},
 			"headerDecision": {
 				"title": "Décision & actions",
-				"hint": "Raccourcis vers la revue KYC, le screening/contrôles, les tâches et les écrans AML.",
-				"openReview": "Revue & décision",
-				"openScreening": "Screening & contrôles",
-				"openTasks": "Tâches conformité",
+				"hint": "Raccourcis vers la revue KYC, le screening/contrôles et les écrans AML.",
+				"openReview": "Revue KYC",
+				"openScreening": "Screening PEP & Sanctions",
 				"openAudit": "Piste d’audit",
 				"openAmlAlerts": "Alertes AML",
 				"screeningSanctions": "Sanctions",
 				"screeningPep": "PEP",
-				"openRejectSection": "Vers le rejet",
-				"openCreateTask": "Créer une tâche"
+				"openRejectSection": "Décision KYC"
 			},
 			"compliance": {
 				"title": "Conformité et suivi du dossier",
-				"subtitle": "Contrôles KYC, screening sur listes (sanctions et PEP), tâches de conformité et examen renforcé (EDD).",
+				"subtitle": "Contrôles KYC, screening sur listes (sanctions et PEP) et examen renforcé (EDD).",
 				"screeningBlockTitle": "Screening sur listes",
-				"screeningBlockHint": "Relancez le screening sanctions et PEP depuis les boutons ci-dessous. Le détail des contrôles figure dans l’onglet « Contrôles KYC ».",
+				"screeningBlockHint": "Relancez le screening sanctions et PEP depuis les boutons ci-dessous. La liste des contrôles enregistrés figure dans le tableau sous ce panneau.",
+				"newListScreening": "Nouveau screening",
+				"listScreeningClose": "Masquer le screening",
 				"subTabs": {
 					"aria": "Rubriques de conformité pour ce dossier",
-					"review": "Revue & décision KYC",
-					"screeningChecks": "Screening & contrôles",
+					"review": "Revue KYC",
+					"decision": "Décision KYC",
+					"screeningChecks": "Screening PEP & Sanctions",
 					"screening": "Screening listes",
 					"data": "Contrôles KYC",
-					"tasks": "Tâches de conformité",
-					"timeline": "Événements",
 					"auditTrail": "Piste d’audit KYC"
 				},
 				"auditTrail": {
@@ -862,15 +845,9 @@
 				"dossierTrackingTitle": "Contrôles KYC",
 				"rekycBanner": "Contexte re-KYC AML",
 				"checksTitle": "Contrôles KYC",
-				"checksSubtitle": "Les contrôles les plus récents apparaissent en premier.",
 				"checksTotal": "{{count}} contrôle(s) enregistré(s)",
-				"tasksTitle": "Tâches de conformité",
 				"runScreening": "Lancer le screening sur listes (simulation)",
 				"refresh": "Actualiser",
-				"createEdd": "Ouvrir tâche EDD",
-				"instruction": "Consigne",
-				"markDone": "Marquer terminée",
-				"cancel": "Annuler la tâche",
 				"type": "Type",
 				"status": "Statut",
 				"result": "Résultat",
@@ -879,11 +856,7 @@
 				"columnProvider": "Fournisseur",
 				"emptyChecksTitle": "Aucun contrôle pour l’instant",
 				"emptyChecks": "Aucun contrôle enregistré.",
-				"emptyTasks": "Aucune tâche.",
-				"resolution": "Note de résolution (optionnel)",
 				"screeningDone": "Contrôles listes enregistrés.",
-				"eddCreated": "Tâche EDD créée.",
-				"taskUpdated": "Tâche mise à jour.",
 				"paginationResultsLabel": "contrôles KYC",
 				"checkType": {
 					"ID_VERIFICATION": "Vérification d’identité",
@@ -953,6 +926,8 @@
 				"title": "Documents",
 				"subtitle": "Gestion des documents KYC",
 				"upload": "Uploader un document",
+				"newButton": "Nouveau",
+				"closeUpload": "Fermer",
 				"fileType": "Type",
 				"idCardSide": "Côté (CNI)",
 				"idCardSideRecto": "Recto",
