@@ -171,6 +171,7 @@
 	},
 	"tablePagination": {
 		"range": "Showing {{from}}–{{to}} of {{total}} {{resultsLabel}}",
+		"pageControlsAria": "Result page navigation",
 		"pageSize": "Page size",
 		"first": "First",
 		"previous": "Previous",
@@ -574,6 +575,23 @@
 			}
 		},
 		"description": "Banking customer management and tracking",
+		"worklist": {
+			"title": "Customers",
+			"subtitle": "Prioritised customer dossiers for KYC and compliance processing.",
+			"sortLabel": "Worklist sort",
+			"sortPriority": "Workflow priority (P1 urgent first)",
+			"sortRisk": "Highest risk first",
+			"sortRecent": "Newest dossiers first",
+			"presetsAria": "Quick worklist filters",
+			"presetAll": "All statuses in list",
+			"presetAction": "Needs action",
+			"presetBlocked": "Blocked",
+			"presetDraft": "Drafts",
+			"columnPriority": "Priority",
+			"columnAge": "File age",
+			"ageDays": "{{count}} d",
+			"ageUnknown": "—"
+		},
 		"errors": {
 			"unknown": "An unknown error occurred"
 		},
@@ -668,10 +686,10 @@
 			},
 			"tabs": {
 				"overview": "Overview",
-				"dossier": "Customer file",
-				"pieces": "Documents and identity",
+				"dossier": "Profile & KYC data",
+				"pieces": "Documents",
 				"kycReview": "KYC review and decision",
-				"compliance": "Compliance and monitoring",
+				"compliance": "Compliance (KYC/AML)",
 				"accounts": "Accounts",
 				"profile": "Profile details",
 				"documents": "Documents",
@@ -732,6 +750,19 @@
 				"alerts": "AML alerts",
 				"newCase": "New AML case"
 			},
+			"headerDecision": {
+				"title": "Decision & actions",
+				"hint": "Shortcuts to KYC review, screening/checks, compliance tasks and AML screens.",
+				"openReview": "Review & decision",
+				"openScreening": "Screening & checks",
+				"openTasks": "Compliance tasks",
+				"openAudit": "Audit trail",
+				"openAmlAlerts": "AML alerts",
+				"screeningSanctions": "Sanctions",
+				"screeningPep": "PEP",
+				"openRejectSection": "Go to rejection",
+				"openCreateTask": "Create task"
+			},
 			"compliance": {
 				"title": "Compliance and file monitoring",
 				"subtitle": "KYC checks, list screening (sanctions and PEP), compliance tasks and enhanced due diligence (EDD).",
@@ -739,6 +770,8 @@
 				"screeningBlockHint": "Re-run sanctions and PEP list screening using the buttons below. Full check details are under « KYC checks ».",
 				"subTabs": {
 					"aria": "Compliance areas for this file",
+					"review": "KYC review & decision",
+					"screeningChecks": "Screening & checks",
 					"screening": "List screening",
 					"data": "KYC checks",
 					"tasks": "Compliance tasks",

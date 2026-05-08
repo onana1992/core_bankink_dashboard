@@ -171,6 +171,7 @@
 	},
 	"tablePagination": {
 		"range": "Affichage de {{from}} à {{to}} sur {{total}} {{resultsLabel}}",
+		"pageControlsAria": "Navigation dans les pages de résultats",
 		"pageSize": "Taille de page",
 		"first": "Premier",
 		"previous": "Précédent",
@@ -574,6 +575,23 @@
 			}
 		},
 		"description": "Gestion et suivi des clients bancaires",
+		"worklist": {
+			"title": "Clients",
+			"subtitle": "Liste des dossiers clients priorisés pour le traitement KYC et la conformité.",
+			"sortLabel": "Tri worklist",
+			"sortPriority": "Priorité métier (P1 urgent)",
+			"sortRisk": "Risque décroissant",
+			"sortRecent": "Dossiers récents",
+			"presetsAria": "Filtres rapides worklist",
+			"presetAll": "Tous statuts liste",
+			"presetAction": "À traiter",
+			"presetBlocked": "Bloqués",
+			"presetDraft": "Brouillons",
+			"columnPriority": "Priorité",
+			"columnAge": "Âge dossier",
+			"ageDays": "{{count}} j",
+			"ageUnknown": "—"
+		},
 		"errors": {
 			"unknown": "Une erreur inconnue s'est produite"
 		},
@@ -667,11 +685,11 @@
 				}
 			},
 			"tabs": {
-				"overview": "Vue d'ensemble",
-				"dossier": "Dossier client",
-				"pieces": "Pièces et identité",
+				"overview": "Aperçu",
+				"dossier": "Profil & données KYC",
+				"pieces": "Documents",
 				"kycReview": "Revue KYC et décision",
-				"compliance": "Conformité et suivi",
+				"compliance": "Conformité (KYC/AML)",
 				"accounts": "Comptes",
 				"profile": "Détail du profil",
 				"documents": "Documents",
@@ -732,6 +750,19 @@
 				"alerts": "Alertes AML",
 				"newCase": "Nouveau dossier AML"
 			},
+			"headerDecision": {
+				"title": "Décision & actions",
+				"hint": "Raccourcis vers la revue KYC, le screening/contrôles, les tâches et les écrans AML.",
+				"openReview": "Revue & décision",
+				"openScreening": "Screening & contrôles",
+				"openTasks": "Tâches conformité",
+				"openAudit": "Piste d’audit",
+				"openAmlAlerts": "Alertes AML",
+				"screeningSanctions": "Sanctions",
+				"screeningPep": "PEP",
+				"openRejectSection": "Vers le rejet",
+				"openCreateTask": "Créer une tâche"
+			},
 			"compliance": {
 				"title": "Conformité et suivi du dossier",
 				"subtitle": "Contrôles KYC, screening sur listes (sanctions et PEP), tâches de conformité et examen renforcé (EDD).",
@@ -739,6 +770,8 @@
 				"screeningBlockHint": "Relancez le screening sanctions et PEP depuis les boutons ci-dessous. Le détail des contrôles figure dans l’onglet « Contrôles KYC ».",
 				"subTabs": {
 					"aria": "Rubriques de conformité pour ce dossier",
+					"review": "Revue & décision KYC",
+					"screeningChecks": "Screening & contrôles",
 					"screening": "Screening listes",
 					"data": "Contrôles KYC",
 					"tasks": "Tâches de conformité",

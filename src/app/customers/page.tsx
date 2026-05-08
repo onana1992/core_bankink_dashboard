@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import TablePagination from "@/components/ui/TablePagination";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 import {
 	DomainStatusBadge,
 	OpsEmptyState,
@@ -26,8 +26,24 @@ import {
 } from "@/components/ops";
 import { customersApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
+import {
+	compareCustomersWorklist,
+	customerDossierAgeDays,
+	customerWorklistTier,
+	customerWorklistTierLabel,
+	type CustomerWorklistSortMode
+} from "@/lib/customerWorklistSort";
 import { resolveApiExceptionMessage } from "@/lib/resolveApiException";
-import type { Customer } from "@/types";
+import type { Customer, CustomerStatus } from "@/types";
+
+function worklistTierChipClass(status: CustomerStatus): string {
+	const tier = customerWorklistTier(status);
+	if (tier === 1) return "border-rose-200 bg-rose-50 text-rose-900 font-semibold";
+	if (tier === 2) return "border-slate-300 bg-slate-100 text-slate-900 font-semibold";
+	if (tier === 3) return "border-amber-200 bg-amber-50 text-amber-900 font-medium";
+	if (tier === 4) return "border-orange-200 bg-orange-50 text-orange-900 font-medium";
+	return "border-emerald-200 bg-emerald-50 text-emerald-900 font-medium";
+}
 
 export default function CustomersPage() {
 	const { t } = useTranslation();
@@ -38,7 +54,6 @@ export default function CustomersPage() {
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalElements, setTotalElements] = useState(0);
 	const [size, setSize] = useState(20);
-	const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 	// Filtres
 	const [q, setQ] = useState("");
@@ -46,11 +61,24 @@ export default function CustomersPage() {
 		"ALL" | "DRAFT" | "PENDING_REVIEW" | "VERIFIED" | "REJECTED" | "BLOCKED"
 	>("ALL");
 	const [filterType, setFilterType] = useState<"ALL" | "PERSON" | "BUSINESS">("ALL");
+	const [worklistSort, setWorklistSort] = useState<CustomerWorklistSortMode>("priority");
+	const customersFetchGen = useRef(0);
+	const lastListFilterSigRef = useRef(`${filterType}|${filterStatus}|${q}`);
 
 	async function load() {
+		const seq = ++customersFetchGen.current;
 		setLoading(true);
 		setError(null);
 		try {
+			const sig = `${filterType}|${filterStatus}|${q}`;
+			if (lastListFilterSigRef.current !== sig) {
+				lastListFilterSigRef.current = sig;
+				if (page !== 0) {
+					setPage(0);
+					return;
+				}
+			}
+
 			const response = await customersApi.list({
 				type: filterType !== "ALL" ? filterType : undefined,
 				status: filterStatus !== "ALL" ? filterStatus : undefined,
@@ -58,13 +86,20 @@ export default function CustomersPage() {
 				page,
 				size
 			});
-			setCustomers(response.content);
-			setTotalPages(response.totalPages);
-			setTotalElements(response.totalElements);
+			if (seq !== customersFetchGen.current) return;
+			setCustomers(response.content ?? []);
+			const te = Number(response.totalElements);
+			const tp = Number(response.totalPages);
+			setTotalPages(Number.isFinite(tp) && tp >= 0 ? tp : 0);
+			setTotalElements(Number.isFinite(te) && te >= 0 ? te : 0);
+			const srvPage = Number(response.number);
+			if (Number.isFinite(srvPage) && srvPage >= 0 && srvPage !== page) {
+				setPage(srvPage);
+			}
 		} catch (e: unknown) {
-			setError(resolveApiExceptionMessage(e, t));
+			if (seq === customersFetchGen.current) setError(resolveApiExceptionMessage(e, t));
 		} finally {
-			setLoading(false);
+			if (seq === customersFetchGen.current) setLoading(false);
 		}
 	}
 
@@ -88,21 +123,33 @@ export default function CustomersPage() {
 		};
 	}, [customers, totalElements]);
 
-	function riskTone(score?: number | null): string {
-		if (typeof score !== "number") return "bg-slate-100 text-slate-700";
-		if (score >= 70) return "bg-rose-100 text-rose-800";
-		if (score >= 40) return "bg-amber-100 text-amber-800";
-		return "bg-emerald-100 text-emerald-800";
-	}
+	// Les filtres sont gérés côté serveur ; tri worklist uniquement client (page courante).
+	const sortedCustomers = useMemo(() => [...customers].sort((a, b) => compareCustomersWorklist(a, b, worklistSort)), [
+		customers,
+		worklistSort
+	]);
 
-	// Les filtres sont maintenant gérés côté serveur, donc on utilise directement customers
-	const filteredCustomers = customers;
+	const footerTotalElements = useMemo(() => {
+		const n = Number(totalElements);
+		const base = Number.isFinite(n) && n >= 0 ? n : 0;
+		return Math.max(base, sortedCustomers.length);
+	}, [totalElements, sortedCustomers.length]);
+
+	function applyWorklistPreset(
+		mode: "all" | "action" | "blocked" | "draft"
+	): void {
+		setPage(0);
+		if (mode === "all") setFilterStatus("ALL");
+		else if (mode === "action") setFilterStatus("PENDING_REVIEW");
+		else if (mode === "blocked") setFilterStatus("BLOCKED");
+		else setFilterStatus("DRAFT");
+	}
 
 	return (
 		<div className={OPS_PAGE_STACK}>
 			<OpsPageHeader
-				title={t("common.customers")}
-				description={t("customer.description")}
+				title={t("customer.worklist.title")}
+				description={t("customer.worklist.subtitle")}
 				actions={
 					<>
 						<Button onClick={load} variant="outline" className="flex items-center gap-2">
@@ -120,7 +167,7 @@ export default function CustomersPage() {
 							</Button>
 						</Link>
 						<Link href="/customers/new/business">
-							<Button className="flex items-center gap-2">
+							<Button variant="outline" className="flex items-center gap-2">
 								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
 								</svg>
@@ -269,6 +316,57 @@ export default function CustomersPage() {
 				</OpsField>
 			</OpsFilterPanel>
 
+			<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+				<div className="flex flex-wrap gap-2" aria-label={t("customer.worklist.presetsAria")}>
+					<Button
+						type="button"
+						size="sm"
+						variant={filterStatus === "ALL" ? "secondary" : "outline"}
+						className={filterStatus === "ALL" ? "ring-2 ring-ops-ring" : undefined}
+						onClick={() => applyWorklistPreset("all")}
+					>
+						{t("customer.worklist.presetAll")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={filterStatus === "PENDING_REVIEW" ? "secondary" : "outline"}
+						className={filterStatus === "PENDING_REVIEW" ? "ring-2 ring-ops-ring" : undefined}
+						onClick={() => applyWorklistPreset("action")}
+					>
+						{t("customer.worklist.presetAction")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={filterStatus === "BLOCKED" ? "secondary" : "outline"}
+						className={filterStatus === "BLOCKED" ? "ring-2 ring-ops-ring" : undefined}
+						onClick={() => applyWorklistPreset("blocked")}
+					>
+						{t("customer.worklist.presetBlocked")}
+					</Button>
+					<Button
+						type="button"
+						size="sm"
+						variant={filterStatus === "DRAFT" ? "secondary" : "outline"}
+						className={filterStatus === "DRAFT" ? "ring-2 ring-ops-ring" : undefined}
+						onClick={() => applyWorklistPreset("draft")}
+					>
+						{t("customer.worklist.presetDraft")}
+					</Button>
+				</div>
+				<OpsField label={t("customer.worklist.sortLabel")} className="min-w-[12rem] sm:max-w-xs">
+					<OpsSelect
+						value={worklistSort}
+						onChange={(e) => setWorklistSort(e.target.value as CustomerWorklistSortMode)}
+					>
+						<option value="priority">{t("customer.worklist.sortPriority")}</option>
+						<option value="risk_desc">{t("customer.worklist.sortRisk")}</option>
+						<option value="recent">{t("customer.worklist.sortRecent")}</option>
+					</OpsSelect>
+				</OpsField>
+			</div>
+
 			{error && (
 				<OpsInlineAlert variant="error">
 					<svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +378,7 @@ export default function CustomersPage() {
 
 			{loading ? (
 				<OpsLoadingState message={t("common.loading")} />
-			) : filteredCustomers.length === 0 ? (
+			) : sortedCustomers.length === 0 ? (
 				<OpsEmptyState
 					title={t("customer.table.noCustomers")}
 					hint={t("customer.table.noCustomersHint")}
@@ -297,19 +395,28 @@ export default function CustomersPage() {
 							<thead className={OPS_THEAD}>
 								<tr>
 									<th className={`${OPS_TH} py-4`}>{t("common.id")}</th>
+									<th className={`${OPS_TH} py-4 whitespace-nowrap`}>{t("customer.worklist.columnPriority")}</th>
 									<th className={`${OPS_TH} py-4`}>{t("common.name")}</th>
 									<th className={`${OPS_TH} py-4`}>{t("common.type")}</th>
 									<th className={`${OPS_TH} py-4`}>{t("common.status")}</th>
 									<th className={`${OPS_TH} py-4 w-52`}>{t("customer.table.phone")}</th>
-									<th className={`${OPS_TH} py-4`}>{t("common.risk")}</th>
+									<th className={`${OPS_TH} py-4 whitespace-nowrap`}>{t("customer.worklist.columnAge")}</th>
 									<th className={`${OPS_TH} py-4 text-right`}>{t("customer.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-ops-border bg-ops-surface">
-								{filteredCustomers.map((c) => (
+								{sortedCustomers.map((c) => (
 									<tr key={c.id} className={`${OPS_TR_HOVER} text-sm`}>
 										<td className={OPS_TD}>
 											<span className="font-mono font-medium">{c.id}</span>
+										</td>
+										<td className={OPS_TD}>
+											<span
+												title={t(`customer.statuses.${c.status}`)}
+												className={`inline-flex rounded-md border px-2 py-0.5 text-xs tabular-nums ${worklistTierChipClass(c.status)}`}
+											>
+												{customerWorklistTierLabel(c.status)}
+											</span>
 										</td>
 										<td className={OPS_TD}>
 											<Link href={customerDetailPath(c.id, c.type)} className="font-medium text-ops-ring hover:underline">
@@ -325,13 +432,11 @@ export default function CustomersPage() {
 										<td className={`${OPS_TD} max-w-[13rem] overflow-hidden text-ops-fg-muted`} title={c.phone || undefined}>
 											<span className="block truncate min-w-0">{c.phone || "-"}</span>
 										</td>
-										<td className={OPS_TD}>
-											{typeof c.riskScore === "number" ? (
-												<span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${riskTone(c.riskScore)}`}>
-													{c.riskScore}
-												</span>
+										<td className={`${OPS_TD} whitespace-nowrap text-ops-fg-muted tabular-nums`}>
+											{c.createdAt === undefined || customerDossierAgeDays(c) == null ? (
+												t("customer.worklist.ageUnknown")
 											) : (
-												<span className="text-ops-fg-muted">-</span>
+												t("customer.worklist.ageDays", { count: customerDossierAgeDays(c)! })
 											)}
 										</td>
 										<td className={`${OPS_TD} text-right`}>
@@ -350,16 +455,20 @@ export default function CustomersPage() {
 							</tbody>
 						</table>
 					</div>
-					{(filteredCustomers.length > 0 || totalElements > 0) && (
+					{(sortedCustomers.length > 0 || totalElements > 0) && (
 						<TablePagination
 							page={page}
 							totalPages={totalPages}
-							totalElements={totalElements}
+							totalElements={footerTotalElements}
 							pageSize={size}
 							onPageChange={(p) => setPage(p)}
-							resultsLabel={totalElements > 1 ? t("customer.table.pagination.customersPlural") : t("customer.table.pagination.customers")}
+							resultsLabel={
+								footerTotalElements > 1
+									? t("customer.table.pagination.customersPlural")
+									: t("customer.table.pagination.customers")
+							}
 							showFirstLast
-							sizeOptions={PAGE_SIZE_OPTIONS}
+							sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
 							size={size}
 							onSizeChange={(s) => {
 								setSize(s);

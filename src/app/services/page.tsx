@@ -45,7 +45,7 @@ export default function ServicesPage() {
 	}, [isAuthenticated, filterStatus, pageSize]);
 
 	function goToPage(page: number) {
-		if (page < 0 || page >= totalPages) return;
+		if (page < 0) return;
 		load(page);
 	}
 
@@ -285,7 +285,10 @@ export default function ServicesPage() {
 							showFirstLast
 							sizeOptions={[10, 20, 50]}
 							size={pageSize}
-							onSizeChange={(s) => { setPageSize(s); load(0); }}
+							onSizeChange={(s) => {
+								setPageSize(s);
+								setCurrentPage(0);
+							}}
 						/>
 					</>
 				)}

@@ -317,7 +317,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		{ id: "overview", label: t("customer.detail.tabs.overview") },
 		{ id: "dossier", label: t("customer.detail.tabs.dossier") },
 		{ id: "pieces", label: t("customer.detail.tabs.pieces") },
-		{ id: "kycReview", label: t("customer.detail.tabs.kycReview") },
 		{ id: "compliance", label: t("customer.detail.tabs.compliance") },
 		{ id: "accounts", label: t("customer.detail.tabs.accounts") }
 	];
@@ -329,9 +328,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [decisionPanelScreeningBusy, setDecisionPanelScreeningBusy] = useState(false);
 	const [eddInstruction, setEddInstruction] = useState("");
 	const [taskResolution, setTaskResolution] = useState<Record<number, string>>({});
-	const [complianceInnerTab, setComplianceInnerTab] = useState<
-		"screening" | "data" | "tasks" | "timeline" | "auditTrail"
-	>("screening");
+	type ComplianceInnerTab = "review" | "screeningChecks" | "tasks" | "timeline" | "auditTrail";
+
+	const [complianceInnerTab, setComplianceInnerTab] = useState<ComplianceInnerTab>("screeningChecks");
+	const prevWorklistComplianceRef = useRef<{ tab: string; customerId?: number }>({
+		tab: "overview",
+		customerId: undefined
+	});
 	const KYC_AUDIT_TRAIL_PAGE_SIZE = 15;
 	const [kycAuditTrailPage, setKycAuditTrailPage] = useState(0);
 	const [kycAuditTrailPaged, setKycAuditTrailPaged] = useState<PagedResponse<AuditEvent> | null>(null);
@@ -418,10 +421,19 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	}, [id, customer?.id, customer?.status, activeTab]);
 
 	useEffect(() => {
-		if (activeTab !== "compliance") {
-			setComplianceInnerTab("screening");
-		}
-	}, [activeTab]);
+		if (!customer?.id || Number.isNaN(id)) return;
+		if (activeTab !== "compliance") return;
+		const prev = prevWorklistComplianceRef.current;
+		const enteredCompliance = prev.tab !== "compliance";
+		const switchedCustomer =
+			prev.customerId !== undefined && prev.customerId !== customer.id;
+		if (!enteredCompliance && !switchedCustomer) return;
+		setComplianceInnerTab(customer.status === "PENDING_REVIEW" ? "review" : "screeningChecks");
+	}, [activeTab, customer?.id, customer?.status, id]);
+
+	useEffect(() => {
+		prevWorklistComplianceRef.current = { tab: activeTab, customerId: customer?.id };
+	}, [activeTab, customer?.id]);
 
 	useEffect(() => {
 		if (!id || Number.isNaN(id)) return;
@@ -1782,6 +1794,116 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 			</div>
+
+			{customer && (
+				<div className="mb-6 overflow-hidden rounded-xl border border-indigo-200/55 bg-gradient-to-r from-indigo-50/80 via-white to-slate-50/90 px-5 py-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+					<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+						<div className="min-w-0 flex-1 space-y-2">
+							<h3 className="text-sm font-semibold tracking-tight text-slate-900">
+								{t("customer.detail.headerDecision.title")}
+							</h3>
+							<p className="max-w-prose text-xs leading-relaxed text-slate-600">
+								{t("customer.detail.headerDecision.hint")}
+							</p>
+							{kycChecks.length > 0 ? (
+								<div className="flex flex-wrap items-center gap-2">
+									{listScreeningPresence.latestSanctions ? (
+										<Badge variant={kycCheckResultBadgeVariant(listScreeningPresence.latestSanctions.result)}>
+											{t("customer.detail.headerDecision.screeningSanctions")}:{" "}
+											{kycCheckResultLabel(t, listScreeningPresence.latestSanctions.result)}
+										</Badge>
+									) : null}
+									{listScreeningPresence.latestPep ? (
+										<Badge variant={kycCheckResultBadgeVariant(listScreeningPresence.latestPep.result)}>
+											{t("customer.detail.headerDecision.screeningPep")}:{" "}
+											{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
+										</Badge>
+									) : null}
+									{!listScreeningPresence.latestSanctions && !listScreeningPresence.latestPep ? (
+										<span className="text-xs text-slate-500">—</span>
+									) : null}
+								</div>
+							) : (
+								<p className="text-xs text-slate-500">
+									{complianceLoading ? t("customer.detail.loading") : "—"}
+								</p>
+							)}
+						</div>
+						<div className="flex flex-wrap gap-2 lg:shrink-0">
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => {
+									setActiveTab("compliance");
+									setComplianceInnerTab("review");
+								}}
+							>
+								{t("customer.detail.headerDecision.openReview")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => {
+									setActiveTab("compliance");
+									setComplianceInnerTab("review");
+								}}
+							>
+								{t("customer.detail.headerDecision.openRejectSection")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => {
+									setActiveTab("compliance");
+									setComplianceInnerTab("screeningChecks");
+								}}
+							>
+								{t("customer.detail.headerDecision.openScreening")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => {
+									setActiveTab("compliance");
+									setComplianceInnerTab("tasks");
+								}}
+							>
+								{t("customer.detail.headerDecision.openCreateTask")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => {
+									setActiveTab("compliance");
+									setComplianceInnerTab("auditTrail");
+									setKycAuditTrailPage(0);
+								}}
+							>
+								{t("customer.detail.headerDecision.openAudit")}
+							</Button>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								className="border-slate-300 bg-white"
+								onClick={() => router.push(`/aml/alerts?clientId=${customer.id}`)}
+							>
+								{t("customer.detail.headerDecision.openAmlAlerts")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Onglets + contenu */}
 			<div className="overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-md shadow-slate-200/50">
@@ -4180,7 +4302,50 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
-				{activeTab === "kycReview" && customer && (
+				{activeTab === "compliance" && customer && (
+					<div className="space-y-6">
+						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
+								<h2 id="compliance-tab-title" className="text-xl font-semibold tracking-tight text-slate-900">
+									{t("customer.detail.compliance.title")}
+								</h2>
+								<p className="mt-0.5 max-w-prose text-sm text-slate-500">
+									{t("customer.detail.compliance.subtitle")}
+								</p>
+							</div>
+							<nav
+								role="tablist"
+								aria-label={t("customer.detail.compliance.subTabs.aria")}
+								className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-white px-6"
+							>
+								{(["review", "screeningChecks", "tasks", "timeline", "auditTrail"] as const).map(tid => (
+									<button
+										key={tid}
+										type="button"
+										role="tab"
+										id={`compliance-subtab-${tid}`}
+										aria-selected={complianceInnerTab === tid}
+										aria-controls={`compliance-subpanel-${tid}`}
+										tabIndex={complianceInnerTab === tid ? 0 : -1}
+										onClick={() => {
+											if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
+												setKycAuditTrailPage(0);
+											}
+											setComplianceInnerTab(tid);
+										}}
+										className={`relative shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-t-lg ${
+											complianceInnerTab === tid
+												? "-mb-px border-indigo-600 text-indigo-900"
+												: "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"
+										}`}
+									>
+										{t(`customer.detail.compliance.subTabs.${tid}`)}
+									</button>
+								))}
+							</nav>
+						</div>
+
+				{complianceInnerTab === "review" && (
 					<div className="space-y-6">
 						{/* En-tête */}
 						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
@@ -4679,55 +4844,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
-				{activeTab === "compliance" && customer && (
-					<div className="space-y-6">
-						<div className="overflow-hidden rounded-xl border border-slate-200/85 bg-white shadow-sm ring-1 ring-slate-900/[0.04]">
-							<div className="border-b border-slate-100 bg-gradient-to-r from-white via-slate-50/40 to-white px-6 py-5">
-								<h2 id="compliance-tab-title" className="text-xl font-semibold tracking-tight text-slate-900">
-									{t("customer.detail.compliance.title")}
-								</h2>
-								<p className="mt-0.5 max-w-prose text-sm text-slate-500">
-									{t("customer.detail.compliance.subtitle")}
-								</p>
-							</div>
-							<nav
-								role="tablist"
-								aria-label={t("customer.detail.compliance.subTabs.aria")}
-								className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-white px-6"
-							>
-								{(["screening", "data", "tasks", "auditTrail"] as const).map(tid => (
-									<button
-										key={tid}
-										type="button"
-										role="tab"
-										id={`compliance-subtab-${tid}`}
-										aria-selected={complianceInnerTab === tid}
-										aria-controls={`compliance-subpanel-${tid}`}
-										tabIndex={complianceInnerTab === tid ? 0 : -1}
-										onClick={() => {
-											if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
-												setKycAuditTrailPage(0);
-											}
-											setComplianceInnerTab(tid);
-										}}
-										className={`relative shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-t-lg ${
-											complianceInnerTab === tid
-												? "-mb-px border-indigo-600 text-indigo-900"
-												: "border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900"
-										}`}
-									>
-										{t(`customer.detail.compliance.subTabs.${tid}`)}
-									</button>
-								))}
-							</nav>
-						</div>
 
-						{complianceInnerTab === "screening" && (
+						{complianceInnerTab === "screeningChecks" && (
 					<div
 						className="space-y-6"
 						role="tabpanel"
-						id="compliance-subpanel-screening"
-						aria-labelledby="compliance-subtab-screening"
+						id="compliance-subpanel-screeningChecks"
+						aria-labelledby="compliance-subtab-screeningChecks"
 					>
 						<section className="overflow-hidden rounded-xl border border-indigo-200/55 bg-gradient-to-br from-indigo-50/40 via-white to-white shadow-md shadow-indigo-100/40 ring-1 ring-slate-900/[0.04]">
 							<div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
@@ -4897,16 +5020,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								{customer.rekycPendingReason && <p className="text-sm text-amber-900">{customer.rekycPendingReason}</p>}
 							</div>
 						)}
-					</div>
-					)}
-
-					{complianceInnerTab === "data" && (
-						<div
-							className="space-y-4"
-							role="tabpanel"
-							id="compliance-subpanel-data"
-							aria-labelledby="compliance-subtab-data"
-						>
 						<section className="space-y-4" aria-labelledby="compliance-dossier-tracking">
 							<h3
 								id="compliance-dossier-tracking"
@@ -5286,7 +5399,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									resultsHeading={t("customer.detail.compliance.auditTrail.title")}
 									onPageChange={setKycAuditTrailPage}
 									onPageSizeChange={() => {
-										// Fixed page size in this panel.
+										setKycAuditTrailPage(0);
 									}}
 									onEventDetails={(eventId) => router.push(`/audit/${eventId}`)}
 									onResourceTrace={(resourceType, resourceId) =>

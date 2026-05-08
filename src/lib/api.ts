@@ -368,6 +368,63 @@ async function handleJsonResponse<T>(res: Response, silent: boolean = false): Pr
 	}
 }
 
+function readPagingNonNegative(obj: Record<string, unknown>, ...keys: string[]): number | undefined {
+	for (const k of keys) {
+		const n = Number(obj[k]);
+		if (Number.isFinite(n) && n >= 0) return n;
+	}
+	return undefined;
+}
+
+/**
+ * Spring Data Page JSON :
+ * - mode classique ou DIRECT : totals à la racine ;
+ * - `PageSerializationMode.VIA_DTO` (CoreBackendApplication) : `page: { totalElements, totalPages, number, size }`.
+ */
+function normalizeOpsCustomersPagePayload(raw: unknown): {
+	content: Customer[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+} {
+	const o = raw !== null && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+	const content = Array.isArray(o.content) ? (o.content as Customer[]) : [];
+
+	const dtoMeta =
+		o.page !== undefined && o.page !== null && typeof o.page === "object" && !Array.isArray(o.page)
+			? (o.page as Record<string, unknown>)
+			: undefined;
+
+	const totalElements =
+		readPagingNonNegative(o, "totalElements", "total_elements") ??
+		(dtoMeta ? readPagingNonNegative(dtoMeta, "totalElements", "total_elements") : undefined) ??
+		0;
+	const totalPages =
+		readPagingNonNegative(o, "totalPages", "total_pages") ??
+		(dtoMeta ? readPagingNonNegative(dtoMeta, "totalPages", "total_pages") : undefined) ??
+		0;
+
+	/** Ne pas lire une clé `page` scalaire à la racine si `page` est l’objet DTO imbriqué. */
+	const number =
+		readPagingNonNegative(o, "number", "pageNumber", "page_number") ??
+		(dtoMeta ? readPagingNonNegative(dtoMeta, "number", "pageNumber", "page_number") : undefined) ??
+		0;
+
+	let size =
+		readPagingNonNegative(o, "size", "pageSize", "page_size") ??
+		(dtoMeta ? readPagingNonNegative(dtoMeta, "size", "pageSize", "page_size") : undefined);
+
+	const pageable =
+		o.pageable !== undefined && o.pageable !== null && typeof o.pageable === "object"
+			? (o.pageable as Record<string, unknown>)
+			: undefined;
+	if (size === undefined && pageable) size = readPagingNonNegative(pageable, "pageSize", "page_size");
+	const fallbackSize = 20;
+	const safeSize = size !== undefined ? size : fallbackSize;
+	return { content, totalElements, totalPages, number, size: safeSize };
+}
+
 export const customersApi = {
 	async list(params?: {
 		type?: "PERSON" | "BUSINESS";
@@ -387,7 +444,11 @@ export const customersApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<{ content: Customer[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		const body = await handleJsonResponse<Record<string, unknown>>(res);
+		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
+			throw new Error("Liste clients : réponse invalide ou vide.");
+		}
+		return normalizeOpsCustomersPagePayload(body);
 	},
 
 	async create(payload: CreateCustomerRequest): Promise<Customer> {

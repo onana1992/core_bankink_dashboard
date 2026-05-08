@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import type { AuditEvent } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import TablePagination from "@/components/ui/TablePagination";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 import { formatAuditEventDate, getAuditActionBadge } from "@/components/audit/AuditEventDetails";
 import {
 	OpsEmptyState,
@@ -51,8 +51,18 @@ export function AuditEventsTable({
 }: AuditEventsTableProps) {
 	const { t } = useTranslation();
 
+	const declaredTotal = Number(totalElements) || 0;
+	const safeSize = Math.max(1, Number(pageSize) || 1);
+	/** Tolère un total API à 0 alors que la page affiche encore des lignes. */
+	const effectiveTotalElements = Math.max(declaredTotal, events.length);
+	const apiPages = Math.max(0, Number(totalPages) || 0);
+	const effectiveTotalPages =
+		effectiveTotalElements > 0
+			? Math.max(1, Math.ceil(effectiveTotalElements / safeSize))
+			: apiPages;
+
 	return (
-		<OpsTableCard title={resultsHeading}>
+		<OpsTableCard title={resultsHeading} className="overflow-visible">
 			{loading ? (
 				<OpsLoadingState embedded message={t("common.auditTableLoading")} />
 			) : events.length === 0 ? (
@@ -121,13 +131,13 @@ export function AuditEventsTable({
 
 					<TablePagination
 						page={currentPage}
-						totalPages={totalPages}
-						totalElements={totalElements ?? 0}
+						totalPages={effectiveTotalPages}
+						totalElements={effectiveTotalElements}
 						pageSize={pageSize}
 						onPageChange={onPageChange}
 						resultsLabel="événements"
 						showFirstLast
-						sizeOptions={[10, 20, 50, 100]}
+						sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
 						size={pageSize}
 						onSizeChange={(s) => {
 							onPageSizeChange(s);

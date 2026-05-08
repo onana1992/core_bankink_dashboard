@@ -33,7 +33,7 @@ export default function UsersPage() {
 	}, [isAuthenticated, filterStatus, pageSize]);
 
 	function goToPage(page: number) {
-		if (page < 0 || page >= totalPages) return;
+		if (page < 0) return;
 		load(page);
 	}
 
@@ -336,7 +336,7 @@ export default function UsersPage() {
 							size={pageSize}
 							onSizeChange={(s) => {
 								setPageSize(s);
-								load(0);
+								setCurrentPage(0);
 							}}
 						/>
 					)}
