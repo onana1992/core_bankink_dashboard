@@ -4455,20 +4455,31 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					>
 						{/* Décision KYC — workflow (statut → revues → risque → décision) */}
 						<div className={OPS_CARD_SHELL}>
-							<div className={OPS_CARD_HEADER}>
-								<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.kyc.decisionPanel.title")}</h2>
-								<p className="mt-0.5 max-w-3xl text-xs text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.decisionPanel.subtitle")}</p>
+							<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
+								<div className="min-w-0 flex-1">
+									<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">
+										{t("customer.detail.kyc.decisionPanel.title")}
+									</h2>
+									<p className="mt-0.5 max-w-prose text-xs text-ops-fg-muted sm:text-sm">
+										{t("customer.detail.kyc.decisionPanel.subtitle")}
+									</p>
+								</div>
 							</div>
-							<div className="space-y-8 p-6 sm:p-8">
+							<div className="space-y-4 bg-ops-surface-muted/25 p-4 sm:p-6 lg:p-8">
 								{/* Synthèse statut dossier */}
-								<section className="rounded-ops-lg border border-ops-border bg-ops-surface-muted/50 px-4 py-4 shadow-sm sm:px-5">
-									<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-										<div>
-											<p className="text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">{t("customer.detail.kyc.currentStatus")}</p>
-											<p className="mt-1 text-lg font-semibold text-ops-fg">
-												{t(`customer.statuses.${customer.status}`)}
-											</p>
-										</div>
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-sm ring-1 ring-black/[0.03]"
+									aria-labelledby="kyc-decision-status-heading"
+								>
+									<div className="border-b border-ops-border bg-ops-surface-muted/80 px-5 py-3">
+										<h3 id="kyc-decision-status-heading" className="text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+											{t("customer.detail.kyc.currentStatus")}
+										</h3>
+									</div>
+									<div className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:py-5">
+										<p className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">
+											{t(`customer.statuses.${customer.status}`)}
+										</p>
 										<Badge variant={statusBadgeVariant(customer.status)} className="w-fit shrink-0 px-3 py-1 text-xs font-medium">
 											<span>{translatedCustomerStatus(t, customer.status)}</span>
 											<span className="ml-1.5 font-mono text-[10px] font-normal opacity-75">
@@ -4479,21 +4490,26 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 								</section>
 
 								{/* Étape 1 — Revues ligne (résumé) */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-sm ring-1 ring-black/[0.03]"
+									aria-labelledby="kyc-decision-step-1-title"
+								>
+									<div className="flex flex-wrap items-start gap-4 p-5 sm:gap-5 sm:p-6">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-sm font-bold text-white shadow-md ring-4 ring-black/10">
 											1
 										</div>
 										<div className="min-w-0 flex-1 space-y-3">
 											<div className="flex flex-wrap items-center gap-2">
-												<h4 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.workflow.stepA.title")}</h4>
+												<h4 id="kyc-decision-step-1-title" className="text-sm font-semibold text-ops-fg sm:text-base">
+													{t("customer.detail.kyc.workflow.stepA.title")}
+												</h4>
 												{kycAllLineReviewsApproved ? (
 													<Badge variant="success" className="text-[10px] font-medium">
 														{t("customer.detail.kyc.workflow.stepA.badgeOk")}
 													</Badge>
 												) : null}
 											</div>
-											<p className="text-xs text-slate-600">{t("customer.detail.kyc.workflow.stepA.description")}</p>
+											<p className="text-xs leading-relaxed text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.workflow.stepA.description")}</p>
 											<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
 												{[
 													{ key: "email", label: t("customer.detail.kyc.emailReview"), s: customer.emailReviewStatus },
@@ -4502,7 +4518,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												].map(row => (
 													<div
 														key={row.key}
-														className="flex items-center justify-between gap-2 rounded-lg border border-ops-border bg-ops-surface-muted/60 px-3 py-2.5"
+														className="flex items-center justify-between gap-2 rounded-xl border border-ops-border bg-ops-surface-muted/50 px-3 py-2.5 shadow-sm"
 													>
 														<span className="truncate text-xs font-medium text-ops-fg">{row.label}</span>
 														<Badge variant={reviewStatusBadgeVariant(row.s)} className="shrink-0 text-[10px]">
@@ -4512,7 +4528,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												))}
 											</div>
 											{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-												<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-3 py-2">
+												<p className="rounded-xl border border-amber-200/90 bg-amber-50 px-3 py-2 text-xs text-amber-950">
 													{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 												</p>
 											) : null}
@@ -4520,24 +4536,27 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									</div>
 								</section>
 
-								<div className="border-t border-ops-border" aria-hidden />
-
 								{/* Étape 2 — Screening listes */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-sm ring-1 ring-black/[0.03]"
+									aria-labelledby="kyc-decision-step-2-title"
+								>
+									<div className="flex flex-wrap items-start gap-4 p-5 sm:gap-5 sm:p-6">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-sm font-bold text-white shadow-md ring-4 ring-black/10">
 											2
 										</div>
 										<div className="min-w-0 flex-1 space-y-3">
 											<div className="flex flex-wrap items-center gap-2">
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepScreening.title")}</h4>
+												<h4 id="kyc-decision-step-2-title" className="text-sm font-semibold text-ops-fg sm:text-base">
+													{t("customer.detail.kyc.workflow.stepScreening.title")}
+												</h4>
 												{listScreeningPresence.hasListScreening ? (
 													<Badge variant="success" className="text-[10px] font-medium">
 														{t("customer.detail.kyc.workflow.stepScreening.badgeOk")}
 													</Badge>
 												) : null}
 											</div>
-											<p className="text-xs text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
+											<p className="text-xs leading-relaxed text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.workflow.stepScreening.description")}</p>
 											{listScreeningPresence.hasListScreening && listScreeningHasReviewOutcome ? (
 												<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
 													{t("customer.detail.kyc.workflow.stepScreening.reviewOutcomeHint")}
@@ -4552,7 +4571,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</p>
 											) : null}
 											{listScreeningPresence.hasListScreening ? (
-												<div className="max-w-3xl space-y-2 rounded-ops-lg border border-ops-border bg-ops-surface px-4 py-3 text-sm text-ops-fg shadow-sm">
+												<div className="max-w-3xl space-y-2 rounded-xl border border-ops-border bg-ops-surface-muted/40 px-4 py-3 text-sm text-ops-fg shadow-sm">
 													{listScreeningPresence.latestSanctions ? (
 														<div className="flex flex-wrap items-center justify-between gap-2 border-b border-ops-border pb-2">
 															<span className="text-xs font-medium text-ops-fg">
@@ -4597,7 +4616,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 																>
 																	{kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
 																</Badge>
-																<span className="text-[11px] text-slate-500">
+																<span className="text-[11px] text-ops-fg-muted">
 																	{listScreeningPresence.latestPep.checkedAt
 																		? new Date(listScreeningPresence.latestPep.checkedAt).toLocaleString(locale)
 																		: "—"}
@@ -4645,8 +4664,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															</Button>
 														</div>
 													</div>
-													<div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-														<p className="text-[11px] font-medium text-slate-700 mb-2">
+													<div className="rounded-xl border border-ops-border bg-ops-surface-muted/50 p-3 shadow-sm">
+														<p className="mb-2 text-[11px] font-medium text-ops-fg">
 															{t("customer.detail.kyc.workflow.stepScreening.simulatePep")}
 														</p>
 														<div className="flex flex-wrap gap-2">
@@ -4667,18 +4686,21 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									</div>
 								</section>
 
-								<div className="border-t border-ops-border" aria-hidden />
-
 								{/* Étape 3 — Risque */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-sm ring-1 ring-black/[0.03]"
+									aria-labelledby="kyc-decision-step-3-title"
+								>
+									<div className="flex flex-wrap items-start gap-4 p-5 sm:gap-5 sm:p-6">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-sm font-bold text-white shadow-md ring-4 ring-black/10">
 											3
 										</div>
 										<div className="min-w-0 flex-1 space-y-4">
 											<div>
-												<h4 className="text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.workflow.stepB.title")}</h4>
-												<p className="mt-1 text-xs text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepB.description")}</p>
+												<h4 id="kyc-decision-step-3-title" className="text-sm font-semibold text-ops-fg sm:text-base">
+													{t("customer.detail.kyc.workflow.stepB.title")}
+												</h4>
+												<p className="mt-1 text-xs leading-relaxed text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.workflow.stepB.description")}</p>
 											</div>
 											{customer.status === "PENDING_REVIEW" ? (
 												<div className="max-w-3xl rounded-xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm">
@@ -4705,7 +4727,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 											) : null}
 											<div className="min-w-0 max-w-3xl">
 												{(customer.status === "PENDING_REVIEW" || kycOnboardingRisk != null) && (
-												<div className="rounded-ops-lg border border-ops-border bg-ops-surface px-4 py-3 text-sm text-ops-fg shadow-sm">
+												<div className="rounded-xl border border-ops-border bg-ops-surface-muted/35 px-4 py-3 text-sm text-ops-fg shadow-sm">
 													{kycOnboardingRisk ? (
 														<>
 															<div className="mb-4 flex flex-wrap items-stretch gap-3">
@@ -4785,30 +4807,33 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 									</div>
 								</section>
 
-								<div className="border-t border-ops-border" aria-hidden />
-
 								{/* Étape 4 — Décision finale */}
-								<section>
-									<div className="flex flex-wrap items-start gap-3">
-										<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ops-border bg-ops-fg text-xs font-bold text-ops-surface shadow-sm ring-2 ring-ops-ring/25">
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-sm ring-1 ring-black/[0.03]"
+									aria-labelledby="kyc-decision-step-4-title"
+								>
+									<div className="flex flex-wrap items-start gap-4 p-5 sm:gap-5 sm:p-6">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-sm font-bold text-white shadow-md ring-4 ring-black/10">
 											4
 										</div>
 										<div className="min-w-0 flex-1 space-y-4">
 											<div>
-												<h4 className="text-sm font-semibold text-slate-900">{t("customer.detail.kyc.workflow.stepC.title")}</h4>
-												<p className="text-xs text-slate-600 mt-1">{t("customer.detail.kyc.workflow.stepC.description")}</p>
+												<h4 id="kyc-decision-step-4-title" className="text-sm font-semibold text-ops-fg sm:text-base">
+													{t("customer.detail.kyc.workflow.stepC.title")}
+												</h4>
+												<p className="mt-1 text-xs leading-relaxed text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.workflow.stepC.description")}</p>
 											</div>
-											<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-0 md:divide-x md:divide-ops-border">
-												<div className="rounded-ops-lg border border-ops-border bg-ops-surface-muted/30 p-4 shadow-sm md:rounded-none md:border-0 md:bg-transparent md:p-0 md:pr-4 md:shadow-none">
+											<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+												<div className="rounded-xl border border-emerald-200/80 bg-gradient-to-b from-emerald-50/50 to-ops-surface p-4 shadow-sm sm:p-5">
 													<h5 className="mb-1 text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.verify.title")}</h5>
 													<p className="mb-3 text-xs text-ops-fg-muted">{t("customer.detail.kyc.verify.descriptionNoManualScore")}</p>
 													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+														<p className="mb-3 rounded-xl border border-amber-200/90 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-950">
 															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 														</p>
 													) : null}
 													{kycOnboardingRisk?.blocked === true ? (
-														<p className="mb-3 text-xs text-red-800 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+														<p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-800">
 															{t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")}
 														</p>
 													) : null}
@@ -4827,11 +4852,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														{kycSubmitting === "verify" ? t("customer.detail.kyc.verify.verifying") : t("customer.detail.kyc.verify.button")}
 													</Button>
 												</div>
-												<div className="md:pl-4 rounded-xl border border-slate-200/90 bg-white p-4 shadow-sm md:border-0 md:shadow-none md:bg-transparent md:p-0 md:rounded-none">
-													<h5 className="text-sm font-semibold text-slate-900 mb-1">{t("customer.detail.kyc.reject.title")}</h5>
-													<p className="text-xs text-slate-500 mb-3">{t("customer.detail.kyc.reject.description")}</p>
+												<div className="rounded-xl border border-ops-border bg-ops-surface-muted/40 p-4 shadow-sm sm:p-5">
+													<h5 className="mb-1 text-sm font-semibold text-ops-fg">{t("customer.detail.kyc.reject.title")}</h5>
+													<p className="mb-3 text-xs text-ops-fg-muted">{t("customer.detail.kyc.reject.description")}</p>
 													{customer.status === "PENDING_REVIEW" && !kycAllLineReviewsApproved ? (
-														<p className="text-xs text-amber-900 bg-amber-50 border border-amber-200/90 rounded-lg px-2 py-1.5 mb-3">
+														<p className="mb-3 rounded-xl border border-amber-200/90 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-950">
 															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 														</p>
 													) : null}
@@ -4871,9 +4896,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 						</div>
 
 						{customer.rejectionReason && (
-							<div className="rounded-xl border border-red-200 bg-red-50 p-4">
-								<h3 className="text-sm font-semibold text-red-900 mb-2">{t("customer.detail.kyc.reject.previousReason")}</h3>
-								<p className="text-sm text-red-800">{customer.rejectionReason}</p>
+							<div className="overflow-hidden rounded-ops-xl border border-red-200/90 bg-red-50/90 p-5 shadow-sm ring-1 ring-red-900/[0.06] sm:p-6">
+								<h3 className="mb-2 text-sm font-semibold text-red-900">{t("customer.detail.kyc.reject.previousReason")}</h3>
+								<p className="text-sm leading-relaxed text-red-800">{customer.rejectionReason}</p>
 							</div>
 						)}
 					</div>
