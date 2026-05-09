@@ -112,6 +112,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						<div className="mt-1 space-y-1 pl-3">
 							<NavLink href="/customers" label={t("sidebar.clientDossiers")} icon={FolderOpen} collapsed={collapsed} activeMatch="prefix" />
 							<NavLink href="/kyc/audit-trail" label={t("sidebar.kycAuditTrail")} icon={ScrollText} collapsed={collapsed} />
+							<NavLink href="/kyc/rules" label={t("sidebar.kycRulesCatalog")} icon={Layers} collapsed={collapsed} />
 						</div>
 					</details>
 

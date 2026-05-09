@@ -93,6 +93,12 @@ export interface KycRiskRunItem {
 	blockReasonCode: string | null;
 }
 
+/** Détail d’une exécution (GET …/kyc/risk-runs/{runId}). */
+export interface KycRiskRunDetail extends KycRiskRunItem {
+	components: KycOnboardingRiskComponent[];
+	matchedRules: string[];
+}
+
 export interface Customer {
 	id: number;
 	type: CustomerType;

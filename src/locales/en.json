@@ -6,6 +6,7 @@
 		"clientsKyc": "Clients & KYC",
 		"clientDossiers": "Customer files",
 		"kycAuditTrail": "KYC audit log",
+		"kycRulesCatalog": "KYC rules",
 		"clients": "Clients",
 		"kycChecks": "KYC Verification",
 		"productCatalog": "Product Catalog",
@@ -799,7 +800,37 @@
 					"screeningChecks": "Screening PEP & Sanctions",
 					"screening": "List screening",
 					"data": "KYC checks",
+					"riskRunsHistory": "KYC evaluation history",
 					"auditTrail": "KYC audit trail"
+				},
+				"riskRunsHistory": {
+					"title": "KYC evaluation history",
+					"subtitle": "Paginated list of recorded risk-engine runs (kyc_risk_runs snapshots).",
+					"loading": "Loading history…",
+					"loadError": "Could not load evaluation history.",
+					"empty": "No engine runs recorded for this file.",
+					"columnWhen": "Date",
+					"columnSource": "Source",
+					"columnScore": "Score",
+					"columnBand": "Band",
+					"columnDecision": "Decision",
+					"columnBlocked": "Blocked",
+					"columnActions": "Actions",
+					"details": "Details",
+					"modalTitle": "Engine evaluation #{{id}}",
+					"modalTitleLoading": "Evaluation detail",
+					"modalLoading": "Loading detail…",
+					"modalEmpty": "No detail available.",
+					"detailNotFound": "This run was not found or does not belong to this file.",
+					"modalMetaPep": "Analyst PEP (evaluation)",
+					"modalInputHash": "Engine input fingerprint",
+					"paginationLabel": "runs",
+					"yes": "Yes",
+					"no": "No",
+					"runSource": {
+						"ASSESSMENT_API": "API preview",
+						"VERIFY": "KYC verification"
+					}
 				},
 				"auditTrail": {
 					"title": "KYC audit trail",
@@ -1067,8 +1098,11 @@
 					"stepB": {
 						"title": "Risk assessment",
 						"description": "Adjust the PEP flag if needed, then review the proposed score and risk band after list screening.",
+						"verifiedDescription": "Last recorded evaluation at verification time (read-only).",
 						"needScreeningFirst": "Complete step 2 (list screening) first: the evaluation score is available only after at least one sanctions or PEP check exists.",
-						"engineLoading": "Computing score…"
+						"engineLoading": "Computing score…",
+						"lastRunLoading": "Loading last evaluation…",
+						"lastRunEmpty": "No engine evaluation on file for this client (empty history)."
 					},
 					"stepC": {
 						"title": "Final decision",
@@ -3294,6 +3328,45 @@
 			"factors": "Factors",
 			"statsHint": "Indicators reflect the loaded history for the current client."
 		}
+	},
+	"kycCatalog": {
+		"rules": {
+			"title": "KYC rules",
+			"intro": "Official register of KYC assessment rules for compliance, audit, and internal control. Executable rules are enforced by the business rules engine.",
+			"tableFilters": "Filters",
+			"search": "Search",
+			"filterCategory": "Category",
+			"allCategories": "All",
+			"searchPlaceholder": "Search by code or label…",
+			"stats": {
+				"total": "Definitions",
+				"scoring": "Scoring",
+				"override": "Overrides",
+				"decision": "Decision"
+			},
+			"createDefinition": "New definition",
+			"code": "Code",
+			"name": "Name",
+			"category": "Category",
+			"description": "Description",
+			"drlFile": "DRL file",
+			"salience": "Salience",
+			"algorithm": "Algorithm version",
+			"ruleText": "Documentation",
+			"submitCreate": "Create",
+			"actions": "Actions",
+			"view": "View",
+			"delete": "Delete",
+			"deleteConfirm": "Delete definition \"{{code}}\"? This cannot be undone.",
+			"modalTitle": "Rule details",
+			"modalClose": "Close",
+			"saveChanges": "Save",
+			"saving": "Saving…",
+			"invalidSalience": "Salience must be a valid integer or empty.",
+			"paginationRules": "rules"
+		},
+		"loading": "Loading…",
+		"empty": "No catalog rules."
 	},
 	"login": {
 		"title": "Core Banking",

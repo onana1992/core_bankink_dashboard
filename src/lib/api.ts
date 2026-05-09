@@ -15,6 +15,7 @@ import type {
 	CustomerIdentityDocumentUniquenessResponse,
 	KycGeographyRiskResponse,
 	KycOnboardingRiskAssessmentResponse,
+	KycRiskRunDetail,
 	KycRiskRunItem,
 	Document,
 	DocumentType,
@@ -138,6 +139,9 @@ import type {
 	CreateDeclarationResponse,
 	AmlAlertStatus,
 	AmlAlertSeverity,
+	KycRuleDefinitionResponse,
+	CreateKycRuleDefinitionRequest,
+	UpdateKycRuleDefinitionRequest,
 	PagedResponse
 } from "@/types";
 
@@ -647,6 +651,16 @@ export const customersApi = {
 		return handleJsonResponse<KycOnboardingRiskAssessmentResponse>(res);
 	},
 
+	/** Dernier snapshot enregistré (sans relancer le moteur). 404 → null. */
+	async getKycRiskAssessmentLatest(id: number | string): Promise<KycOnboardingRiskAssessmentResponse | null> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/risk-assessment/latest`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		if (res.status === 404) return null;
+		return handleJsonResponse<KycOnboardingRiskAssessmentResponse>(res);
+	},
+
 	async listKycRiskRuns(
 		id: number | string,
 		params: { page?: number; size?: number } = {}
@@ -660,6 +674,15 @@ export const customersApi = {
 			{ headers: getAuthHeaders(), cache: "no-store" }
 		);
 		return handleJsonResponse<PagedResponse<KycRiskRunItem>>(res);
+	},
+
+	async getKycRiskRun(id: number | string, runId: number | string): Promise<KycRiskRunDetail | null> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers/${id}/kyc/risk-runs/${runId}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		if (res.status === 404) return null;
+		return handleJsonResponse<KycRiskRunDetail>(res);
 	},
 
 	async getKycAuditTimeline(
@@ -2908,6 +2931,44 @@ export const amlApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<CreateDeclarationResponse>(res);
+	}
+};
+
+const KYC_CATALOG_BASE = `${API_BASE}/api/ops/kyc`;
+
+export const kycCatalogApi = {
+	async listRules(): Promise<KycRuleDefinitionResponse[]> {
+		const res = await fetchWithAutoRefresh(`${KYC_CATALOG_BASE}/rules`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<KycRuleDefinitionResponse[]>(res);
+	},
+
+	async createRule(payload: CreateKycRuleDefinitionRequest): Promise<KycRuleDefinitionResponse> {
+		const res = await fetchWithAutoRefresh(`${KYC_CATALOG_BASE}/rules`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<KycRuleDefinitionResponse>(res);
+	},
+
+	async updateRule(id: number, payload: UpdateKycRuleDefinitionRequest): Promise<KycRuleDefinitionResponse> {
+		const res = await fetchWithAutoRefresh(`${KYC_CATALOG_BASE}/rules/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<KycRuleDefinitionResponse>(res);
+	},
+
+	async deleteRule(id: number): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${KYC_CATALOG_BASE}/rules/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse<void>(res);
 	}
 };
 

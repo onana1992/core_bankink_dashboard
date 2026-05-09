@@ -8,11 +8,21 @@ import type { TFunction } from "i18next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
-import TablePagination from "@/components/ui/TablePagination";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 import Toast from "@/components/ui/Toast";
 import { AuditEventsTable } from "@/components/audit/AuditEventsTable";
-import { OpsInlineAlert, OpsLoadingState, OpsPageHeader } from "@/components/ops";
-import { OPS_CARD_HEADER, OPS_CARD_SHELL, OPS_PAGE_STACK } from "@/components/ops/opsClasses";
+import { OpsEmptyState, OpsInlineAlert, OpsLoadingState, OpsModal, OpsPageHeader } from "@/components/ops";
+import {
+	OPS_CARD_HEADER,
+	OPS_CARD_SHELL,
+	OPS_PAGE_STACK,
+	OPS_TABLE,
+	OPS_TABLE_WRAP,
+	OPS_TD,
+	OPS_TH,
+	OPS_THEAD,
+	OPS_TR_HOVER
+} from "@/components/ops/opsClasses";
 import { customersApi, accountsApi } from "@/lib/api";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
@@ -39,6 +49,8 @@ import type {
 	KycCheckResult,
 	KycCheckType,
 	KycOnboardingRiskAssessmentResponse,
+	KycRiskRunDetail,
+	KycRiskRunItem,
 	PagedResponse,
 	RelatedPerson,
 	RelatedPersonRole,
@@ -127,8 +139,8 @@ function sanitizeReviewerNote(raw?: string | null): string | null {
 
 const KYC_COMPLIANCE_CHECKS_PAGE_SIZE = 20;
 
-/** Sous-onglets conformité : 1 Revue KYC, 2 Screening PEP & Sanctions, 3 Décision KYC, 4 Piste d'audit KYC. */
-const COMPLIANCE_INNER_SUBTAB_ORDER = ["review", "screeningChecks", "decision", "auditTrail"] as const;
+/** Sous-onglets conformité : 1 Revue KYC, 2 Screening PEP & Sanctions, 3 Décision KYC, 4 Historique évaluations, 5 Piste d'audit KYC. */
+const COMPLIANCE_INNER_SUBTAB_ORDER = ["review", "screeningChecks", "decision", "riskRunsHistory", "auditTrail"] as const;
 type ComplianceInnerTab = (typeof COMPLIANCE_INNER_SUBTAB_ORDER)[number];
 
 function kycCheckResultBadgeVariant(result: KycCheckResult): "success" | "danger" | "warning" {
@@ -231,6 +243,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	/** N’initialise le PEP « évaluation » depuis le profil qu’au premier chargement du client : évite qu’un `load()` écrase la case après cochage. */
 	const evaluationPepInitClientIdRef = useRef<number | null>(null);
 	const [kycOnboardingRisk, setKycOnboardingRisk] = useState<KycOnboardingRiskAssessmentResponse | null>(null);
+	/** Chargement du snapshot « dernière évaluation » pour clients déjà vérifiés. */
+	const [kycLastEvalLoading, setKycLastEvalLoading] = useState(false);
 	const [rejectionReason, setRejectionReason] = useState<string>("");
 
 	const kycAllLineReviewsApproved = useMemo(
@@ -313,6 +327,15 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [kycAuditTrailPage, setKycAuditTrailPage] = useState(0);
 	const [kycAuditTrailPaged, setKycAuditTrailPaged] = useState<PagedResponse<AuditEvent> | null>(null);
 	const [kycAuditTrailLoading, setKycAuditTrailLoading] = useState(false);
+
+	const KYC_RISK_RUNS_PAGE_SIZE = 15;
+	const [kycRiskRunsPage, setKycRiskRunsPage] = useState(0);
+	const [kycRiskRunsSize, setKycRiskRunsSize] = useState(KYC_RISK_RUNS_PAGE_SIZE);
+	const [kycRiskRunsPaged, setKycRiskRunsPaged] = useState<PagedResponse<KycRiskRunItem> | null>(null);
+	const [kycRiskRunsLoading, setKycRiskRunsLoading] = useState(false);
+	const [kycRiskRunModalOpen, setKycRiskRunModalOpen] = useState(false);
+	const [kycRiskRunDetailLoading, setKycRiskRunDetailLoading] = useState(false);
+	const [kycRiskRunDetail, setKycRiskRunDetail] = useState<KycRiskRunDetail | null>(null);
 
 	const loadComplianceData = async () => {
 		if (!id) return;
@@ -451,15 +474,73 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	}, [id, activeTab, complianceInnerTab, kycAuditTrailPage, t]);
 
 	useEffect(() => {
+		if (!id || Number.isNaN(id)) return;
+		if (activeTab !== "compliance" || complianceInnerTab !== "riskRunsHistory") return;
+		let cancelled = false;
+		setKycRiskRunsLoading(true);
+		(async () => {
+			try {
+				const res = await customersApi.listKycRiskRuns(id, {
+					page: kycRiskRunsPage,
+					size: kycRiskRunsSize
+				});
+				if (!cancelled) setKycRiskRunsPaged(res);
+			} catch (e) {
+				if (!cancelled) {
+					setKycRiskRunsPaged(null);
+					const errMsg = e instanceof Error ? e.message : String(e);
+					setToast({
+						message: errMsg
+							? `${t("customer.detail.compliance.riskRunsHistory.loadError")} — ${errMsg}`
+							: t("customer.detail.compliance.riskRunsHistory.loadError"),
+						type: "error"
+					});
+				}
+			} finally {
+				if (!cancelled) setKycRiskRunsLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [id, activeTab, complianceInnerTab, kycRiskRunsPage, kycRiskRunsSize, t]);
+
+	useEffect(() => {
 		if (!id || Number.isNaN(id)) {
 			setKycOnboardingRisk(null);
+			setKycLastEvalLoading(false);
 			return;
 		}
-		if (customer?.status !== "PENDING_REVIEW") {
+		if (customer == null || customer.id !== id) {
 			setKycOnboardingRisk(null);
+			setKycLastEvalLoading(false);
 			return;
 		}
-		if (customer.id !== id) {
+
+		if (customer.status === "VERIFIED") {
+			setKycOnboardingRisk(null);
+			setKycLastEvalLoading(true);
+			let cancelled = false;
+			(async () => {
+				try {
+					const a = await customersApi.getKycRiskAssessmentLatest(id);
+					if (!cancelled) {
+						setKycOnboardingRisk(a);
+					}
+				} catch {
+					if (!cancelled) setKycOnboardingRisk(null);
+				} finally {
+					if (!cancelled) setKycLastEvalLoading(false);
+				}
+			})();
+			return () => {
+				cancelled = true;
+			};
+		}
+
+		setKycLastEvalLoading(false);
+
+		if (customer.status !== "PENDING_REVIEW") {
 			setKycOnboardingRisk(null);
 			return;
 		}
@@ -547,6 +628,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		const key = `customer.detail.kyc.onboardingRisk.blockReason.${code}`;
 		const translated = t(key);
 		return translated === key ? code : translated;
+	}
+
+	function kycRiskRunSourceLabel(source: string): string {
+		const key = `customer.detail.compliance.riskRunsHistory.runSource.${source}`;
+		const translated = t(key);
+		return translated === key ? source : translated;
 	}
 
 	function reviewStatusBadgeVariant(s?: Customer["emailReviewStatus"]): "neutral" | "success" | "warning" | "danger" {
@@ -1145,6 +1232,26 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		}
 	}
 
+	async function openKycRiskRunDetails(run: KycRiskRunItem) {
+		if (!id || Number.isNaN(id)) return;
+		setKycRiskRunModalOpen(true);
+		setKycRiskRunDetail(null);
+		setKycRiskRunDetailLoading(true);
+		try {
+			const d = await customersApi.getKycRiskRun(id, run.id);
+			if (d) {
+				setKycRiskRunDetail(d);
+			} else {
+				setToast({ message: t("customer.detail.compliance.riskRunsHistory.detailNotFound"), type: "error" });
+			}
+		} catch (e) {
+			setKycRiskRunDetail(null);
+			setToast({ message: e instanceof Error ? e.message : String(e), type: "error" });
+		} finally {
+			setKycRiskRunDetailLoading(false);
+		}
+	}
+
 	async function doSubmitKyc() {
 		if (!id) return;
 		setKycSubmitting("submit");
@@ -1521,6 +1628,148 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					onClose={() => setToast(null)}
 				/>
 			)}
+			<OpsModal
+				open={kycRiskRunModalOpen}
+				onOpenChange={open => {
+					setKycRiskRunModalOpen(open);
+					if (!open) {
+						setKycRiskRunDetail(null);
+						setKycRiskRunDetailLoading(false);
+					}
+				}}
+				size="xl"
+				className="!p-8 sm:!p-10"
+				title={
+					kycRiskRunDetail
+						? t("customer.detail.compliance.riskRunsHistory.modalTitle", { id: kycRiskRunDetail.id })
+						: t("customer.detail.compliance.riskRunsHistory.modalTitleLoading")
+				}
+				description={
+					kycRiskRunDetail?.createdAt
+						? new Date(kycRiskRunDetail.createdAt).toLocaleString(locale)
+						: undefined
+				}
+			>
+				{kycRiskRunDetailLoading ? (
+					<OpsLoadingState embedded message={t("customer.detail.compliance.riskRunsHistory.modalLoading")} />
+				) : kycRiskRunDetail ? (
+					<div className="space-y-4 text-sm text-ops-fg">
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+							<div className="rounded-lg border border-ops-border bg-ops-surface-muted/40 px-3 py-2">
+								<p className="text-[10px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+									{t("customer.detail.compliance.riskRunsHistory.columnSource")}
+								</p>
+								<p className="mt-0.5 font-medium">{kycRiskRunSourceLabel(kycRiskRunDetail.runSource)}</p>
+							</div>
+							<div className="rounded-lg border border-ops-border bg-ops-surface-muted/40 px-3 py-2">
+								<p className="text-[10px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+									{t("customer.detail.compliance.riskRunsHistory.modalMetaPep")}
+								</p>
+								<p className="mt-0.5 font-medium">
+									{kycRiskRunDetail.analystPepFlag
+										? t("customer.detail.compliance.riskRunsHistory.yes")
+										: t("customer.detail.compliance.riskRunsHistory.no")}
+								</p>
+							</div>
+							<div className="rounded-lg border border-ops-border bg-ops-surface-muted/40 px-3 py-2 sm:col-span-2">
+								<p className="text-[10px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+									{t("customer.detail.compliance.riskRunsHistory.modalInputHash")}
+								</p>
+								<code className="mt-1 block break-all text-xs text-ops-fg">{kycRiskRunDetail.inputHash}</code>
+							</div>
+						</div>
+						<div className="flex flex-wrap gap-3">
+							<div
+								className={`flex min-w-[7rem] flex-1 flex-col rounded-lg border px-3 py-2 ${
+									riskBadgeVariant(kycRiskRunDetail.proposedRiskScore) === "danger"
+										? "border-red-200/90 bg-red-50/60"
+										: riskBadgeVariant(kycRiskRunDetail.proposedRiskScore) === "warning"
+											? "border-amber-200/90 bg-amber-50/50"
+											: "border-emerald-200/90 bg-emerald-50/40"
+								}`}
+							>
+								<span className="text-[10px] font-semibold uppercase text-ops-fg-muted">
+									{t("customer.detail.kyc.onboardingRisk.proposed")}
+								</span>
+								<span className="text-xl font-bold tabular-nums">{kycRiskRunDetail.proposedRiskScore}</span>
+								<span className="text-xs text-ops-fg-muted">/100</span>
+							</div>
+							<div className="flex min-w-[6rem] flex-col gap-1 rounded-lg border border-ops-border bg-ops-surface-muted/60 px-3 py-2">
+								<span className="text-[10px] font-semibold uppercase text-ops-fg-muted">
+									{t("customer.detail.kyc.onboardingRisk.band")}
+								</span>
+								<Badge variant={onboardingRiskBandBadgeVariant(kycRiskRunDetail.riskBand)} className="w-fit text-[11px] font-semibold">
+									{onboardingRiskBandLabel(kycRiskRunDetail.riskBand)}
+								</Badge>
+							</div>
+							{kycRiskRunDetail.decision ? (
+								<div className="flex min-w-[8rem] flex-col gap-1 rounded-lg border border-ops-border bg-ops-surface-muted/60 px-3 py-2">
+									<span className="text-[10px] font-semibold uppercase text-ops-fg-muted">
+										{t("customer.detail.kyc.onboardingRisk.decisionLabel")}
+									</span>
+									<Badge variant={onboardingRiskDecisionBadgeVariant(kycRiskRunDetail.decision)} className="w-fit text-[11px] font-semibold">
+										{onboardingRiskDecisionLabel(kycRiskRunDetail.decision)}
+									</Badge>
+								</div>
+							) : null}
+						</div>
+						{kycRiskRunDetail.blocked ? (
+							<div className="rounded-lg border border-red-200 bg-red-50/80 px-3 py-2 text-xs text-red-900">
+								<span className="font-semibold">{t("customer.detail.kyc.onboardingRisk.blockedTitle")}</span>
+								{": "}
+								{onboardingRiskBlockReasonLabel(kycRiskRunDetail.blockReasonCode)}
+							</div>
+						) : null}
+						{kycRiskRunDetail.matchedRules && kycRiskRunDetail.matchedRules.length > 0 ? (
+							<div>
+								<p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+									{t("customer.detail.kyc.onboardingRisk.matchedRulesTitle")}
+								</p>
+								<ul className="flex flex-wrap gap-1">
+									{kycRiskRunDetail.matchedRules.map(rule => (
+										<li key={rule}>
+											<code className="rounded bg-ops-surface-muted px-1.5 py-0.5 text-[11px]">{rule}</code>
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
+						<div className="rounded-lg border border-slate-200/80 bg-slate-50/50">
+							<div className="border-b border-slate-200/70 bg-white/90 px-3 py-1.5">
+								<p className="text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+									{t("customer.detail.kyc.onboardingRisk.components")}
+								</p>
+							</div>
+							<ul className="max-h-48 divide-y divide-slate-200/60 overflow-y-auto">
+								{kycRiskRunDetail.components.map((c, i) => (
+									<li key={`${c.code}-${i}`} className="px-3 py-2">
+										<div className="flex flex-wrap items-baseline justify-between gap-2 gap-y-1">
+											<div className="flex min-w-0 flex-1 items-center gap-2">
+												<span className="shrink-0 rounded bg-ops-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ops-fg">
+													{c.code}
+												</span>
+												<span className="truncate text-xs font-medium text-ops-fg" title={c.label}>
+													{c.label}
+												</span>
+											</div>
+											<span className="shrink-0 rounded-md bg-ops-surface-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ops-fg">
+												{t("customer.detail.kyc.onboardingRisk.floorShort", { n: c.floorAfterComponent })}
+											</span>
+										</div>
+										<p className="mt-1 break-words text-[11px] leading-snug text-ops-fg-muted">{c.detail}</p>
+									</li>
+								))}
+							</ul>
+						</div>
+						<p className="text-[10px] text-slate-500">
+							<span className="font-medium uppercase tracking-wide">{t("customer.detail.kyc.onboardingRisk.algorithm")}</span>{" "}
+							<code className="rounded bg-slate-100 px-1 py-0.5 text-[11px] text-slate-800">{kycRiskRunDetail.algorithmVersion}</code>
+						</p>
+					</div>
+				) : (
+					<p className="text-sm text-ops-fg-muted">{t("customer.detail.compliance.riskRunsHistory.modalEmpty")}</p>
+				)}
+			</OpsModal>
 			<datalist id="nace-suggestions-customer-detail">
 				{NACE_ACTIVITY_CODE_SUGGESTIONS.map(code => (
 					<option key={code} value={code} />
@@ -4090,6 +4339,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										if (tid === "auditTrail" && complianceInnerTab !== "auditTrail") {
 											setKycAuditTrailPage(0);
 										}
+										if (tid === "riskRunsHistory" && complianceInnerTab !== "riskRunsHistory") {
+											setKycRiskRunsPage(0);
+										}
 										setComplianceInnerTab(tid);
 									}}
 									className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition whitespace-nowrap shrink-0 ${
@@ -4700,7 +4952,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												<h4 id="kyc-decision-step-3-title" className="text-sm font-semibold text-ops-fg sm:text-base">
 													{t("customer.detail.kyc.workflow.stepB.title")}
 												</h4>
-												<p className="mt-1 text-xs leading-relaxed text-ops-fg-muted sm:text-sm">{t("customer.detail.kyc.workflow.stepB.description")}</p>
+												<p className="mt-1 text-xs leading-relaxed text-ops-fg-muted sm:text-sm">
+													{customer.status === "VERIFIED"
+														? t("customer.detail.kyc.workflow.stepB.verifiedDescription")
+														: t("customer.detail.kyc.workflow.stepB.description")}
+												</p>
 											</div>
 											{customer.status === "PENDING_REVIEW" ? (
 												<div className="max-w-3xl rounded-xl border border-indigo-200/80 bg-indigo-50/40 px-4 py-3 shadow-sm">
@@ -4726,7 +4982,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</div>
 											) : null}
 											<div className="min-w-0 max-w-3xl">
-												{(customer.status === "PENDING_REVIEW" || kycOnboardingRisk != null) && (
+												{(customer.status === "PENDING_REVIEW" || customer.status === "VERIFIED") && (
 												<div className="rounded-xl border border-ops-border bg-ops-surface-muted/35 px-4 py-3 text-sm text-ops-fg shadow-sm">
 													{kycOnboardingRisk ? (
 														<>
@@ -4799,6 +5055,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 														</p>
 													) : customer.status === "PENDING_REVIEW" && listScreeningPresence.hasListScreening && !kycOnboardingRisk ? (
 														<p className="text-xs leading-relaxed text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepB.engineLoading")}</p>
+													) : customer.status === "VERIFIED" && kycLastEvalLoading ? (
+														<p className="text-xs leading-relaxed text-ops-fg-muted">{t("customer.detail.kyc.workflow.stepB.lastRunLoading")}</p>
+													) : customer.status === "VERIFIED" && !kycLastEvalLoading ? (
+														<p className="text-xs leading-relaxed text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded-lg px-3 py-2">
+															{t("customer.detail.kyc.workflow.stepB.lastRunEmpty")}
+														</p>
 													) : null}
 												</div>
 												)}
@@ -4904,6 +5166,106 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
+
+						{complianceInnerTab === "riskRunsHistory" && (
+							<div
+								className="space-y-4"
+								role="tabpanel"
+								id="compliance-subpanel-riskRunsHistory"
+								aria-labelledby="compliance-subtab-riskRunsHistory"
+							>
+								<section
+									className="overflow-hidden rounded-ops-xl border border-ops-border bg-ops-surface shadow-ops-card"
+									aria-labelledby="compliance-risk-runs-heading"
+								>
+									<div className="border-b border-slate-100 bg-slate-50/90 px-5 py-4">
+										<h3 id="compliance-risk-runs-heading" className="text-sm font-semibold tracking-tight text-slate-900">
+											{t("customer.detail.compliance.riskRunsHistory.title")}
+										</h3>
+										<p className="mt-1 text-xs text-slate-500 leading-relaxed">
+											{t("customer.detail.compliance.riskRunsHistory.subtitle")}
+										</p>
+									</div>
+									{kycRiskRunsLoading && !kycRiskRunsPaged ? (
+										<OpsLoadingState embedded message={t("customer.detail.compliance.riskRunsHistory.loading")} />
+									) : !kycRiskRunsPaged || kycRiskRunsPaged.content.length === 0 ? (
+										<OpsEmptyState embedded title={t("customer.detail.compliance.riskRunsHistory.empty")} />
+									) : (
+										<>
+											<div className={OPS_TABLE_WRAP}>
+												<table className={OPS_TABLE}>
+													<thead className={OPS_THEAD}>
+														<tr>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnWhen")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnSource")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnScore")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnBand")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnDecision")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnBlocked")}</th>
+															<th className={OPS_TH}>{t("customer.detail.compliance.riskRunsHistory.columnActions")}</th>
+														</tr>
+													</thead>
+													<tbody className="divide-y divide-ops-border bg-ops-surface text-sm">
+														{kycRiskRunsPaged.content.map(run => (
+															<tr key={run.id} className={OPS_TR_HOVER}>
+																<td className={`${OPS_TD} whitespace-nowrap text-ops-fg-muted`}>
+																	{run.createdAt ? new Date(run.createdAt).toLocaleString(locale) : "—"}
+																</td>
+																<td className={OPS_TD}>{kycRiskRunSourceLabel(run.runSource)}</td>
+																<td className={`${OPS_TD} font-semibold tabular-nums`}>{run.proposedRiskScore}</td>
+																<td className={OPS_TD}>
+																	<Badge variant={onboardingRiskBandBadgeVariant(run.riskBand)} className="text-[10px] font-semibold">
+																		{onboardingRiskBandLabel(run.riskBand)}
+																	</Badge>
+																</td>
+																<td className={OPS_TD}>
+																	{run.decision ? (
+																		<Badge variant={onboardingRiskDecisionBadgeVariant(run.decision)} className="text-[10px] font-semibold">
+																			{onboardingRiskDecisionLabel(run.decision)}
+																		</Badge>
+																	) : (
+																		<span className="text-ops-fg-muted">—</span>
+																	)}
+																</td>
+																<td className={OPS_TD}>
+																	{run.blocked ? (
+																		<Badge variant="danger" className="text-[10px]">
+																			{t("customer.detail.compliance.riskRunsHistory.yes")}
+																		</Badge>
+																	) : (
+																		<span className="text-ops-fg-muted">{t("customer.detail.compliance.riskRunsHistory.no")}</span>
+																	)}
+																</td>
+																<td className={OPS_TD}>
+																	<Button type="button" size="sm" variant="outline" onClick={() => void openKycRiskRunDetails(run)}>
+																		{t("customer.detail.compliance.riskRunsHistory.details")}
+																	</Button>
+																</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+											</div>
+											<TablePagination
+												page={kycRiskRunsPaged.page ?? kycRiskRunsPage}
+												totalPages={Math.max(1, kycRiskRunsPaged.totalPages ?? 1)}
+												totalElements={kycRiskRunsPaged.totalElements ?? 0}
+												pageSize={kycRiskRunsPaged.size ?? kycRiskRunsSize}
+												onPageChange={setKycRiskRunsPage}
+												resultsLabel={t("customer.detail.compliance.riskRunsHistory.paginationLabel")}
+												showFirstLast
+												sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
+												size={kycRiskRunsSize}
+												onSizeChange={s => {
+													setKycRiskRunsSize(s);
+													setKycRiskRunsPage(0);
+												}}
+											/>
+										</>
+									)}
+								</section>
+							</div>
+						)}
 
 						{complianceInnerTab === "auditTrail" && (
 						<div

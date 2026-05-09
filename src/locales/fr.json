@@ -6,6 +6,7 @@
 		"clientsKyc": "Clients & KYC",
 		"clientDossiers": "Dossiers client",
 		"kycAuditTrail": "Piste d'audit KYC",
+		"kycRulesCatalog": "Règles KYC",
 		"clients": "Clients",
 		"kycChecks": "Vérification KYC",
 		"productCatalog": "Catalogue de produits",
@@ -799,7 +800,37 @@
 					"screeningChecks": "Screening PEP & Sanctions",
 					"screening": "Screening listes",
 					"data": "Contrôles KYC",
+					"riskRunsHistory": "Historique des évaluations KYC",
 					"auditTrail": "Piste d’audit KYC"
+				},
+				"riskRunsHistory": {
+					"title": "Historique des évaluations KYC",
+					"subtitle": "Liste paginée des exécutions enregistrées du moteur de scoring (snapshots kyc_risk_runs).",
+					"loading": "Chargement de l’historique…",
+					"loadError": "Impossible de charger l’historique des évaluations.",
+					"empty": "Aucune exécution moteur enregistrée pour ce dossier.",
+					"columnWhen": "Date",
+					"columnSource": "Origine",
+					"columnScore": "Score",
+					"columnBand": "Bande",
+					"columnDecision": "Décision",
+					"columnBlocked": "Bloqué",
+					"columnActions": "Actions",
+					"details": "Détails",
+					"modalTitle": "Évaluation moteur #{{id}}",
+					"modalTitleLoading": "Détail de l’évaluation",
+					"modalLoading": "Chargement du détail…",
+					"modalEmpty": "Aucun détail disponible.",
+					"detailNotFound": "Cette exécution est introuvable ou n’appartient pas à ce dossier.",
+					"modalMetaPep": "PEP analyste (évaluation)",
+					"modalInputHash": "Empreinte des entrées moteur",
+					"paginationLabel": "exécutions",
+					"yes": "Oui",
+					"no": "Non",
+					"runSource": {
+						"ASSESSMENT_API": "Consultation API",
+						"VERIFY": "Vérification KYC"
+					}
 				},
 				"auditTrail": {
 					"title": "Piste d’audit KYC",
@@ -1067,8 +1098,11 @@
 					"stepB": {
 						"title": "Évaluation du risque",
 						"description": "Ajustez le statut PEP si nécessaire, puis consultez le score et la bande proposés après l’étape screening listes.",
+						"verifiedDescription": "Dernière évaluation enregistrée au moment de la vérification (lecture seule).",
 						"needScreeningFirst": "Complétez d’abord l’étape 2 (screening listes) : le score d’évaluation n’est disponible qu’après au moins un contrôle sanctions ou PEP.",
-						"engineLoading": "Calcul du score en cours…"
+						"engineLoading": "Calcul du score en cours…",
+						"lastRunLoading": "Chargement de la dernière évaluation…",
+						"lastRunEmpty": "Aucune évaluation moteur enregistrée pour ce dossier (historique vide)."
 					},
 					"stepC": {
 						"title": "Décision finale",
@@ -3323,6 +3357,45 @@
 			"factors": "Facteurs",
 			"statsHint": "Les indicateurs reflètent l’historique chargé pour le client courant."
 		}
+	},
+	"kycCatalog": {
+		"rules": {
+			"title": "Règles KYC",
+			"intro": "Référentiel des règles d’évaluation KYC à des fins de conformité, d’audit et de contrôle interne. Les règles effectives sont exécutées par le moteur métier.",
+			"tableFilters": "Filtres",
+			"search": "Recherche",
+			"filterCategory": "Catégorie",
+			"allCategories": "Toutes",
+			"searchPlaceholder": "Rechercher par code ou libellé…",
+			"stats": {
+				"total": "Définitions",
+				"scoring": "Scoring",
+				"override": "Blocages",
+				"decision": "Décision"
+			},
+			"createDefinition": "Nouvelle définition",
+			"code": "Code",
+			"name": "Nom",
+			"category": "Catégorie",
+			"description": "Description",
+			"drlFile": "Fichier DRL",
+			"salience": "Salience",
+			"algorithm": "Version d’algorithme",
+			"ruleText": "Documentation",
+			"submitCreate": "Créer",
+			"actions": "Actions",
+			"view": "Voir",
+			"delete": "Supprimer",
+			"deleteConfirm": "Supprimer la définition « {{code}} » ? Cette action est irréversible.",
+			"modalTitle": "Détail de la règle",
+			"modalClose": "Fermer",
+			"saveChanges": "Enregistrer",
+			"saving": "Enregistrement…",
+			"invalidSalience": "La salience doit être un entier valide ou vide.",
+			"paginationRules": "règles"
+		},
+		"loading": "Chargement…",
+		"empty": "Aucune règle catalogue."
 	},
 	"login": {
 		"title": "Core Banking",
