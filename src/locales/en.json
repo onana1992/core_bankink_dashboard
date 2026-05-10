@@ -521,6 +521,7 @@
 					"registrationRequired": "Registration number is required.",
 					"incorporationDateRequired": "Incorporation date is required.",
 					"activityDescriptionRequired": "Activity / corporate purpose description is required.",
+					"activityCategoryRequired": "Select a business activity sector.",
 					"activityNaceCodeRequired": "NACE class code (Rev.2, e.g. 62.01) is required.",
 					"activityNaceCodeInvalid": "Invalid NACE code: use the four-digit class format (e.g. 62.01).",
 					"textTooLong": "Text is too long.",
@@ -549,6 +550,8 @@
 					"incorporationCountry": "Country of incorporation",
 					"taxResidence": "Tax residence of the legal entity",
 					"taxIdentification": "Tax ID (NIF / TIN, optional)",
+					"activityCategory": "Activity sector",
+					"activityCategoryPlaceholder": "Select a sector…",
 					"activityNaceCode": "NACE Rev.2 class code (e.g. 62.01)",
 					"activityNaceCodeHint": "Referential alignment; format NN.NN. Suggestion list available.",
 					"activityDescription": "Corporate purpose / activity description",
@@ -604,9 +607,12 @@
 					"title": "Supporting documents",
 					"intro": "Statutes (or extract), registered office proof of address, legal representative ID.",
 					"statutes": "Articles of association / statutes (or registration extract)",
+					"statutesCardHint": "Clear scan or PDF of the articles of association or a recent registration extract.",
+					"kbisCardHint": "Optional: trade register excerpt, certificate of incorporation, or similar.",
 					"kbisOptional": "Additional registration document (optional)",
 					"proofOfSeat": "Registered office proof of address (utility bill, lease, etc.)",
-					"repId": "Legal representative – identity document"
+					"repId": "Legal representative – identity document",
+					"identityIssuingSameAsTaxResidence": "Match tax residence"
 				},
 				"recap": {
 					"entity": "Legal entity"
@@ -748,6 +754,23 @@
 				"saving": "Saving...",
 				"cancel": "Cancel"
 			},
+			"businessActivityCategories": {
+				"AGRICULTURE_FORESTRY_FISHING": "Agriculture, forestry & fishing",
+				"EXTRACTIVE_ENERGY": "Mining, quarrying & energy",
+				"MANUFACTURING": "Manufacturing",
+				"CONSTRUCTION": "Construction",
+				"WHOLESALE_RETAIL_TRADE": "Wholesale & retail trade",
+				"TRANSPORT_STORAGE": "Transport & storage",
+				"ACCOMMODATION_FOOD": "Accommodation & food services",
+				"ICT": "Information & communication",
+				"FINANCIAL_INSURANCE": "Financial & insurance activities",
+				"REAL_ESTATE": "Real estate activities",
+				"PROFESSIONAL_ADMIN_SUPPORT": "Professional, scientific & administrative support",
+				"PUBLIC_EDUCATION_HEALTH_SOCIAL": "Public sector, education, health & social work",
+				"ARTS_ENTERTAINMENT_SPORTS": "Arts, entertainment, sports & other services",
+				"GAMING_GAMBLING_CRYPTO": "Gaming, gambling & crypto-asset services",
+				"OTHER_SERVICES": "Other services"
+			},
 			"business": {
 				"title": "Legal entity (onboarding)",
 				"website": "Website",
@@ -757,8 +780,9 @@
 					"registrationNumber": "Registration no.",
 					"incorporationDate": "Incorporation date",
 					"incorporationCountry": "Country of incorporation",
+					"activityCategory": "Activity sector",
 					"activityDescription": "Activity / corporate purpose",
-					"activityCode": "NACE class code",
+					"activityCode": "NACE class code (legacy)",
 					"signingAuthorityNote": "Signing powers",
 					"annualRevenueBand": "Annual revenue (band)",
 					"employeeCount": "Headcount",

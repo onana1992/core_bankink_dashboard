@@ -12,6 +12,9 @@ import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/natio
 import { ANNUAL_REVENUE_BAND_OPTIONS, LEGAL_FORM_OPTIONS } from "@/data/legalFormOptions";
 import {
 	IDENTITY_DOC_NUMBER_MAX,
+	PHONE_MAX_LEN,
+	PHONE_MIN_DIGITS,
+	countPhoneDigits,
 	isFileSizeOk,
 	isImageOrPdfFile,
 	MAX_UPLOAD_BYTES,
@@ -20,11 +23,28 @@ import {
 	isIsoDateStrictlyFuture,
 	MIN_ID_VALIDITY_DAYS
 } from "@/lib/personOnboardingValidation";
+import { composeInternationalPhone, getPhoneDialSelectOptions } from "@/lib/phoneCountryDialOptions";
 import type { AddAddressRequest, AddRelatedPersonRequest, CreateCustomerRequest, UpdateCustomerRequest } from "@/types";
+import { BUSINESS_ACTIVITY_CATEGORY_VALUES, isBusinessActivityCategory } from "@/types/businessActivityCategory";
 import type { KycGeographyRiskResponse, KycOnboardingRiskAssessmentResponse } from "@/types/customer";
 
-const PHONE_REGEX = /^[+]?[0-9\s\-()]+$/;
+const PHONE_CHARS_REGEX = /^[+]?[0-9\s\-().]+$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const BUSINESS_CURRENCY_OPTIONS = ["XAF", "XOF", "EUR", "USD", "CAD"] as const;
+
+function parseBusinessCurrencySet(raw: string): Set<string> {
+	const s = new Set<string>();
+	for (const part of raw.split(",")) {
+		const c = part.trim().toUpperCase();
+		if ((BUSINESS_CURRENCY_OPTIONS as readonly string[]).includes(c)) s.add(c);
+	}
+	return s;
+}
+
+function serializeBusinessCurrencies(set: Set<string>): string {
+	return BUSINESS_CURRENCY_OPTIONS.filter(c => set.has(c)).join(", ");
+}
 
 type DirectorRow = { firstName: string; lastName: string; dateOfBirth: string; nationalId: string; pepFlag: boolean };
 type UboRow = DirectorRow & {
@@ -35,7 +55,8 @@ type UboRow = DirectorRow & {
 	residencePostalCode: string;
 	residenceCountry: string;
 	email: string;
-	phone: string;
+	phoneDialIso2: string;
+	phoneNational: string;
 };
 
 function emptyDirector(): DirectorRow {
@@ -52,7 +73,8 @@ function emptyUbo(): UboRow {
 		residencePostalCode: "",
 		residenceCountry: "CM",
 		email: "",
-		phone: ""
+		phoneDialIso2: "CM",
+		phoneNational: ""
 	};
 }
 
@@ -64,6 +86,7 @@ export default function NewBusinessCustomerPage() {
 	const { t, i18n } = useTranslation();
 	const router = useRouter();
 	const nationalityOptions = useMemo(() => getNationalitySelectOptions(i18n.language), [i18n.language]);
+	const phoneDialOptions = useMemo(() => getPhoneDialSelectOptions(i18n.language), [i18n.language]);
 
 	const [step, setStep] = useState(0);
 	const [wizardSuccess, setWizardSuccess] = useState(false);
@@ -80,6 +103,7 @@ export default function NewBusinessCustomerPage() {
 		incorporationCountry: "CM",
 		taxResidenceCountry: "",
 		taxIdentificationNumber: "",
+		activityCategory: "",
 		activityDescription: "",
 		signingAuthorityNote: ""
 	});
@@ -107,7 +131,7 @@ export default function NewBusinessCustomerPage() {
 		primaryAddress: false
 	});
 
-	const [contact, setContact] = useState({ email: "", phone: "", website: "" });
+	const [contact, setContact] = useState({ email: "", phoneDialIso2: "CM", phoneNational: "", website: "" });
 
 	const [directors, setDirectors] = useState<DirectorRow[]>([emptyDirector()]);
 	const [ubos, setUbos] = useState<UboRow[]>([emptyUbo()]);
@@ -165,7 +189,7 @@ export default function NewBusinessCustomerPage() {
 		setPrecheck({ loading: true, contact: null, doc: null });
 		try {
 			const email = contact.email.trim();
-			const phone = contact.phone.trim();
+			const phone = composeInternationalPhone(contact.phoneDialIso2, contact.phoneNational).trim();
 			const contactCheck = await customersApi.checkContactUniqueness({ email, phone });
 			const contactOk = Boolean(contactCheck.emailUnique && contactCheck.phoneUnique);
 
@@ -198,6 +222,15 @@ export default function NewBusinessCustomerPage() {
 		return /^[A-Z]{2}$/.test(c) && nationalityOptions.some(o => o.code === c);
 	}
 
+	function toggleBusinessCurrency(code: (typeof BUSINESS_CURRENCY_OPTIONS)[number]) {
+		setFinancial(f => {
+			const set = parseBusinessCurrencySet(f.currenciesUsed || "");
+			if (set.has(code)) set.delete(code);
+			else set.add(code);
+			return { ...f, currenciesUsed: serializeBusinessCurrencies(set) };
+		});
+	}
+
 	function validateStep(s: number): string | null {
 		if (s === 0) {
 			if (!entity.displayName.trim()) return t("customer.wizard.business.validation.displayNameRequired");
@@ -208,6 +241,9 @@ export default function NewBusinessCustomerPage() {
 			if (!entity.taxResidenceCountry?.trim()) return t("customer.detail.profile.taxResidenceRequired");
 			if (!validateCountry(entity.taxResidenceCountry)) return t("customer.detail.profile.taxResidenceInvalid");
 			if (entity.taxIdentificationNumber.trim().length > 64) return t("customer.detail.profile.taxIdTooLong");
+			if (!entity.activityCategory.trim() || !isBusinessActivityCategory(entity.activityCategory)) {
+				return t("customer.wizard.business.validation.activityCategoryRequired");
+			}
 			if (!entity.activityDescription.trim()) return t("customer.wizard.business.validation.activityDescriptionRequired");
 			if (entity.activityDescription.trim().length > 1000) return t("customer.wizard.business.validation.textTooLong");
 		}
@@ -226,8 +262,12 @@ export default function NewBusinessCustomerPage() {
 		if (s === 3) {
 			if (!contact.email.trim()) return t("customer.wizard.validation.emailRequired");
 			if (!EMAIL_REGEX.test(contact.email.trim())) return t("customer.wizard.validation.emailInvalid");
-			if (!contact.phone.trim()) return t("customer.wizard.validation.phoneRequired");
-			if (!PHONE_REGEX.test(contact.phone.trim())) return t("customer.wizard.validation.phoneInvalid");
+			if (!contact.phoneNational.trim()) return t("customer.wizard.validation.phoneRequired");
+			const phoneRaw = composeInternationalPhone(contact.phoneDialIso2, contact.phoneNational).trim();
+			if (!phoneRaw) return t("customer.wizard.validation.phoneRequired");
+			if (phoneRaw.length > PHONE_MAX_LEN) return t("customer.wizard.validation.phoneTooLong");
+			if (!PHONE_CHARS_REGEX.test(phoneRaw)) return t("customer.wizard.validation.phoneInvalid");
+			if (countPhoneDigits(phoneRaw) < PHONE_MIN_DIGITS) return t("customer.wizard.validation.phoneDigitsTooFew");
 			const w = contact.website.trim();
 			if (w && !/^https?:\/\/.+/i.test(w) && !/^[a-z0-9.-]+\.[a-z]{2,}.*$/i.test(w)) {
 				return t("customer.wizard.business.validation.websiteInvalid");
@@ -252,7 +292,12 @@ export default function NewBusinessCustomerPage() {
 				if (!u.residenceLine1.trim() || !u.residenceCity.trim()) return t("customer.wizard.business.validation.uboAddressRequired");
 				if (!validateCountry(u.residenceCountry)) return t("customer.wizard.validation.countryInvalid");
 				if (u.email.trim() && !EMAIL_REGEX.test(u.email.trim())) return t("customer.wizard.validation.emailInvalid");
-				if (u.phone.trim() && !PHONE_REGEX.test(u.phone.trim())) return t("customer.wizard.validation.phoneInvalid");
+				if (u.phoneNational.trim()) {
+					const pr = composeInternationalPhone(u.phoneDialIso2, u.phoneNational).trim();
+					if (pr.length > PHONE_MAX_LEN) return t("customer.wizard.validation.phoneTooLong");
+					if (!PHONE_CHARS_REGEX.test(pr)) return t("customer.wizard.validation.phoneInvalid");
+					if (countPhoneDigits(pr) < PHONE_MIN_DIGITS) return t("customer.wizard.validation.phoneDigitsTooFew");
+				}
 			}
 		}
 		if (s === 6) {
@@ -310,7 +355,7 @@ export default function NewBusinessCustomerPage() {
 	async function validateContactUniquenessBeforeSubmit(): Promise<string | null> {
 		const uniqueness = await customersApi.checkContactUniqueness({
 			email: contact.email.trim(),
-			phone: contact.phone.trim()
+			phone: composeInternationalPhone(contact.phoneDialIso2, contact.phoneNational).trim()
 		});
 		if (!uniqueness.emailUnique && !uniqueness.phoneUnique) {
 			return t("customer.wizard.validation.emailAndPhoneAlreadyExists");
@@ -351,7 +396,7 @@ export default function NewBusinessCustomerPage() {
 			residencePostalCode: u.residencePostalCode.trim() || undefined,
 			residenceCountry: u.residenceCountry.trim().toUpperCase().slice(0, 2),
 			email: u.email.trim() || undefined,
-			phone: u.phone.trim() || undefined
+			phone: composeInternationalPhone(u.phoneDialIso2, u.phoneNational).trim() || undefined
 		};
 	}
 
@@ -360,7 +405,7 @@ export default function NewBusinessCustomerPage() {
 			type: "BUSINESS",
 			displayName: entity.displayName.trim(),
 			email: contact.email.trim(),
-			phone: contact.phone.trim()
+			phone: composeInternationalPhone(contact.phoneDialIso2, contact.phoneNational).trim()
 		};
 		const created = await customersApi.create(createPayload);
 		const id = created.id;
@@ -387,6 +432,7 @@ export default function NewBusinessCustomerPage() {
 			incorporationCountry: entity.incorporationCountry.trim().toUpperCase().slice(0, 2),
 			taxResidenceCountry: entity.taxResidenceCountry.trim().toUpperCase().slice(0, 2),
 			taxIdentificationNumber: entity.taxIdentificationNumber.trim() ? entity.taxIdentificationNumber.trim() : null,
+			activityCategory: entity.activityCategory.trim(),
 			activityDescription: entity.activityDescription.trim(),
 			signingAuthorityNote: entity.signingAuthorityNote.trim() || null,
 			websiteUrl,
@@ -644,6 +690,23 @@ export default function NewBusinessCustomerPage() {
 							/>
 						</div>
 						<div className="md:col-span-2">
+							<label className="block text-sm font-medium text-gray-700 mb-2">
+								{t("customer.wizard.business.entity.activityCategory")} *
+							</label>
+							<select
+								className="w-full px-3 py-2 border border-gray-300 rounded-md"
+								value={entity.activityCategory}
+								onChange={e => setEntity(x => ({ ...x, activityCategory: e.target.value }))}
+							>
+								<option value="">{t("customer.wizard.business.entity.activityCategoryPlaceholder")}</option>
+								{BUSINESS_ACTIVITY_CATEGORY_VALUES.map(code => (
+									<option key={code} value={code}>
+										{t(`customer.detail.businessActivityCategories.${code}`)}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.entity.activityDescription")} *</label>
 							<textarea
 								className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[88px]"
@@ -735,6 +798,10 @@ export default function NewBusinessCustomerPage() {
 									<Input value={mailing.postalCode || ""} onChange={e => setMailing(a => ({ ...a, postalCode: e.target.value }))} />
 								</div>
 								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.address.state")}</label>
+									<Input value={mailing.state || ""} onChange={e => setMailing(a => ({ ...a, state: e.target.value }))} />
+								</div>
+								<div>
 									<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.address.country")} *</label>
 									<select
 										className="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -762,9 +829,30 @@ export default function NewBusinessCustomerPage() {
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.contact.email")} *</label>
 							<Input type="email" value={contact.email} onChange={e => setContact(c => ({ ...c, email: e.target.value }))} />
 						</div>
-						<div>
+						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.contact.phone")} *</label>
-							<Input type="tel" value={contact.phone} onChange={e => setContact(c => ({ ...c, phone: e.target.value }))} />
+							<div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+								<select
+									className="w-full sm:w-[min(100%,280px)] shrink-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+									value={contact.phoneDialIso2}
+									onChange={e => setContact(c => ({ ...c, phoneDialIso2: e.target.value.toUpperCase().slice(0, 2) }))}
+									aria-label={t("customer.wizard.contact.phonePrefix")}
+								>
+									{phoneDialOptions.map(opt => (
+										<option key={opt.iso2} value={opt.iso2}>
+											{opt.label} (+{opt.dial})
+										</option>
+									))}
+								</select>
+								<Input
+									type="tel"
+									className="min-w-0 flex-1"
+									value={contact.phoneNational}
+									onChange={e => setContact(c => ({ ...c, phoneNational: e.target.value }))}
+									placeholder={t("customer.wizard.contact.phoneNationalPlaceholder")}
+									maxLength={PHONE_MAX_LEN}
+								/>
+							</div>
 						</div>
 						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.contact.website")}</label>
@@ -898,9 +986,32 @@ export default function NewBusinessCustomerPage() {
 									<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.contact.email")}</label>
 									<Input type="email" value={u.email} onChange={e => setUbos(rows => rows.map((r, i) => (i === idx ? { ...r, email: e.target.value } : r)))} />
 								</div>
-								<div>
+								<div className="md:col-span-2">
 									<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.contact.phone")}</label>
-									<Input type="tel" value={u.phone} onChange={e => setUbos(rows => rows.map((r, i) => (i === idx ? { ...r, phone: e.target.value } : r)))} />
+									<div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+										<select
+											className="w-full sm:w-[min(100%,220px)] shrink-0 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+											value={u.phoneDialIso2}
+											onChange={e =>
+												setUbos(rows => rows.map((r, i) => (i === idx ? { ...r, phoneDialIso2: e.target.value.toUpperCase().slice(0, 2) } : r)))
+											}
+											aria-label={t("customer.wizard.contact.phonePrefix")}
+										>
+											{phoneDialOptions.map(opt => (
+												<option key={opt.iso2} value={opt.iso2}>
+													{opt.label} (+{opt.dial})
+												</option>
+											))}
+										</select>
+										<Input
+											type="tel"
+											className="min-w-0 flex-1 text-sm"
+											value={u.phoneNational}
+											onChange={e => setUbos(rows => rows.map((r, i) => (i === idx ? { ...r, phoneNational: e.target.value } : r)))}
+											placeholder={t("customer.wizard.contact.phoneNationalPlaceholder")}
+											maxLength={PHONE_MAX_LEN}
+										/>
+									</div>
 								</div>
 							</div>
 							<label className="flex items-center gap-2 text-sm">
@@ -939,8 +1050,20 @@ export default function NewBusinessCustomerPage() {
 							</select>
 						</div>
 						<div className="md:col-span-2">
-							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.financial.currencies")}</label>
-							<Input value={financial.currenciesUsed} onChange={e => setFinancial(f => ({ ...f, currenciesUsed: e.target.value }))} placeholder="EUR, XAF, USD…" />
+							<fieldset>
+								<legend className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.financial.currencies")}</legend>
+								<div className="flex flex-wrap gap-x-5 gap-y-2">
+									{BUSINESS_CURRENCY_OPTIONS.map(code => {
+										const selected = parseBusinessCurrencySet(financial.currenciesUsed || "").has(code);
+										return (
+											<label key={code} className="inline-flex cursor-pointer items-center gap-2 text-sm text-gray-800">
+												<input type="checkbox" checked={selected} onChange={() => toggleBusinessCurrency(code)} />
+												<span className="font-medium tabular-nums">{code}</span>
+											</label>
+										);
+									})}
+								</div>
+							</fieldset>
 						</div>
 						<div className="md:col-span-2">
 							<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.financial.transactionProfile")}</label>
@@ -961,77 +1084,376 @@ export default function NewBusinessCustomerPage() {
 			{!wizardSuccess && step === 7 && (
 				<div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 space-y-4">
 					<h2 className="text-lg font-semibold text-gray-900">{t("customer.wizard.business.documents.title")}</h2>
-					<p className="text-sm text-gray-600">{t("customer.wizard.business.documents.intro")}</p>
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.documents.statutes")} *</label>
-						<input type="file" className="text-sm w-full" onChange={e => setStatutesFile(e.target.files?.[0] ?? null)} />
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("customer.wizard.business.documents.kbisOptional")}</label>
-						<input type="file" className="text-sm w-full" onChange={e => setKbisFile(e.target.files?.[0] ?? null)} />
-					</div>
-					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">
-							{t("customer.wizard.business.documents.proofOfSeat")} <span className="text-red-500">*</span>
-						</label>
-						<input type="file" className="text-sm w-full" onChange={e => setPoaFile(e.target.files?.[0] ?? null)} />
-					</div>
-					<div className="border-t border-gray-100 pt-4 space-y-3">
-						<label className="block text-sm font-medium text-gray-700">{t("customer.wizard.business.documents.repId")} *</label>
-						<div className="flex flex-wrap gap-3">
-							<label className="flex items-center gap-2 text-sm">
-								<input type="radio" name="idt" checked={idDocType === "ID_CARD"} onChange={() => { setIdDocType("ID_CARD"); setPassportFile(null); }} />
-								{t("customer.wizard.documents.idCardShort")}
-							</label>
-							<label className="flex items-center gap-2 text-sm">
-								<input type="radio" name="idt" checked={idDocType === "PASSPORT"} onChange={() => { setIdDocType("PASSPORT"); setIdRectoFile(null); setIdVersoFile(null); }} />
-								{t("customer.wizard.documents.passport")}
-							</label>
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div>
-								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityNumber")} *</label>
-								<Input value={identityDocumentNumber} onChange={e => setIdentityDocumentNumber(e.target.value)} maxLength={IDENTITY_DOC_NUMBER_MAX} />
+					<p className="text-sm text-gray-600">{t("customer.wizard.documents.formatsHint")}</p>
+					<p className="text-sm text-slate-600">{t("customer.wizard.business.documents.intro")}</p>
+					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+						<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="mb-3 flex items-start gap-3">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 ring-1 ring-blue-200/70">
+									<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={1.75}
+											d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+										/>
+									</svg>
+								</div>
+								<div className="min-w-0 flex-1">
+									<h4 className="text-sm font-semibold tracking-tight text-slate-900">
+										{t("customer.wizard.business.documents.statutes")} <span className="text-red-500">*</span>
+									</h4>
+									<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.business.documents.statutesCardHint")}</p>
+								</div>
 							</div>
-							<div>
-								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityExpires")} *</label>
-								<Input type="date" value={identityDocumentExpiresOn} onChange={e => setIdentityDocumentExpiresOn(e.target.value)} />
-							</div>
-							<div className="md:col-span-2">
-								<label className="block text-xs text-gray-600 mb-1">{t("customer.wizard.documents.identityIssuingCountryLabel")} *</label>
-								<select
-									className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
-									value={identityIssuingCountry}
-									onChange={e => setIdentityIssuingCountry(e.target.value)}
-								>
-									<option value="">{t("customer.wizard.profile.nationalityPlaceholder")}</option>
-									{nationalityOptions.map(opt => (
-										<option key={opt.code} value={opt.code}>
-											{opt.label} ({opt.code})
-										</option>
-									))}
-								</select>
-								<p className="mt-1 text-xs text-slate-500">{t("customer.wizard.documents.identityIssuingCountryHint")}</p>
-							</div>
-						</div>
-						{idDocType === "ID_CARD" ? (
-							<div className="space-y-2">
-								<label className="block text-xs text-gray-600">{t("customer.wizard.documents.idRecto")} *</label>
-								<input type="file" accept="image/*" className="text-sm w-full" onChange={e => setIdRectoFile(e.target.files?.[0] ?? null)} />
-								<label className="block text-xs text-gray-600">{t("customer.wizard.documents.idVerso")}</label>
-								<input type="file" accept="image/*" className="text-sm w-full" onChange={e => setIdVersoFile(e.target.files?.[0] ?? null)} />
-							</div>
-						) : (
-							<div>
-								<label className="block text-xs text-gray-600">{t("customer.wizard.documents.passportScan")} *</label>
+							<label className="group flex cursor-pointer flex-col gap-2 rounded-xl border-2 border-dashed border-blue-200/90 bg-white/95 px-3 py-4 transition hover:border-blue-400 hover:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/25">
 								<input
 									type="file"
 									accept="image/*,application/pdf"
-									className="text-sm w-full"
-									onChange={e => setPassportFile(e.target.files?.[0] ?? null)}
+									className="sr-only"
+									onChange={e => setStatutesFile(e.target.files?.[0] ?? null)}
 								/>
+								<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+									<span className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-blue-700">
+										{t("customer.wizard.documents.proofOfAddressDropHint")}
+									</span>
+									<span className="text-xs text-slate-500">{t("customer.wizard.documents.passportFormatsLine")}</span>
+								</div>
+								{statutesFile && (
+									<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+										<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+											<path
+												fillRule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+												clipRule="evenodd"
+											/>
+										</svg>
+										<span className="min-w-0 break-all font-medium">{statutesFile.name}</span>
+									</div>
+								)}
+							</label>
+						</div>
+						<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+							<div className="mb-3 flex items-start gap-3">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 ring-1 ring-slate-200/80">
+									<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={1.75}
+											d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+										/>
+									</svg>
+								</div>
+								<div className="min-w-0 flex-1">
+									<h4 className="text-sm font-semibold tracking-tight text-slate-900">{t("customer.wizard.business.documents.kbisOptional")}</h4>
+									<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.business.documents.kbisCardHint")}</p>
+								</div>
 							</div>
-						)}
+							<label className="group flex cursor-pointer flex-col gap-2 rounded-xl border-2 border-dashed border-slate-200/95 bg-white/95 px-3 py-4 transition hover:border-slate-400 hover:bg-white focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-slate-400/25">
+								<input
+									type="file"
+									accept="image/*,application/pdf"
+									className="sr-only"
+									onChange={e => setKbisFile(e.target.files?.[0] ?? null)}
+								/>
+								<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+									<span className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-700 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-slate-800">
+										{t("customer.wizard.documents.proofOfAddressDropHint")}
+									</span>
+									<span className="text-xs text-slate-500">{t("customer.wizard.documents.passportFormatsLine")}</span>
+								</div>
+								{kbisFile && (
+									<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+										<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+											<path
+												fillRule="evenodd"
+												d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+												clipRule="evenodd"
+											/>
+										</svg>
+										<span className="min-w-0 break-all font-medium">{kbisFile.name}</span>
+									</div>
+								)}
+							</label>
+						</div>
+					</div>
+					<div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-white to-indigo-50/40 p-5 shadow-sm ring-1 ring-slate-900/[0.04]">
+						<div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-indigo-200/30 blur-2xl" aria-hidden />
+						<div className="relative flex flex-col gap-4 sm:flex-row sm:items-start">
+							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 shadow-inner ring-1 ring-indigo-200/60">
+								<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={1.75}
+										d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+									/>
+								</svg>
+							</div>
+							<div className="min-w-0 flex-1 space-y-4">
+								<div>
+									<div className="flex flex-wrap items-center gap-2">
+										<h3 className="text-base font-semibold tracking-tight text-slate-900">{t("customer.wizard.business.documents.proofOfSeat")}</h3>
+										<span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-rose-700 ring-1 ring-rose-200/70">
+											*
+										</span>
+									</div>
+									<p className="mt-2 text-sm leading-relaxed text-slate-600">{t("customer.wizard.documents.proofOfAddressCardHint")}</p>
+								</div>
+								<label className="group flex cursor-pointer flex-col gap-3 rounded-xl border-2 border-dashed border-indigo-200/90 bg-white/90 px-4 py-5 transition hover:border-indigo-400/90 hover:bg-white focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20">
+									<input
+										type="file"
+										accept="image/*,application/pdf"
+										className="sr-only"
+										onChange={e => setPoaFile(e.target.files?.[0] ?? null)}
+									/>
+									<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+										<span className="inline-flex h-9 items-center justify-center rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-indigo-700">
+											{t("customer.wizard.documents.proofOfAddressDropHint")}
+										</span>
+										<span className="text-xs text-slate-500">{t("customer.wizard.documents.proofOfAddressFormatsLine")}</span>
+									</div>
+									{poaFile && (
+										<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/80 px-3 py-2 text-sm text-emerald-900">
+											<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+												<path
+													fillRule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+													clipRule="evenodd"
+												/>
+											</svg>
+											<span className="min-w-0 break-all">
+												<span className="font-medium">{t("customer.wizard.documents.proofOfAddressFileSelected")} : </span>
+												{poaFile.name}
+											</span>
+										</div>
+									)}
+								</label>
+							</div>
+						</div>
+					</div>
+					<div className="mt-2 border-t border-gray-100 pt-6 space-y-4">
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-2">
+								{t("customer.wizard.business.documents.repId")} <span className="text-red-500">*</span>
+							</label>
+							<div className="flex flex-wrap gap-3 mb-3">
+								<label className="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="bizIdDocType"
+										checked={idDocType === "ID_CARD"}
+										onChange={() => {
+											setIdDocType("ID_CARD");
+											setPassportFile(null);
+										}}
+									/>
+									{t("customer.wizard.documents.idCard")}
+								</label>
+								<label className="flex items-center gap-2 text-sm">
+									<input
+										type="radio"
+										name="bizIdDocType"
+										checked={idDocType === "PASSPORT"}
+										onChange={() => {
+											setIdDocType("PASSPORT");
+											setIdRectoFile(null);
+											setIdVersoFile(null);
+										}}
+									/>
+									{t("customer.wizard.documents.passport")}
+								</label>
+							</div>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										{t("customer.wizard.documents.identityNumber")} <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="text"
+										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+										value={identityDocumentNumber}
+										onChange={e => setIdentityDocumentNumber(e.target.value)}
+										maxLength={IDENTITY_DOC_NUMBER_MAX}
+										autoComplete="off"
+									/>
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-gray-700 mb-1">
+										{t("customer.wizard.documents.identityExpires")} <span className="text-red-500">*</span>
+									</label>
+									<input
+										type="date"
+										className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+										value={identityDocumentExpiresOn}
+										onChange={e => setIdentityDocumentExpiresOn(e.target.value)}
+									/>
+								</div>
+							</div>
+							<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+								<div className="min-w-0 grow sm:max-w-md">
+									<label className="mb-1 block text-sm font-medium text-gray-700">
+										{t("customer.wizard.documents.identityIssuingCountryLabel")} <span className="text-red-500">*</span>
+									</label>
+									<select
+										className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none ring-slate-400/35 focus:border-slate-500 focus:ring-2"
+										value={identityIssuingCountry}
+										onChange={e => setIdentityIssuingCountry(e.target.value)}
+									>
+										<option value="">{t("customer.wizard.profile.selectFromList")}</option>
+										{nationalityOptions.map(o => (
+											<option key={o.code} value={o.code}>
+												{o.label}
+											</option>
+										))}
+									</select>
+									<p className="mt-1 text-xs text-slate-500">{t("customer.wizard.documents.identityIssuingCountryHint")}</p>
+								</div>
+								<Button
+									type="button"
+									variant="outline"
+									className="shrink-0 text-sm"
+									onClick={() => {
+										const n = entity.taxResidenceCountry.trim().toUpperCase().slice(0, 2);
+										if (/^[A-Z]{2}$/.test(n)) setIdentityIssuingCountry(n);
+									}}
+								>
+									{t("customer.wizard.business.documents.identityIssuingSameAsTaxResidence")}
+								</Button>
+							</div>
+							{idDocType === "ID_CARD" ? (
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+									<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+										<div className="mb-3 flex items-start gap-3">
+											<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 ring-1 ring-blue-200/70">
+												<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={1.75}
+														d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+													/>
+												</svg>
+											</div>
+											<div className="min-w-0 flex-1">
+												<h4 className="text-sm font-semibold tracking-tight text-slate-900">
+													{t("customer.wizard.documents.idRecto")} <span className="text-red-500">*</span>
+												</h4>
+												<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.documents.idRectoSub")}</p>
+											</div>
+										</div>
+										<label className="group flex cursor-pointer flex-col gap-2 rounded-xl border-2 border-dashed border-blue-200/90 bg-white/95 px-3 py-4 transition hover:border-blue-400 hover:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/25">
+											<input type="file" accept="image/*" className="sr-only" onChange={e => setIdRectoFile(e.target.files?.[0] ?? null)} />
+											<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+												<span className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-blue-700">
+													{t("customer.wizard.documents.proofOfAddressDropHint")}
+												</span>
+												<span className="text-xs text-slate-500">{t("customer.wizard.documents.idPhotoFormatsLine")}</span>
+											</div>
+											{idRectoFile && (
+												<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+													<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+														<path
+															fillRule="evenodd"
+															d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+															clipRule="evenodd"
+														/>
+													</svg>
+													<span className="min-w-0 break-all font-medium">{idRectoFile.name}</span>
+												</div>
+											)}
+										</label>
+									</div>
+									<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+										<div className="mb-3 flex items-start gap-3">
+											<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600 ring-1 ring-slate-200/80">
+												<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+													<path
+														strokeLinecap="round"
+														strokeLinejoin="round"
+														strokeWidth={1.75}
+														d="M4 7v10c0 1.1.9 2 2 2h12a2 2 0 002-2V7M4 7l2-3h12l2 3M4 7h16"
+													/>
+												</svg>
+											</div>
+											<div className="min-w-0 flex-1">
+												<h4 className="text-sm font-semibold tracking-tight text-slate-900">{t("customer.wizard.documents.idVerso")}</h4>
+												<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.documents.idVersoSub")}</p>
+											</div>
+										</div>
+										<label className="group flex cursor-pointer flex-col gap-2 rounded-xl border-2 border-dashed border-slate-200/95 bg-white/95 px-3 py-4 transition hover:border-slate-400 hover:bg-white focus-within:border-slate-500 focus-within:ring-2 focus-within:ring-slate-400/25">
+											<input type="file" accept="image/*" className="sr-only" onChange={e => setIdVersoFile(e.target.files?.[0] ?? null)} />
+											<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+												<span className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-700 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-slate-800">
+													{t("customer.wizard.documents.proofOfAddressDropHint")}
+												</span>
+												<span className="text-xs text-slate-500">{t("customer.wizard.documents.idPhotoFormatsLine")}</span>
+											</div>
+											{idVersoFile && (
+												<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+													<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+														<path
+															fillRule="evenodd"
+															d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+															clipRule="evenodd"
+														/>
+													</svg>
+													<span className="min-w-0 break-all font-medium">{idVersoFile.name}</span>
+												</div>
+											)}
+										</label>
+									</div>
+								</div>
+							) : (
+								<div className="rounded-xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 p-4 shadow-sm ring-1 ring-slate-900/[0.04]">
+									<div className="mb-3 flex items-start gap-3">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700 ring-1 ring-blue-200/70">
+											<svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													strokeWidth={1.75}
+													d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+												/>
+											</svg>
+										</div>
+										<div className="min-w-0 flex-1">
+											<h4 className="text-sm font-semibold tracking-tight text-slate-900">
+												{t("customer.wizard.documents.passportScan")} <span className="text-red-500">*</span>
+											</h4>
+											<p className="mt-1 text-xs leading-relaxed text-slate-600">{t("customer.wizard.documents.passportScanSub")}</p>
+										</div>
+									</div>
+									<label className="group flex cursor-pointer flex-col gap-2 rounded-xl border-2 border-dashed border-blue-200/90 bg-white/95 px-3 py-4 transition hover:border-blue-400 hover:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/25">
+										<input
+											type="file"
+											accept="image/*,application/pdf"
+											className="sr-only"
+											onChange={e => setPassportFile(e.target.files?.[0] ?? null)}
+										/>
+										<div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:justify-center sm:gap-3">
+											<span className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm transition group-hover:bg-blue-700">
+												{t("customer.wizard.documents.proofOfAddressDropHint")}
+											</span>
+											<span className="text-xs text-slate-500">{t("customer.wizard.documents.passportFormatsLine")}</span>
+										</div>
+										{passportFile && (
+											<div className="flex items-center gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/90 px-3 py-2 text-sm text-emerald-900">
+												<svg className="h-4 w-4 shrink-0 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+													<path
+														fillRule="evenodd"
+														d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+														clipRule="evenodd"
+													/>
+												</svg>
+												<span className="min-w-0 break-all font-medium">{passportFile.name}</span>
+											</div>
+										)}
+									</label>
+								</div>
+							)}
+						</div>
 					</div>
 				</div>
 			)}
@@ -1056,6 +1478,14 @@ export default function NewBusinessCustomerPage() {
 								value={formatNationalityLabel(entity.taxResidenceCountry, i18n.language)}
 							/>
 							<RecapRow label={t("customer.wizard.business.entity.taxIdentification")} value={entity.taxIdentificationNumber.trim() || "—"} />
+							<RecapRow
+								label={t("customer.wizard.business.entity.activityCategory")}
+								value={
+									entity.activityCategory
+										? t(`customer.detail.businessActivityCategories.${entity.activityCategory}`)
+										: ""
+								}
+							/>
 							<RecapRow label={t("customer.wizard.business.entity.activityDescription")} value={entity.activityDescription} />
 						</dl>
 					</section>
@@ -1063,7 +1493,10 @@ export default function NewBusinessCustomerPage() {
 						<h3 className="text-sm font-semibold text-gray-800 uppercase tracking-wide mb-2">{t("customer.wizard.recap.sectionContact")}</h3>
 						<dl className="rounded-lg border border-gray-100 bg-gray-50/50 px-3 py-2">
 							<RecapRow label={t("customer.wizard.recap.email")} value={contact.email} />
-							<RecapRow label={t("customer.wizard.recap.phone")} value={contact.phone} />
+							<RecapRow
+								label={t("customer.wizard.recap.phone")}
+								value={composeInternationalPhone(contact.phoneDialIso2, contact.phoneNational).trim()}
+							/>
 							<RecapRow label={t("customer.wizard.business.contact.website")} value={contact.website} />
 						</dl>
 					</section>

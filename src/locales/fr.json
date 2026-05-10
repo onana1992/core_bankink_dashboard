@@ -521,6 +521,7 @@
 					"registrationRequired": "Le numéro d'immatriculation est obligatoire.",
 					"incorporationDateRequired": "La date de création est obligatoire.",
 					"activityDescriptionRequired": "La description d'activité / objet social est obligatoire.",
+					"activityCategoryRequired": "Sélectionnez un secteur d'activité.",
 					"activityNaceCodeRequired": "Le code NACE (classe Rév.2, ex. 62.01) est obligatoire.",
 					"activityNaceCodeInvalid": "Code NACE invalide : format classe à quatre chiffres (ex. 62.01).",
 					"textTooLong": "Texte trop long.",
@@ -549,6 +550,8 @@
 					"incorporationCountry": "Pays d'immatriculation",
 					"taxResidence": "Résidence fiscale de la personne morale",
 					"taxIdentification": "Identifiant fiscal (NIF / TIN, optionnel)",
+					"activityCategory": "Secteur d'activité",
+					"activityCategoryPlaceholder": "Sélectionnez un secteur…",
 					"activityNaceCode": "Code NACE Rév.2 (classe, ex. 62.01)",
 					"activityNaceCodeHint": "Alignement référentiel ; format NN.NN. Liste de suggestions disponible.",
 					"activityDescription": "Objet social / description de l'activité",
@@ -604,9 +607,12 @@
 					"title": "Pièces justificatives",
 					"intro": "Statuts (ou extrait), justificatif de domicile du siège, pièce d'identité du représentant légal.",
 					"statutes": "Statuts / extrait d'immatriculation",
+					"statutesCardHint": "Scan lisible ou PDF des statuts ou d'un extrait d'immatriculation récent.",
+					"kbisCardHint": "Facultatif : extrait Kbis, certificat d'immatriculation ou équivalent.",
 					"kbisOptional": "Document d'immatriculation complémentaire (optionnel)",
 					"proofOfSeat": "Justificatif de domicile du siège (facture, quittance, bail, etc.)",
-					"repId": "Représentant légal – pièce d'identité"
+					"repId": "Représentant légal – pièce d'identité",
+					"identityIssuingSameAsTaxResidence": "Aligner sur la résidence fiscale"
 				},
 				"recap": {
 					"entity": "Personne morale"
@@ -748,6 +754,23 @@
 				"saving": "Sauvegarde...",
 				"cancel": "Annuler"
 			},
+			"businessActivityCategories": {
+				"AGRICULTURE_FORESTRY_FISHING": "Agriculture, sylviculture & pêche",
+				"EXTRACTIVE_ENERGY": "Mines, carrières & énergie",
+				"MANUFACTURING": "Industrie manufacturière",
+				"CONSTRUCTION": "Bâtiment & travaux publics",
+				"WHOLESALE_RETAIL_TRADE": "Commerce de gros & de détail",
+				"TRANSPORT_STORAGE": "Transports & entreposage",
+				"ACCOMMODATION_FOOD": "Hébergement & restauration",
+				"ICT": "Information & communication",
+				"FINANCIAL_INSURANCE": "Activités financières & d'assurance",
+				"REAL_ESTATE": "Activités immobilières",
+				"PROFESSIONAL_ADMIN_SUPPORT": "Activités scientifiques, techniques & de soutien aux entreprises",
+				"PUBLIC_EDUCATION_HEALTH_SOCIAL": "Secteur public, éducation, santé & action sociale",
+				"ARTS_ENTERTAINMENT_SPORTS": "Arts, spectacles, sport & autres services",
+				"GAMING_GAMBLING_CRYPTO": "Jeux d'argent, paris & services crypto-actifs",
+				"OTHER_SERVICES": "Autres services"
+			},
 			"business": {
 				"title": "Personne morale (onboarding)",
 				"website": "Site web",
@@ -757,8 +780,9 @@
 					"registrationNumber": "N° d'immatriculation",
 					"incorporationDate": "Date de création",
 					"incorporationCountry": "Pays d'immatriculation",
+					"activityCategory": "Secteur d'activité",
 					"activityDescription": "Activité / objet social",
-					"activityCode": "Code NACE (classe)",
+					"activityCode": "Code NACE (classe, historique)",
 					"signingAuthorityNote": "Pouvoirs de signature",
 					"annualRevenueBand": "Chiffre d'affaires (fourchette)",
 					"employeeCount": "Effectif",

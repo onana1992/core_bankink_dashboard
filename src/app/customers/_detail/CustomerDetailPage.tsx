@@ -28,8 +28,7 @@ import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
 import { ANNUAL_REVENUE_BAND_OPTIONS, LEGAL_FORM_OPTIONS } from "@/data/legalFormOptions";
-import { NACE_ACTIVITY_CODE_SUGGESTIONS } from "@/data/naceActivitySuggestions";
-import { isValidNaceClassCode, normalizeNaceClassCode } from "@/lib/naceActivityCode";
+import { BUSINESS_ACTIVITY_CATEGORY_VALUES, isBusinessActivityCategory } from "@/types/businessActivityCategory";
 import {
 	isPersonIncomeSourceValue,
 	isPersonProfessionValue,
@@ -67,7 +66,7 @@ type BusinessProfileFormData = {
 	incorporationCountry: string;
 	taxResidenceCountry: string;
 	taxIdentificationNumber: string;
-	activityCode: string;
+	activityCategory: string;
 	activityDescription: string;
 	signingAuthorityNote: string;
 	websiteUrl: string;
@@ -88,7 +87,7 @@ function emptyBusinessProfileForm(): BusinessProfileFormData {
 		incorporationCountry: "",
 		taxResidenceCountry: "",
 		taxIdentificationNumber: "",
-		activityCode: "",
+		activityCategory: "",
 		activityDescription: "",
 		signingAuthorityNote: "",
 		websiteUrl: "",
@@ -115,7 +114,7 @@ function customerToBusinessProfileForm(c: Customer): BusinessProfileFormData {
 		incorporationCountry: c.incorporationCountry ?? "",
 		taxResidenceCountry: c.taxResidenceCountry ?? "",
 		taxIdentificationNumber: c.taxIdentificationNumber ?? "",
-		activityCode: c.activityCode ?? "",
+		activityCategory: c.activityCategory ?? "",
 		activityDescription: c.activityDescription ?? "",
 		signingAuthorityNote: c.signingAuthorityNote ?? "",
 		websiteUrl: stripScheme(c.websiteUrl),
@@ -890,12 +889,8 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			setToast({ message: t("customer.detail.profile.taxIdTooLong"), type: "error" });
 			return;
 		}
-		if (!b.activityCode.trim()) {
-			setToast({ message: t("customer.wizard.business.validation.activityNaceCodeRequired"), type: "error" });
-			return;
-		}
-		if (!isValidNaceClassCode(b.activityCode)) {
-			setToast({ message: t("customer.wizard.business.validation.activityNaceCodeInvalid"), type: "error" });
+		if (!b.activityCategory.trim() || !isBusinessActivityCategory(b.activityCategory)) {
+			setToast({ message: t("customer.wizard.business.validation.activityCategoryRequired"), type: "error" });
 			return;
 		}
 		if (!b.activityDescription.trim()) {
@@ -966,6 +961,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				incorporationCountry: incCountry,
 				taxResidenceCountry: taxCountry,
 				taxIdentificationNumber: b.taxIdentificationNumber.trim() ? b.taxIdentificationNumber.trim() : null,
+				activityCategory: b.activityCategory.trim(),
 				activityDescription: b.activityDescription.trim(),
 				signingAuthorityNote: b.signingAuthorityNote.trim(),
 				websiteUrl,
@@ -1770,12 +1766,6 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<p className="text-sm text-ops-fg-muted">{t("customer.detail.compliance.riskRunsHistory.modalEmpty")}</p>
 				)}
 			</OpsModal>
-			<datalist id="nace-suggestions-customer-detail">
-				{NACE_ACTIVITY_CODE_SUGGESTIONS.map(code => (
-					<option key={code} value={code} />
-				))}
-			</datalist>
-
 			<Link
 				href="/customers"
 				className="inline-flex items-center gap-1.5 text-sm font-medium text-ops-fg-muted transition hover:text-ops-fg"
@@ -1789,40 +1779,57 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 			<OpsPageHeader
 				leading={
 					customer ? (
-						<div className="shrink-0" aria-label={t("customer.detail.photo.selfieLabel")}>
-							{selfieUrl && id && !selfieError ? (
-								<div className="relative h-14 w-14 sm:h-16 sm:w-16">
-									<img
-										src={selfieUrl}
-										alt={t("customer.detail.photo.alt")}
-										className="h-full w-full rounded-2xl border border-ops-border object-cover shadow-sm"
-										onError={() => setSelfieError(true)}
-										onLoad={() => setSelfieError(false)}
+						customer.type === "BUSINESS" ? (
+							<div
+								className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-ops-border bg-ops-surface-muted text-ops-fg-muted sm:h-16 sm:w-16"
+								role="img"
+								aria-label={t(`customer.types.${customer.type}`)}
+							>
+								<svg className="h-8 w-8 sm:h-9 sm:w-9" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={1.75}
+										d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
 									/>
-									{selfieDocument?.status === "APPROVED" && (
-										<div className="absolute bottom-0.5 right-0.5 rounded-md border-2 border-white bg-emerald-600 p-0.5 shadow-sm" title={documentReviewStatusLabel(t, "APPROVED")}>
-											<svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-												<path
-													fillRule="evenodd"
-													d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-													clipRule="evenodd"
-												/>
-											</svg>
-										</div>
-									)}
-								</div>
-							) : (
-								<div
-									className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-dashed border-ops-border bg-ops-surface-muted sm:h-16 sm:w-16"
-									role="img"
-									aria-label={t("customer.detail.photo.alt")}
-								>
-									<svg className="h-8 w-8 text-ops-fg-muted/50 sm:h-9 sm:w-9" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
-										<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-									</svg>
-								</div>
-							)}
-						</div>
+								</svg>
+							</div>
+						) : (
+							<div className="shrink-0" aria-label={t("customer.detail.photo.selfieLabel")}>
+								{selfieUrl && id && !selfieError ? (
+									<div className="relative h-14 w-14 sm:h-16 sm:w-16">
+										<img
+											src={selfieUrl}
+											alt={t("customer.detail.photo.alt")}
+											className="h-full w-full rounded-2xl border border-ops-border object-cover shadow-sm"
+											onError={() => setSelfieError(true)}
+											onLoad={() => setSelfieError(false)}
+										/>
+										{selfieDocument?.status === "APPROVED" && (
+											<div className="absolute bottom-0.5 right-0.5 rounded-md border-2 border-white bg-emerald-600 p-0.5 shadow-sm" title={documentReviewStatusLabel(t, "APPROVED")}>
+												<svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+													<path
+														fillRule="evenodd"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+														clipRule="evenodd"
+													/>
+												</svg>
+											</div>
+										)}
+									</div>
+								) : (
+									<div
+										className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-dashed border-ops-border bg-ops-surface-muted sm:h-16 sm:w-16"
+										role="img"
+										aria-label={t("customer.detail.photo.alt")}
+									>
+										<svg className="h-8 w-8 text-ops-fg-muted/50 sm:h-9 sm:w-9" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+											<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+										</svg>
+									</div>
+								)}
+							</div>
+						)
 					) : undefined
 				}
 				title={
@@ -1854,139 +1861,11 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				}
 			/>
 
-			{customer && expectedType === "BUSINESS" && (
-				<div className={`${OPS_CARD_SHELL} px-4 py-3 sm:px-5 sm:py-4`}>
-					<div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">
-								{t("customer.detail.headerStrip.dossierStatus")}
-							</span>
-							<Badge variant={statusBadgeVariant(customer.status)} className="gap-0 text-xs font-medium">
-								<span>{translatedCustomerStatus(t, customer.status)}</span>
-								<span className="ml-1.5 font-mono text-[10px] font-normal opacity-70">
-									{t("customer.detail.headerStrip.statusCode", { code: customer.status })}
-								</span>
-							</Badge>
-						</div>
-						<div className="hidden h-4 w-px bg-ops-border sm:block" aria-hidden />
-						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
-							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.clientId")}</span>
-							<span className="rounded-md border border-ops-border bg-ops-surface-muted px-2 py-0.5 font-mono">{customer.id}</span>
-						</div>
-						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
-							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.typeLabel")}</span>
-							<span className="rounded-md border border-ops-border bg-ops-surface-muted px-2 py-0.5">{t(`customer.types.${customer.type}`)}</span>
-						</div>
-						{typeof customer.riskScore === "number" && (
-							<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
-								<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.riskScore")}</span>
-								<Badge variant={riskBadgeVariant(customer.riskScore)} className="text-[11px]">
-									{customer.riskScore}/100
-								</Badge>
-							</div>
-						)}
-						{customer.lastRiskAssessmentAt && (
-							<div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-ops-fg">
-								<span className="shrink-0 font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.lastRiskAt")}</span>
-								<span className="truncate tabular-nums">{new Date(customer.lastRiskAssessmentAt).toLocaleString(locale)}</span>
-							</div>
-						)}
-						<div className="flex flex-wrap items-center gap-2 text-xs text-ops-fg">
-							<span className="font-medium text-ops-fg-muted">{t("customer.detail.headerStrip.pepLabel")}</span>
-							<Badge variant={customer.pepFlag ? "danger" : "success"} className="text-[11px]">
-								{customer.pepFlag ? t("customer.detail.generalInfo.yes") : t("customer.detail.generalInfo.no")}
-							</Badge>
-						</div>
-					</div>
-				</div>
-			)}
-
 			{error && customer ? (
 				<OpsInlineAlert variant="error">
 					<span className="text-sm">{error}</span>
 				</OpsInlineAlert>
 			) : null}
-
-			{customer && expectedType === "BUSINESS" && (
-				<div className={`${OPS_CARD_SHELL} p-4 sm:p-5`}>
-					<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-						<div className="min-w-0 flex-1 space-y-2">
-							<h3 className="text-sm font-semibold tracking-tight text-ops-fg">{t("customer.detail.headerDecision.title")}</h3>
-							<p className="max-w-prose text-xs leading-relaxed text-ops-fg-muted">{t("customer.detail.headerDecision.hint")}</p>
-							{kycChecks.length > 0 ? (
-								<div className="flex flex-wrap items-center gap-2">
-									{listScreeningPresence.latestSanctions ? (
-										<Badge variant={kycCheckResultBadgeVariant(listScreeningPresence.latestSanctions.result)}>
-											{t("customer.detail.headerDecision.screeningSanctions")}:{" "}
-											{kycCheckResultLabel(t, listScreeningPresence.latestSanctions.result)}
-										</Badge>
-									) : null}
-									{listScreeningPresence.latestPep ? (
-										<Badge variant={kycCheckResultBadgeVariant(listScreeningPresence.latestPep.result)}>
-											{t("customer.detail.headerDecision.screeningPep")}: {kycCheckResultLabel(t, listScreeningPresence.latestPep.result)}
-										</Badge>
-									) : null}
-									{!listScreeningPresence.latestSanctions && !listScreeningPresence.latestPep ? (
-										<span className="text-xs text-ops-fg-muted">—</span>
-									) : null}
-								</div>
-							) : (
-								<p className="text-xs text-ops-fg-muted">{complianceLoading ? t("customer.detail.loading") : "—"}</p>
-							)}
-						</div>
-						<div className="flex flex-wrap gap-2 lg:shrink-0">
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									setActiveTab("compliance");
-									setComplianceInnerTab("review");
-								}}
-							>
-								{t("customer.detail.headerDecision.openReview")}
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									setActiveTab("compliance");
-									setComplianceInnerTab("decision");
-								}}
-							>
-								{t("customer.detail.headerDecision.openRejectSection")}
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									setActiveTab("compliance");
-									setComplianceInnerTab("screeningChecks");
-								}}
-							>
-								{t("customer.detail.headerDecision.openScreening")}
-							</Button>
-							<Button
-								type="button"
-								size="sm"
-								variant="outline"
-								onClick={() => {
-									setActiveTab("compliance");
-									setComplianceInnerTab("auditTrail");
-									setKycAuditTrailPage(0);
-								}}
-							>
-								{t("customer.detail.headerDecision.openAudit")}
-							</Button>
-							<Button type="button" size="sm" variant="outline" onClick={() => router.push(`/aml/alerts?clientId=${customer.id}`)}>
-								{t("customer.detail.headerDecision.openAmlAlerts")}
-							</Button>
-						</div>
-					</div>
-				</div>
-			)}
 
 			<div className={OPS_CARD_SHELL}>
 				<nav className="flex gap-1 overflow-x-auto border-b border-ops-border bg-ops-surface-muted px-2 py-2 sm:px-3" aria-label={t("customer.detail.subtitle")}>
@@ -2043,7 +1922,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										</h2>
 										{expectedType === "PERSON" ? (
 											<p className="mt-1 text-xs text-ops-fg-muted">{t("customer.detail.profile.subtitle")}</p>
-										) : null}
+										) : (
+											<p className="mt-1 text-xs text-ops-fg-muted">{t("customer.detail.profile.businessSubtitle")}</p>
+										)}
 									</div>
 								</div>
 								{!isEditingProfile ? (
@@ -2481,10 +2362,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
 													<div>
 														<dt className="text-xs font-semibold uppercase tracking-wide text-black">
-															{t("customer.detail.business.fields.activityCode")}
+															{t("customer.detail.business.fields.activityCategory")}
 														</dt>
 														<dd className="mt-1.5 text-sm font-medium leading-relaxed text-slate-800">
-															{customer.activityCode?.trim() || "—"}
+															{customer.activityCategory?.trim() && isBusinessActivityCategory(customer.activityCategory)
+																? t(`customer.detail.businessActivityCategories.${customer.activityCategory}`)
+																: customer.activityCategory?.trim() || "—"}
 														</dd>
 													</div>
 													<div className="sm:col-span-2 lg:col-span-3">
@@ -2759,23 +2642,27 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 												</div>
 												<div className="bg-ops-surface p-4 sm:p-5">
 													<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-8">
-														<div>
+														<div className="sm:col-span-2 lg:col-span-3">
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
-																{t("customer.detail.business.fields.activityCode")} <span className="text-red-500">*</span>
+																{t("customer.detail.business.fields.activityCategory")} <span className="text-red-500">*</span>
 															</label>
-															<Input
-																value={businessProfileFormData.activityCode}
+															<select
+																className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+																value={businessProfileFormData.activityCategory}
 																onChange={e =>
 																	setBusinessProfileFormData(prev => ({
 																		...prev,
-																		activityCode: e.target.value
+																		activityCategory: e.target.value
 																	}))
 																}
-																list="nace-suggestions-customer-detail"
-																maxLength={32}
-																placeholder="62.01"
-																autoComplete="off"
-															/>
+															>
+																<option value="">{t("customer.wizard.business.entity.activityCategoryPlaceholder")}</option>
+																{BUSINESS_ACTIVITY_CATEGORY_VALUES.map(code => (
+																	<option key={code} value={code}>
+																		{t(`customer.detail.businessActivityCategories.${code}`)}
+																	</option>
+																))}
+															</select>
 														</div>
 														<div className="sm:col-span-2 lg:col-span-3">
 															<label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-black">
@@ -3478,9 +3365,20 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					<div className={`${OPS_CARD_HEADER} flex flex-wrap items-center justify-between gap-4`}>
 							<div className="flex min-w-0 items-center gap-3">
 								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border">
-									<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
+									{customer?.type === "BUSINESS" ? (
+										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+											<path
+												strokeLinecap="round"
+												strokeLinejoin="round"
+												strokeWidth={2}
+												d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+											/>
+										</svg>
+									) : (
+										<svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+										</svg>
+									)}
 								</div>
 								<div className="min-w-0">
 									<h2 className="text-lg font-semibold tracking-tight text-ops-fg sm:text-xl">{t("customer.detail.generalInfo.title")}</h2>
@@ -3495,7 +3393,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 					<div className="p-6 sm:p-8">
 						{loading && <div className="text-sm text-slate-500 text-center py-4">{t("common.loading")}</div>}
-						{customer && !selfieUrl ? (
+						{customer && customer.type === "PERSON" && !selfieUrl ? (
 							<div className="mb-6 border-b border-ops-border pb-6">
 								<p className="mb-2 text-xs font-medium text-ops-fg">{t("customer.detail.photo.selfieLabel")}</p>
 								<form onSubmit={uploadSelfie} className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -3542,7 +3440,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													</div>
 												)}
 												<div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
-													<dt className="text-sm font-medium text-slate-600">Type</dt>
+													<dt className="text-sm font-medium text-slate-600">{t("customer.detail.headerStrip.typeLabel")}</dt>
 													<dd>
 														<Badge variant={customer.type === "PERSON" ? "info" : "warning"}>{customer.type}</Badge>
 													</dd>
@@ -3720,10 +3618,12 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															<dl className="grid grid-cols-1 gap-4">
 																<div>
 																	<dt className="text-xs font-semibold uppercase tracking-wide text-black">
-																		{t("customer.detail.business.fields.activityCode")}
+																		{t("customer.detail.business.fields.activityCategory")}
 																	</dt>
 																	<dd className="mt-1 text-sm font-medium leading-relaxed text-slate-800">
-																		{customer.activityCode?.trim() || "—"}
+																		{customer.activityCategory?.trim() && isBusinessActivityCategory(customer.activityCategory)
+																			? t(`customer.detail.businessActivityCategories.${customer.activityCategory}`)
+																			: customer.activityCategory?.trim() || "—"}
 																	</dd>
 																</div>
 																<div>

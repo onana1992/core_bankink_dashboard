@@ -1,4 +1,5 @@
 export * from './customer';
+export * from './businessActivityCategory';
 export * from './personProfileOptions';
 export * from './product';
 export * from './account';
