@@ -350,12 +350,17 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	};
 
 	const listScreeningPresence = useMemo(() => {
-		const hasListScreening = kycChecks.some(
-			c => c.type === "SANCTIONS_SCREENING" || c.type === "PEP_SCREENING"
-		);
+		const screening = kycChecks.filter(c => c.type === "SANCTIONS_SCREENING" || c.type === "PEP_SCREENING");
+		const hasListScreening = screening.length > 0;
+		const sorted = [...screening].sort((a, b) => {
+			const ta = a.checkedAt ? new Date(a.checkedAt).getTime() : 0;
+			const tb = b.checkedAt ? new Date(b.checkedAt).getTime() : 0;
+			if (tb !== ta) return tb - ta;
+			return b.id - a.id;
+		});
 		let latestSanctions: KycCheck | null = null;
 		let latestPep: KycCheck | null = null;
-		for (const c of kycChecks) {
+		for (const c of sorted) {
 			if (c.type === "SANCTIONS_SCREENING" && latestSanctions === null) {
 				latestSanctions = c;
 			}
@@ -376,10 +381,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const screeningChecksFingerprint = useMemo(() => {
 		const list = kycChecks.filter(c => c.type === "SANCTIONS_SCREENING" || c.type === "PEP_SCREENING");
 		if (list.length === 0) return "";
-		return list
-			.map(c => `${c.id}:${c.result}:${c.checkedAt ?? ""}`)
-			.sort()
-			.join("|");
+		const sorted = [...list].sort((a, b) => {
+			const ta = a.checkedAt ? new Date(a.checkedAt).getTime() : 0;
+			const tb = b.checkedAt ? new Date(b.checkedAt).getTime() : 0;
+			if (tb !== ta) return tb - ta;
+			return b.id - a.id;
+		});
+		return sorted.map(c => `${c.id}:${c.result}:${c.checkedAt ?? ""}`).join("|");
 	}, [kycChecks]);
 
 	const sortedKycChecksForCompliance = useMemo(() => {
@@ -4345,17 +4353,27 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					>
 						<div className="flex flex-wrap items-center justify-between gap-3">
 							<div className="flex flex-wrap items-center gap-2">
-								<Button
-									type="button"
-									size="sm"
-									variant={showListScreeningCard ? "outline" : "default"}
-									onClick={() => setShowListScreeningCard(v => !v)}
-									aria-expanded={showListScreeningCard}
-								>
-									{showListScreeningCard
-										? t("customer.detail.compliance.listScreeningClose")
-										: t("customer.detail.compliance.newListScreening")}
-								</Button>
+								{showListScreeningCard ? (
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										onClick={() => setShowListScreeningCard(false)}
+										aria-expanded={showListScreeningCard}
+									>
+										{t("customer.detail.compliance.listScreeningClose")}
+									</Button>
+								) : (
+									<Button
+										type="button"
+										size="sm"
+										variant="default"
+										onClick={() => setShowListScreeningCard(true)}
+										aria-expanded={showListScreeningCard}
+									>
+										{t("customer.detail.compliance.newListScreening")}
+									</Button>
+								)}
 								<Button type="button" size="sm" variant="outline" disabled={complianceLoading} onClick={() => void loadComplianceData()}>
 									{t("customer.detail.compliance.refresh")}
 								</Button>
@@ -4482,9 +4500,9 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 						)}
 						<section className={OPS_CARD_SHELL} aria-labelledby="compliance-dossier-tracking">
-							<div className="flex flex-wrap items-start justify-between gap-3 border-b border-ops-border bg-ops-surface-muted px-5 py-4">
+							<div className={`${OPS_CARD_HEADER} flex flex-wrap items-start justify-between gap-3`}>
 								<div>
-									<h3 id="compliance-dossier-tracking" className="text-sm font-semibold tracking-tight text-slate-900">
+									<h3 id="compliance-dossier-tracking" className="text-sm font-semibold tracking-tight text-ops-fg">
 										{t("customer.detail.compliance.checksTitle")}
 									</h3>
 								</div>
@@ -4496,57 +4514,37 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							</div>
 
 							{complianceLoading ? (
-								<div className="flex items-center gap-3 px-5 py-10 text-sm text-slate-500">
-									<span
-										className="inline-block size-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"
-										aria-hidden
-									/>
-									{t("customer.detail.loading")}
-								</div>
+								<OpsLoadingState embedded message={t("customer.detail.loading")} />
 							) : kycChecks.length === 0 ? (
-								<div className="px-5 py-10 text-center">
-									<p className="text-sm font-medium text-slate-700">{t("customer.detail.compliance.emptyChecksTitle")}</p>
-									<p className="mt-1 text-xs text-slate-500">{t("customer.detail.compliance.emptyChecks")}</p>
-								</div>
+								<OpsEmptyState
+									embedded
+									title={t("customer.detail.compliance.emptyChecksTitle")}
+									hint={t("customer.detail.compliance.emptyChecks")}
+								/>
 							) : (
 								<>
-									<div className="overflow-x-auto">
-										<table className="min-w-full divide-y divide-slate-200 text-sm">
-											<thead className="bg-slate-50/95">
+									<div className={OPS_TABLE_WRAP}>
+										<table className={OPS_TABLE}>
+											<thead className={OPS_THEAD}>
 												<tr>
-													<th
-														scope="col"
-														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
+													<th scope="col" className={OPS_TH}>
 														{t("customer.detail.compliance.columnId")}
 													</th>
-													<th
-														scope="col"
-														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
+													<th scope="col" className={OPS_TH}>
 														{t("customer.detail.compliance.type")}
 													</th>
-													<th
-														scope="col"
-														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
+													<th scope="col" className={OPS_TH}>
 														{t("customer.detail.compliance.result")}
 													</th>
-													<th
-														scope="col"
-														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600"
-													>
+													<th scope="col" className={`${OPS_TH} max-w-[12rem]`}>
 														{t("customer.detail.compliance.columnProvider")}
 													</th>
-													<th
-														scope="col"
-														className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-600 min-w-[9.5rem]"
-													>
+													<th scope="col" className={`${OPS_TH} min-w-[9.5rem]`}>
 														{t("customer.detail.compliance.at")}
 													</th>
 												</tr>
 											</thead>
-											<tbody className="divide-y divide-slate-100 bg-white">
+											<tbody className="divide-y divide-ops-border bg-ops-surface text-sm">
 												{kycCompliancePaginated.map((c, rowIdx) => {
 													const rowNumber =
 														kycComplianceChecksPage * KYC_COMPLIANCE_CHECKS_PAGE_SIZE + rowIdx + 1;
@@ -4555,25 +4553,20 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 													const displayType = typeLabel === typeKey ? c.type : typeLabel;
 													const provider = c.provider?.trim() || "—";
 													return (
-														<tr
-															key={c.id}
-															className={`${kycCheckTypeRowAccent(c.type)} transition-colors hover:bg-slate-50/90`}
-														>
-															<td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-slate-500 tabular-nums">
-																{rowNumber}
+														<tr key={c.id} className={`${kycCheckTypeRowAccent(c.type)} ${OPS_TR_HOVER}`}>
+															<td className={`${OPS_TD} font-mono text-xs text-ops-fg-muted tabular-nums`}>{rowNumber}</td>
+															<td className={`${OPS_TD} whitespace-normal`}>
+																<span className="font-medium text-ops-fg">{displayType}</span>
 															</td>
-															<td className="px-4 py-3">
-																<span className="font-medium text-slate-900">{displayType}</span>
-															</td>
-															<td className="whitespace-nowrap px-4 py-3">
+															<td className={OPS_TD}>
 																<Badge variant={kycCheckResultBadgeVariant(c.result)} className="text-[10px]">
 																	{kycCheckResultLabel(t, c.result)}
 																</Badge>
 															</td>
-															<td className="max-w-[10rem] px-4 py-3 text-xs text-slate-600" title={provider}>
+															<td className={`${OPS_TD} max-w-[12rem] whitespace-normal`} title={provider}>
 																<span className="line-clamp-2 break-words">{provider}</span>
 															</td>
-															<td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600">
+															<td className={`${OPS_TD} text-ops-fg-muted`}>
 																{c.checkedAt ? new Date(c.checkedAt).toLocaleString(locale) : "—"}
 															</td>
 														</tr>
@@ -4590,7 +4583,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 										onPageChange={setKycComplianceChecksPage}
 										resultsLabel={t("customer.detail.compliance.paginationResultsLabel")}
 										showFirstLast
-										className="border-t border-slate-200 bg-slate-50/80 rounded-none px-4 sm:px-5"
+										className="border-t border-ops-border bg-ops-surface-muted/80 rounded-none px-4 sm:px-6"
 									/>
 								</>
 							)}
