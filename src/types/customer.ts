@@ -140,7 +140,10 @@ export interface Customer {
 	registrationNumber?: string | null;
 	incorporationDate?: string | null;
 	incorporationCountry?: string | null;
+	/** @deprecated Legacy ; préférer `activityCategory`. */
 	activityCode?: string | null;
+	/** Secteur d'activité (code liste fermée). */
+	activityCategory?: string | null;
 	activityDescription?: string | null;
 	signingAuthorityNote?: string | null;
 	websiteUrl?: string | null;
@@ -243,6 +246,7 @@ export interface UpdateCustomerRequest {
 	incorporationDate?: string | null;
 	incorporationCountry?: string | null;
 	activityCode?: string | null;
+	activityCategory?: string | null;
 	activityDescription?: string | null;
 	signingAuthorityNote?: string | null;
 	websiteUrl?: string | null;
