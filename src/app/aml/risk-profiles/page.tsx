@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { amlApi } from "@/lib/api";
-import type { AmlRiskProfileDto } from "@/types";
+import type { AmlRiskLevel, AmlDiligenceLevel, AmlRiskProfileDto } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
@@ -18,6 +18,10 @@ function AmlRiskProfilesInner() {
 	const [rows, setRows] = useState<AmlRiskProfileDto[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [showForce, setShowForce] = useState(false);
+	const [forceRiskLevel, setForceRiskLevel] = useState<AmlRiskLevel>("MEDIUM");
+	const [forceDiligence, setForceDiligence] = useState<AmlDiligenceLevel>("ENHANCED");
+	const [forceRationale, setForceRationale] = useState("");
 
 	const stats = useMemo(() => {
 		let active = 0;
@@ -98,6 +102,37 @@ function AmlRiskProfilesInner() {
 					})
 				);
 			}
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : "Error");
+		} finally {
+			setLoading(false);
+		}
+	}
+
+	async function submitForce() {
+		const id = Number(clientId.trim());
+		if (!Number.isFinite(id) || id <= 0) {
+			setError(t("aml.risk.clientRequired"));
+			return;
+		}
+		setLoading(true);
+		setError(null);
+		try {
+			await amlApi.forceRiskProfile(id, {
+				riskLevel: forceRiskLevel,
+				diligenceLevel: forceDiligence,
+				rationale: forceRationale.trim()
+			});
+			const list = await amlApi.listRiskProfiles(id);
+			setRows(list ?? []);
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(
+					new CustomEvent("show-toast", {
+						detail: { message: t("aml.risk.forceDone"), type: "success" }
+					})
+				);
+			}
+			setShowForce(false);
 		} catch (e: unknown) {
 			setError(e instanceof Error ? e.message : "Error");
 		} finally {
@@ -209,7 +244,57 @@ function AmlRiskProfilesInner() {
 					<Button type="button" variant="outline" className="h-10" onClick={() => void recompute()} disabled={loading}>
 						{t("aml.risk.recompute")}
 					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						className="h-10 border-amber-300 text-amber-900"
+						onClick={() => setShowForce((v) => !v)}
+						disabled={loading}
+					>
+						{t("aml.risk.forceUc02")}
+					</Button>
 				</div>
+				{showForce && (
+					<div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50/50 space-y-3">
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceRiskLevel")}</label>
+								<select
+									className="w-full h-10 rounded-md border border-gray-300 px-2 text-sm bg-white"
+									value={forceRiskLevel}
+									onChange={(e) => setForceRiskLevel(e.target.value as AmlRiskLevel)}
+								>
+									<option value="LOW">LOW</option>
+									<option value="MEDIUM">MEDIUM</option>
+									<option value="HIGH">HIGH</option>
+								</select>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceDiligence")}</label>
+								<select
+									className="w-full h-10 rounded-md border border-gray-300 px-2 text-sm bg-white"
+									value={forceDiligence}
+									onChange={(e) => setForceDiligence(e.target.value as AmlDiligenceLevel)}
+								>
+									<option value="STANDARD">STANDARD</option>
+									<option value="ENHANCED">ENHANCED</option>
+								</select>
+							</div>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceRationale")}</label>
+							<textarea
+								className="w-full min-h-[100px] rounded-md border border-gray-300 px-3 py-2 text-sm"
+								value={forceRationale}
+								onChange={(e) => setForceRationale(e.target.value)}
+								placeholder="…"
+							/>
+						</div>
+						<Button type="button" className="h-10" onClick={() => void submitForce()} disabled={loading}>
+							{t("aml.risk.forceSubmit")}
+						</Button>
+					</div>
+				)}
 			</div>
 
 			{error && (

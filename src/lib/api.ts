@@ -121,6 +121,7 @@ import type {
 	CreateProductPaymentMethodRequest,
 	UpdateProductPaymentMethodRequest,
 	AmlRiskProfileDto,
+	ForceAmlRiskProfileRequest,
 	AmlRuleDefinitionResponse,
 	AmlRuleVersionResponse,
 	CreateRuleDefinitionRequest,
@@ -2775,6 +2776,18 @@ export const amlApi = {
 		const res = await fetchWithAutoRefresh(`${AML_BASE}/risk-profiles/clients/${clientId}/recompute`, {
 			method: "POST",
 			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<AmlRiskProfileDto>(res);
+	},
+
+	async forceRiskProfile(
+		clientId: number | string,
+		payload: ForceAmlRiskProfileRequest
+	): Promise<AmlRiskProfileDto> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/risk-profiles/clients/${clientId}/force`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
 		});
 		return handleJsonResponse<AmlRiskProfileDto>(res);
 	},
