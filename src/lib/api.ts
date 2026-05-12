@@ -125,6 +125,7 @@ import type {
 	AmlRuleDefinitionResponse,
 	AmlRuleVersionResponse,
 	CreateRuleDefinitionRequest,
+	UpdateRuleDefinitionRequest,
 	PublishRuleVersionRequest,
 	AmlAlertResponse,
 	AmlAlertPage,
@@ -2809,6 +2810,15 @@ export const amlApi = {
 		return handleJsonResponse<AmlRuleDefinitionResponse>(res);
 	},
 
+	async updateRule(id: number | string, payload: UpdateRuleDefinitionRequest): Promise<AmlRuleDefinitionResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules/${id}`, {
+			method: "PUT",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlRuleDefinitionResponse>(res);
+	},
+
 	async listRuleVersions(ruleDefinitionId: number | string): Promise<AmlRuleVersionResponse[]> {
 		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules/${ruleDefinitionId}/versions`, {
 			headers: getAuthHeaders(),
@@ -2836,6 +2846,14 @@ export const amlApi = {
 			body: JSON.stringify({ enabled })
 		});
 		return handleJsonResponse<AmlRuleVersionResponse>(res);
+	},
+
+	async deleteRule(id: number | string): Promise<void> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules/${id}`, {
+			method: "DELETE",
+			headers: getAuthHeaders()
+		});
+		await handleJsonResponse<void>(res);
 	},
 
 	async listAlerts(params?: {

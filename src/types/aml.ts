@@ -60,6 +60,13 @@ export type CreateRuleDefinitionRequest = {
 	description?: string | null;
 };
 
+/** Corps de `PUT /api/ops/aml/rules/{id}` — le code n'est pas modifiable. */
+export type UpdateRuleDefinitionRequest = {
+	name: string;
+	category: AmlRuleCategory;
+	description?: string | null;
+};
+
 export type PublishRuleVersionRequest = {
 	effectiveFrom: string;
 	enabled: boolean;
