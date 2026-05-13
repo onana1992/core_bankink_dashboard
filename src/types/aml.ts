@@ -29,14 +29,6 @@ export type AmlRiskProfileDto = {
 	active: boolean;
 };
 
-/** UC-A02 — corps `POST …/risk-profiles/clients/{id}/force` */
-export type ForceAmlRiskProfileRequest = {
-	riskLevel: AmlRiskLevel;
-	diligenceLevel: AmlDiligenceLevel;
-	/** Motif documenté, min. 20 caractères côté serveur */
-	rationale: string;
-};
-
 export type AmlRuleDefinitionResponse = {
 	id: number;
 	code: string;

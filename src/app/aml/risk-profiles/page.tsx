@@ -4,11 +4,187 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { Braces, Eye, Hash, User, X } from "lucide-react";
 import { amlApi } from "@/lib/api";
-import type { AmlRiskLevel, AmlDiligenceLevel, AmlRiskProfileDto } from "@/types";
+import type { AmlRiskProfileDto, AmlDiligenceLevel, AmlRiskLevel } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
+
+function formatFactorsJson(factorsJson: string | null): string | null {
+	if (!factorsJson) return null;
+	try {
+		return JSON.stringify(JSON.parse(factorsJson), null, 2);
+	} catch {
+		return factorsJson;
+	}
+}
+
+function riskLevelBadgeClass(level: AmlRiskLevel): string {
+	switch (level) {
+		case "HIGH":
+			return "bg-red-50 text-red-900 ring-red-200/80";
+		case "MEDIUM":
+			return "bg-amber-50 text-amber-900 ring-amber-200/80";
+		default:
+			return "bg-emerald-50 text-emerald-900 ring-emerald-200/80";
+	}
+}
+
+function diligenceBadgeClass(level: AmlDiligenceLevel): string {
+	return level === "ENHANCED"
+		? "bg-violet-50 text-violet-900 ring-violet-200/80"
+		: "bg-slate-50 text-slate-800 ring-slate-200/80";
+}
+
+function AmlRiskProfileDetailModal({
+	profile,
+	factorsFormatted,
+	onClose
+}: {
+	profile: AmlRiskProfileDto;
+	factorsFormatted: string | null;
+	onClose: () => void;
+}) {
+	const { t } = useTranslation();
+	const computedLabel = profile.computedAt ? new Date(profile.computedAt).toLocaleString() : "—";
+
+	useEffect(() => {
+		const prevOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKey);
+		return () => {
+			document.body.style.overflow = prevOverflow;
+			window.removeEventListener("keydown", onKey);
+		};
+	}, [onClose]);
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="aml-risk-profile-modal-title">
+			<button
+				type="button"
+				className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+				aria-label={t("aml.risk.modalClose")}
+				onClick={onClose}
+			/>
+			<div className="relative z-10 flex max-h-[min(92vh,760px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+				<header className="shrink-0 border-b border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 px-5 py-4 sm:px-6">
+					<div className="flex items-start justify-between gap-4">
+						<div className="min-w-0 flex-1 space-y-2">
+							<p id="aml-risk-profile-modal-title" className="text-xs font-medium uppercase tracking-wide text-emerald-800">
+								{t("aml.risk.detailModalEyebrow")}
+							</p>
+							<p className="break-all font-mono text-sm font-semibold text-emerald-950">
+								{t("aml.risk.detailTitle", { id: profile.id })}
+							</p>
+							<p className="text-sm text-emerald-900/90">
+								{t("aml.risk.detailClientLabel")}:{" "}
+								<span className="font-semibold tabular-nums">{profile.clientId}</span>
+							</p>
+							<div className="flex flex-wrap gap-2 pt-1">
+								<span
+									className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ring-1 ${riskLevelBadgeClass(profile.riskLevel)}`}
+								>
+									{profile.riskLevel}
+								</span>
+								<span
+									className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ring-1 ${diligenceBadgeClass(profile.diligenceLevel)}`}
+								>
+									{profile.diligenceLevel}
+								</span>
+								<span
+									className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ring-1 ${profile.active ? "bg-white/70 text-emerald-900 ring-emerald-300/80" : "bg-white/50 text-gray-700 ring-emerald-200/60"}`}
+								>
+									{profile.active ? t("aml.risk.activeYesBadge") : t("aml.risk.activeNoBadge")}
+								</span>
+								{profile.riskScore !== null && profile.riskScore !== undefined ? (
+									<span className="inline-flex items-center rounded-md bg-white/80 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-emerald-950 ring-1 ring-emerald-200/80">
+										{t("aml.risk.score")}: {profile.riskScore}
+									</span>
+								) : null}
+							</div>
+							<p className="text-xs text-emerald-900/80">
+								<span className="font-medium">{t("aml.risk.by")}:</span> {profile.computedBy ?? "—"} · {computedLabel}
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={onClose}
+							className="shrink-0 rounded-lg p-2 text-emerald-800 transition-colors hover:bg-emerald-200/70 hover:text-emerald-950"
+							aria-label={t("aml.risk.modalClose")}
+						>
+							<X className="h-5 w-5" />
+						</button>
+					</div>
+				</header>
+
+				<div className="flex flex-1 flex-col overflow-hidden bg-gradient-to-b from-gray-50/95 to-white">
+					<div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
+						<div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-900/[0.04]">
+							<div className="mb-3 flex items-center gap-2 text-gray-500">
+								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+									<Hash className="h-4 w-4" aria-hidden />
+								</div>
+								<span className="text-[11px] font-bold uppercase tracking-wide">{t("aml.risk.detailIdsSection")}</span>
+							</div>
+							<dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+								<div>
+									<dt className="text-xs font-medium text-gray-500">{t("aml.risk.detailProfileId")}</dt>
+									<dd className="mt-0.5 font-semibold tabular-nums text-gray-900">{profile.id}</dd>
+								</div>
+								<div>
+									<dt className="text-xs font-medium text-gray-500">{t("aml.risk.detailClientId")}</dt>
+									<dd className="mt-0.5 font-semibold tabular-nums text-gray-900">{profile.clientId}</dd>
+								</div>
+							</dl>
+						</div>
+
+						<div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-900/[0.04]">
+							<div className="mb-3 flex items-center gap-2 text-gray-500">
+								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+									<User className="h-4 w-4" aria-hidden />
+								</div>
+								<span className="text-[11px] font-bold uppercase tracking-wide">{t("aml.risk.detailOriginSection")}</span>
+							</div>
+							<p className="text-sm leading-relaxed text-gray-800">
+								<span className="font-medium text-gray-600">{t("aml.risk.by")}:</span> {profile.computedBy ?? "—"}
+							</p>
+							<p className="mt-2 text-sm leading-relaxed text-gray-800">
+								<span className="font-medium text-gray-600">{t("aml.risk.computedAt")}:</span> {computedLabel}
+							</p>
+						</div>
+
+						<div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm ring-1 ring-gray-900/[0.04]">
+							<div className="mb-3 flex items-center gap-2 text-gray-500">
+								<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-700">
+									<Braces className="h-4 w-4" aria-hidden />
+								</div>
+								<span className="text-[11px] font-bold uppercase tracking-wide">{t("aml.risk.factors")}</span>
+							</div>
+							{factorsFormatted ? (
+								<pre className="max-h-[min(42vh,380px)] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-gray-100 bg-gray-50/90 p-3 font-mono text-xs leading-relaxed text-gray-800 ring-1 ring-gray-900/[0.03]">
+									{factorsFormatted}
+								</pre>
+							) : (
+								<p className="text-sm text-gray-500">{t("aml.risk.factorsNone")}</p>
+							)}
+						</div>
+					</div>
+
+					<div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-gray-100 bg-white/90 px-5 py-4 backdrop-blur-sm sm:px-6">
+						<Button type="button" variant="outline" onClick={onClose} className="min-w-[7rem] border-gray-200">
+							{t("aml.risk.modalClose")}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
 
 function AmlRiskProfilesInner() {
 	const { t } = useTranslation();
@@ -18,10 +194,9 @@ function AmlRiskProfilesInner() {
 	const [rows, setRows] = useState<AmlRiskProfileDto[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [showForce, setShowForce] = useState(false);
-	const [forceRiskLevel, setForceRiskLevel] = useState<AmlRiskLevel>("MEDIUM");
-	const [forceDiligence, setForceDiligence] = useState<AmlDiligenceLevel>("ENHANCED");
-	const [forceRationale, setForceRationale] = useState("");
+	const [page, setPage] = useState(0);
+	const [pageSize, setPageSize] = useState(10);
+	const [detailProfile, setDetailProfile] = useState<AmlRiskProfileDto | null>(null);
 
 	const stats = useMemo(() => {
 		let active = 0;
@@ -33,6 +208,23 @@ function AmlRiskProfilesInner() {
 			if (r.diligenceLevel === "ENHANCED") enhanced++;
 		}
 		return { total: rows.length, active, high, enhanced };
+	}, [rows]);
+
+	const totalRows = rows.length;
+	const totalPages = totalRows === 0 ? 0 : Math.ceil(totalRows / pageSize);
+
+	const paginatedRows = useMemo(() => {
+		const start = page * pageSize;
+		return rows.slice(start, start + pageSize);
+	}, [rows, page, pageSize]);
+
+	const safePage = totalPages > 0 ? Math.min(page, totalPages - 1) : 0;
+	useEffect(() => {
+		if (page !== safePage) setPage(safePage);
+	}, [page, safePage]);
+
+	useEffect(() => {
+		setPage(0);
 	}, [rows]);
 
 	const loadByClientNumericId = useCallback(async (id: number) => {
@@ -109,47 +301,12 @@ function AmlRiskProfilesInner() {
 		}
 	}
 
-	async function submitForce() {
-		const id = Number(clientId.trim());
-		if (!Number.isFinite(id) || id <= 0) {
-			setError(t("aml.risk.clientRequired"));
-			return;
-		}
-		setLoading(true);
-		setError(null);
-		try {
-			await amlApi.forceRiskProfile(id, {
-				riskLevel: forceRiskLevel,
-				diligenceLevel: forceDiligence,
-				rationale: forceRationale.trim()
-			});
-			const list = await amlApi.listRiskProfiles(id);
-			setRows(list ?? []);
-			if (typeof window !== "undefined") {
-				window.dispatchEvent(
-					new CustomEvent("show-toast", {
-						detail: { message: t("aml.risk.forceDone"), type: "success" }
-					})
-				);
-			}
-			setShowForce(false);
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error");
-		} finally {
-			setLoading(false);
-		}
-	}
+	const detailFactorsFormatted = useMemo(
+		() => (detailProfile ? formatFactorsJson(detailProfile.factorsJson) : null),
+		[detailProfile]
+	);
 
-	const factorsPretty: Record<number, string> = {};
-	for (const r of rows) {
-		if (r.factorsJson) {
-			try {
-				factorsPretty[r.id] = JSON.stringify(JSON.parse(r.factorsJson), null, 2);
-			} catch {
-				factorsPretty[r.id] = r.factorsJson;
-			}
-		}
-	}
+	const closeRiskDetailModal = useCallback(() => setDetailProfile(null), []);
 
 	return (
 		<div className="space-y-6">
@@ -244,57 +401,7 @@ function AmlRiskProfilesInner() {
 					<Button type="button" variant="outline" className="h-10" onClick={() => void recompute()} disabled={loading}>
 						{t("aml.risk.recompute")}
 					</Button>
-					<Button
-						type="button"
-						variant="outline"
-						className="h-10 border-amber-300 text-amber-900"
-						onClick={() => setShowForce((v) => !v)}
-						disabled={loading}
-					>
-						{t("aml.risk.forceUc02")}
-					</Button>
 				</div>
-				{showForce && (
-					<div className="mt-4 p-4 rounded-lg border border-amber-200 bg-amber-50/50 space-y-3">
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceRiskLevel")}</label>
-								<select
-									className="w-full h-10 rounded-md border border-gray-300 px-2 text-sm bg-white"
-									value={forceRiskLevel}
-									onChange={(e) => setForceRiskLevel(e.target.value as AmlRiskLevel)}
-								>
-									<option value="LOW">LOW</option>
-									<option value="MEDIUM">MEDIUM</option>
-									<option value="HIGH">HIGH</option>
-								</select>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceDiligence")}</label>
-								<select
-									className="w-full h-10 rounded-md border border-gray-300 px-2 text-sm bg-white"
-									value={forceDiligence}
-									onChange={(e) => setForceDiligence(e.target.value as AmlDiligenceLevel)}
-								>
-									<option value="STANDARD">STANDARD</option>
-									<option value="ENHANCED">ENHANCED</option>
-								</select>
-							</div>
-						</div>
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">{t("aml.risk.forceRationale")}</label>
-							<textarea
-								className="w-full min-h-[100px] rounded-md border border-gray-300 px-3 py-2 text-sm"
-								value={forceRationale}
-								onChange={(e) => setForceRationale(e.target.value)}
-								placeholder="…"
-							/>
-						</div>
-						<Button type="button" className="h-10" onClick={() => void submitForce()} disabled={loading}>
-							{t("aml.risk.forceSubmit")}
-						</Button>
-					</div>
-				)}
 			</div>
 
 			{error && (
@@ -323,17 +430,18 @@ function AmlRiskProfilesInner() {
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("aml.risk.diligence")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("aml.risk.active")}</th>
 									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("aml.risk.by")}</th>
+									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("common.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">
 								{rows.length === 0 ? (
 									<tr>
-										<td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+										<td colSpan={7} className="px-6 py-12 text-center text-gray-500">
 											{t("aml.risk.empty")}
 										</td>
 									</tr>
 								) : (
-									rows.map((r) => (
+									paginatedRows.map((r) => (
 										<tr key={r.id} className="hover:bg-gray-50 transition-colors align-top">
 											<td className="px-6 py-4 whitespace-nowrap text-gray-900">
 												{r.computedAt ? new Date(r.computedAt).toLocaleString() : "—"}
@@ -345,28 +453,52 @@ function AmlRiskProfilesInner() {
 												{r.active ? <Badge variant="success">{t("aml.risk.yes")}</Badge> : <Badge>{t("aml.risk.no")}</Badge>}
 											</td>
 											<td className="px-6 py-4 text-xs text-gray-600">{r.computedBy ?? "—"}</td>
+											<td className="px-6 py-4 text-right whitespace-nowrap">
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													className="inline-flex items-center gap-1.5"
+													onClick={() => setDetailProfile(r)}
+												>
+													<Eye className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
+													{t("aml.risk.view")}
+												</Button>
+											</td>
 										</tr>
 									))
 								)}
 							</tbody>
 						</table>
 					</div>
+					{rows.length > 0 ? (
+						<TablePagination
+							page={safePage}
+							totalPages={totalPages}
+							totalElements={totalRows}
+							pageSize={pageSize}
+							onPageChange={setPage}
+							resultsLabel={t("aml.risk.paginationProfiles")}
+							showFirstLast
+							sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
+							size={pageSize}
+							onSizeChange={(s) => {
+								setPageSize(s);
+								setPage(0);
+							}}
+							className="!border-t-gray-200 !bg-gray-50/90 [&_.text-ops-fg]:text-gray-800 [&_.text-ops-fg-muted]:text-gray-600 [&_select]:border-gray-300 [&_select]:bg-white"
+						/>
+					) : null}
 				</div>
 			)}
 
-			{rows
-				.filter((r) => Boolean(factorsPretty[r.id]))
-				.map((r) => (
-					<details key={`f-${r.id}`} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 group">
-						<summary className="cursor-pointer text-lg font-semibold text-gray-900 list-none flex items-center gap-2">
-							<svg className="w-5 h-5 text-gray-500 group-open:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-							</svg>
-							{t("aml.risk.factors")} — {r.computedAt ? new Date(r.computedAt).toLocaleString() : r.id}
-						</summary>
-						<pre className="mt-4 text-xs bg-gray-50 p-4 rounded-lg border border-gray-100 overflow-x-auto">{factorsPretty[r.id]}</pre>
-					</details>
-				))}
+			{detailProfile ? (
+				<AmlRiskProfileDetailModal
+					profile={detailProfile}
+					factorsFormatted={detailFactorsFormatted}
+					onClose={closeRiskDetailModal}
+				/>
+			) : null}
 		</div>
 	);
 }
