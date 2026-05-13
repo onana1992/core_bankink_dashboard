@@ -140,6 +140,8 @@
 	"complianceVigilancePage": {
 		"title": "Vigilance AML périodique",
 		"subtitle": "Dernière exécution du lot (mémoire processus jusqu'au redémarrage API). Activer aml.vigilance.enabled et le cron côté backend.",
+		"summaryLastRun": "Dernière exécution",
+		"detailsTitle": "Détails",
 		"lastAt": "Dernière exécution (UTC)",
 		"processed": "Clients traités",
 		"updated": "Profils mis à jour",
@@ -2331,6 +2333,20 @@
 		}
 	},
 	"transaction": {
+		"newHub": {
+			"title": "Nouvelle transaction",
+			"description": "Choisissez le type d'opération. Le compte indiqué sera présélectionné sur le formulaire.",
+			"descriptionNoAccount": "Choisissez le type d'opération à enregistrer.",
+			"backToAccount": "Retour au compte",
+			"backToTransactions": "Retour à la liste",
+			"types": {
+				"deposit": "Dépôt",
+				"withdrawal": "Retrait",
+				"transfer": "Transfert",
+				"interest": "Intérêts",
+				"adjustment": "Ajustement"
+			}
+		},
 		"form": {
 			"paymentMethod": {
 				"label": "Moyen de paiement",
@@ -3277,9 +3293,13 @@
 			"titleRequired": "Le titre est obligatoire."
 		},
 		"alertDetail": {
+			"context": "Contexte",
+			"timeline": "Dates",
 			"openCase": "Ouvrir un dossier",
 			"actions": "Actions",
-			"assignToUserId": "Assigner à (ID utilisateur)",
+			"assignToUser": "Assigner à",
+			"assignSelectPlaceholder": "Choisir un utilisateur…",
+			"usersLoadError": "Impossible de charger la liste des utilisateurs.",
 			"assign": "Assigner",
 			"updateStatus": "Mettre à jour le statut",
 			"closure": "Clôture",
@@ -3294,7 +3314,11 @@
 			"assigned": "Assigné (user ID)",
 			"ruleVersion": "Règle / version",
 			"idempotency": "Clé d’idempotence",
-			"facts": "Faits (JSON)"
+			"facts": "Faits (JSON)",
+			"createdAt": "Création",
+			"updatedAt": "Mis à jour",
+			"closedAt": "Clôturée le",
+			"closureReason": "Motif de clôture"
 		},
 		"rules": {
 			"title": "Règles AML",

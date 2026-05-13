@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { accountsApi, customersApi, transactionsApi } from "@/lib/api";
 import { generateIdempotencyKey } from "@/lib/idempotency";
@@ -34,6 +35,8 @@ export default function TransactionForm({
 	onSubmit
 }: TransactionFormProps) {
 	const { t } = useTranslation();
+	const searchParams = useSearchParams();
+	const accountIdFromUrl = searchParams.get("accountId");
 	const [clientId, setClientId] = useState<number>(0);
 	const [client, setClient] = useState<Customer | null>(null);
 	const [accounts, setAccounts] = useState<Account[]>([]);
@@ -63,6 +66,40 @@ export default function TransactionForm({
 		}
 		loadCustomers();
 	}, []);
+
+	// Préremplissage depuis ?accountId= (ex. lien depuis la fiche compte)
+	useEffect(() => {
+		if (!accountIdFromUrl) return;
+		const aid = parseInt(accountIdFromUrl, 10);
+		if (Number.isNaN(aid) || aid <= 0) return;
+
+		let cancelled = false;
+		(async () => {
+			try {
+				const acc = await accountsApi.get(aid);
+				if (cancelled) return;
+				const cid = acc.clientId;
+				if (cid != null && cid > 0) {
+					setClientId(cid);
+					try {
+						const cust = await customersApi.get(cid);
+						if (!cancelled) setClient(cust);
+					} catch {
+						// le client peut ne pas être listable ; le compte reste sélectionnable
+					}
+				}
+				if (!cancelled) {
+					setSelectedAccountId(aid);
+					if (acc.currency) setCurrency(acc.currency);
+				}
+			} catch (e) {
+				console.error("TransactionForm: prefill account from URL failed", e);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [accountIdFromUrl]);
 
 	// Load accounts when client is selected
 	useEffect(() => {
@@ -193,7 +230,7 @@ export default function TransactionForm({
 	});
 
 	return (
-		<div className="max-w-4xl mx-auto">
+		<div className="w-full min-w-0 space-y-6">
 			{toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 				{/* Header */}
@@ -201,7 +238,7 @@ export default function TransactionForm({
 					<div className="flex items-center gap-4">
 						{icon}
 						<div className="flex-1">
-							<h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+							<h1 className="text-3xl font-bold text-gray-900">{title}</h1>
 							<p className="text-sm text-gray-600 mt-1">{description}</p>
 						</div>
 					</div>

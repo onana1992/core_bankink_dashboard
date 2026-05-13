@@ -16,7 +16,6 @@ import {
 	Percent,
 	FileText,
 	ShieldAlert,
-	Gauge,
 	RefreshCcw,
 	CalendarCheck,
 	KeyRound,
@@ -140,7 +139,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
-							<NavLink href="/aml/risk-profiles" label={t("sidebar.amlRiskProfiles")} icon={ShieldCheck} collapsed={collapsed} />
 							<NavLink href="/compliance/vigilance" label={t("sidebar.complianceVigilance")} icon={RefreshCcw} collapsed={collapsed} />
 						</div>
 					</details>
@@ -240,20 +238,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 						<div className="mt-1 space-y-1 pl-3">
 							<NavLink href="/statements" label={t("sidebar.accountStatements")} icon={FileText} collapsed={collapsed} />
 							<NavLink href="/exports" label={t("sidebar.pdfCsvExports")} icon={FileText} collapsed={collapsed} />
-						</div>
-					</details>
-
-					<details className="group rounded-md">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-							<span className="flex items-center gap-2">
-								<ShieldAlert className="h-4 w-4 text-gray-700" />
-								<span className={labelClass}>{t("sidebar.riskCompliance")}</span>
-							</span>
-							{!collapsed && <Chevron />}
-						</summary>
-						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/risk/limits" label={t("sidebar.limits")} icon={Gauge} collapsed={collapsed} />
-							<NavLink href="/risk/sanctions" label={t("sidebar.sanctionsWatchlists")} icon={ShieldAlert} collapsed={collapsed} />
 						</div>
 					</details>
 
