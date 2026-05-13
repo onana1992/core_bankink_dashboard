@@ -140,6 +140,8 @@
 	"complianceVigilancePage": {
 		"title": "Periodic AML vigilance",
 		"subtitle": "Last batch run (in-memory until API restart). Enable aml.vigilance.enabled and cron on the backend.",
+		"summaryLastRun": "Last run",
+		"detailsTitle": "Details",
 		"lastAt": "Last run (UTC)",
 		"processed": "Clients processed",
 		"updated": "Profiles updated",
@@ -2331,6 +2333,20 @@
 		}
 	},
 	"transaction": {
+		"newHub": {
+			"title": "New transaction",
+			"description": "Choose the operation type. The selected account will be pre-filled on the form.",
+			"descriptionNoAccount": "Choose the type of operation to record.",
+			"backToAccount": "Back to account",
+			"backToTransactions": "Back to list",
+			"types": {
+				"deposit": "Deposit",
+				"withdrawal": "Withdrawal",
+				"transfer": "Transfer",
+				"interest": "Interest",
+				"adjustment": "Adjustment"
+			}
+		},
 		"form": {
 			"client": {
 				"label": "Client",
@@ -3248,9 +3264,13 @@
 			"titleRequired": "Title is required."
 		},
 		"alertDetail": {
+			"context": "Context",
+			"timeline": "Timeline",
 			"openCase": "Open case",
 			"actions": "Actions",
-			"assignToUserId": "Assign to (user ID)",
+			"assignToUser": "Assign to",
+			"assignSelectPlaceholder": "Select a user…",
+			"usersLoadError": "Could not load the user list.",
 			"assign": "Assign",
 			"updateStatus": "Update status",
 			"closure": "Closure",
@@ -3265,7 +3285,11 @@
 			"assigned": "Assigned (user ID)",
 			"ruleVersion": "Rule / version",
 			"idempotency": "Idempotency key",
-			"facts": "Facts (JSON)"
+			"facts": "Facts (JSON)",
+			"createdAt": "Created",
+			"updatedAt": "Updated",
+			"closedAt": "Closed at",
+			"closureReason": "Closure reason"
 		},
 		"rules": {
 			"title": "AML rules",
