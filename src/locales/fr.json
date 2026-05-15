@@ -139,7 +139,7 @@
 	},
 	"complianceVigilancePage": {
 		"title": "Vigilance AML périodique",
-		"subtitle": "Dernière exécution du lot (mémoire processus jusqu'au redémarrage API). Activer aml.vigilance.enabled et le cron côté backend.",
+		"subtitle": "Synthèse du dernier contrôle périodique sur les profils de risque AML des clients éligibles.",
 		"summaryLastRun": "Dernière exécution",
 		"detailsTitle": "Détails",
 		"lastAt": "Dernière exécution (UTC)",

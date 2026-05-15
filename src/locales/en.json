@@ -139,7 +139,7 @@
 	},
 	"complianceVigilancePage": {
 		"title": "Periodic AML vigilance",
-		"subtitle": "Last batch run (in-memory until API restart). Enable aml.vigilance.enabled and cron on the backend.",
+		"subtitle": "Summary of the latest periodic review of eligible clients' AML risk profiles.",
 		"summaryLastRun": "Last run",
 		"detailsTitle": "Details",
 		"lastAt": "Last run (UTC)",
