@@ -128,6 +128,28 @@ export type AmlCaseDetailResponse = {
 	notes: AmlCaseNoteResponse[];
 };
 
+/** Élément de liste paginée `GET /api/ops/aml/cases`. */
+export type AmlCaseSummaryResponse = {
+	id: number;
+	publicRef: string;
+	status: AmlCaseStatus;
+	clientId: number;
+	ownerUserId: number | null;
+	openedAt: string;
+	closedAt: string | null;
+	outcomeCode: string | null;
+};
+
+export type AmlCasePage = {
+	content: AmlCaseSummaryResponse[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+	first?: boolean;
+	last?: boolean;
+};
+
 export type CreateCaseRequest = {
 	clientId: number;
 	alertIds: number[];

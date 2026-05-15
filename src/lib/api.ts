@@ -133,6 +133,8 @@ import type {
 	PatchAlertStatusRequest,
 	CloseAlertRequest,
 	AmlCaseDetailResponse,
+	AmlCaseSummaryResponse,
+	AmlCasePage,
 	AmlCaseNoteResponse,
 	CreateCaseRequest,
 	AddCaseNoteRequest,
@@ -140,6 +142,7 @@ import type {
 	CreateDeclarationResponse,
 	AmlAlertStatus,
 	AmlAlertSeverity,
+	AmlCaseStatus,
 	KycRuleDefinitionResponse,
 	CreateKycRuleDefinitionRequest,
 	UpdateKycRuleDefinitionRequest,
@@ -2915,6 +2918,27 @@ export const amlApi = {
 			body: JSON.stringify(payload)
 		});
 		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async listCases(params?: {
+		clientId?: number;
+		status?: AmlCaseStatus;
+		publicRef?: string;
+		page?: number;
+		size?: number;
+	}): Promise<AmlCasePage> {
+		const usp = new URLSearchParams();
+		if (params?.clientId != null) usp.set("clientId", String(params.clientId));
+		if (params?.status) usp.set("status", params.status);
+		if (params?.publicRef?.trim()) usp.set("publicRef", params.publicRef.trim());
+		if (params?.page != null) usp.set("page", String(params.page));
+		if (params?.size != null) usp.set("size", String(params.size));
+		const q = usp.toString();
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases${q ? `?${q}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlCasePage>(res);
 	},
 
 	async getCase(id: number | string): Promise<AmlCaseDetailResponse> {
