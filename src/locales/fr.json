@@ -1,7 +1,7 @@
 {
 	"sidebar": {
 		"coreAdmin": "CORE BANKING BY NANO-TECH",
-		"tailwindAdmin": "Back-office opérationnel",
+		"tailwindAdmin": "back-office opérationnel",
 		"dashboard": "Tableau de bord",
 		"clientsKyc": "Clients & KYC",
 		"clientDossiers": "Dossiers client",
