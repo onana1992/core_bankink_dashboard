@@ -142,7 +142,7 @@ function AmlCasesListInner() {
 			<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 				<div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-sm">
 					<div className="flex items-center justify-between gap-2">
-						<div>
+						<div className="min-w-0">
 							<div className="mb-1 text-sm font-medium text-blue-700">{t("aml.cases.statsTotal")}</div>
 							<div className="text-3xl font-bold text-blue-900">{totalElements}</div>
 						</div>
@@ -153,7 +153,7 @@ function AmlCasesListInner() {
 				</div>
 				<div className="rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-sky-100 p-5 shadow-sm">
 					<div className="flex items-center justify-between gap-2">
-						<div>
+						<div className="min-w-0">
 							<div className="mb-1 text-sm font-medium text-sky-700">{t("aml.cases.statsOpen")}</div>
 							<div className="text-3xl font-bold text-sky-900">{stats.open}</div>
 						</div>
@@ -166,7 +166,7 @@ function AmlCasesListInner() {
 				</div>
 				<div className="rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 p-5 shadow-sm">
 					<div className="flex items-center justify-between gap-2">
-						<div>
+						<div className="min-w-0">
 							<div className="mb-1 text-sm font-medium text-amber-800">{t("aml.cases.statsInReview")}</div>
 							<div className="text-3xl font-bold text-amber-900">{stats.inReview}</div>
 						</div>
@@ -179,7 +179,7 @@ function AmlCasesListInner() {
 				</div>
 				<div className="col-span-2 rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-5 shadow-sm lg:col-span-1">
 					<div className="flex items-center justify-between gap-2">
-						<div>
+						<div className="min-w-0">
 							<div className="mb-1 text-sm font-medium text-gray-700">{t("aml.cases.statsClosed")}</div>
 							<div className="text-3xl font-bold text-gray-900">{stats.closed}</div>
 						</div>
@@ -191,7 +191,6 @@ function AmlCasesListInner() {
 					</div>
 				</div>
 			</div>
-			<p className="-mt-2 text-xs text-gray-500">{t("aml.stats.pageHint")}</p>
 
 			<div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 				<div className="mb-4 flex items-center gap-2">
@@ -279,7 +278,7 @@ function AmlCasesListInner() {
 												{c.clientId}
 											</Link>
 										</td>
-										<td className="whitespace-nowrap px-6 py-4 text-gray-700">{c.ownerUserId ?? "—"}</td>
+										<td className="whitespace-nowrap px-6 py-4 text-gray-700">{c.ownerUsername?.trim() || "—"}</td>
 										<td className="whitespace-nowrap px-6 py-4 text-gray-600">{c.openedAt ? new Date(c.openedAt).toLocaleString() : "—"}</td>
 										<td className="whitespace-nowrap px-6 py-4 text-gray-600">{c.closedAt ? new Date(c.closedAt).toLocaleString() : "—"}</td>
 										<td className="whitespace-nowrap px-6 py-4 text-right">

@@ -7,14 +7,11 @@ import {
 	LayoutDashboard,
 	Users,
 	Package,
-	BadgePercent,
-	Banknote,
 	Wallet,
 	BookOpen,
 	Repeat,
-	ArrowLeftRight,
-	Percent,
 	FileText,
+	History,
 	ShieldAlert,
 	RefreshCcw,
 	CalendarCheck,
@@ -93,7 +90,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 		<aside className={`hidden md:flex ${collapsed ? "md:w-20" : "md:w-64"} border-r bg-white min-h-screen`}>
 			<div className="w-full p-4 overflow-y-auto">
 				<div className="px-2 py-3">
-					<div className={`text-xl font-semibold ${labelClass}`}>{t("sidebar.coreAdmin")}</div>
+					<div className={`text-xl font-black ${labelClass}`}>{t("sidebar.coreAdmin")}</div>
 					<div className={`text-xs text-gray-500 ${labelClass}`}>{t("sidebar.tailwindAdmin")}</div>
 				</div>
 
@@ -139,6 +136,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
+							<NavLink href="/aml/audit-trail" label={t("sidebar.amlAuditTrail")} icon={History} collapsed={collapsed} />
 							<NavLink href="/compliance/vigilance" label={t("sidebar.complianceVigilance")} icon={RefreshCcw} collapsed={collapsed} />
 						</div>
 					</details>
@@ -196,34 +194,6 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							<NavLink href="/transactions/reversal" label={t("transaction.list.types.reversals")} icon={RotateCcw} collapsed={collapsed} />
 							<NavLink href="/journal-batches" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
 							<NavLink href="/holds" label={t("sidebar.holds")} icon={CheckCircle} collapsed={collapsed} />
-						</div>
-					</details>
-
-					<details className="group rounded-md">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-							<span className="flex items-center gap-2">
-								<ArrowLeftRight className="h-4 w-4 text-gray-700" />
-								<span className={labelClass}>{t("sidebar.payments")}</span>
-							</span>
-							{!collapsed && <Chevron />}
-						</summary>
-						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/payments/outgoing" label={t("sidebar.outgoingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
-							<NavLink href="/payments/incoming" label={t("sidebar.incomingTransfers")} icon={ArrowLeftRight} collapsed={collapsed} />
-						</div>
-					</details>
-
-					<details className="group rounded-md">
-						<summary className="cursor-pointer px-3 py-2 text-sm font-medium text-black flex items-center justify-between rounded-md hover:bg-gray-100">
-							<span className="flex items-center gap-2">
-								<Percent className="h-4 w-4 text-gray-700" />
-								<span className={labelClass}>{t("sidebar.interestFees")}</span>
-							</span>
-							{!collapsed && <Chevron />}
-						</summary>
-						<div className="mt-1 space-y-1 pl-3">
-							<NavLink href="/interest/accruals" label={t("sidebar.calculationAccrual")} icon={Percent} collapsed={collapsed} />
-							<NavLink href="/fees/apply" label={t("sidebar.feeApplication")} icon={Banknote} collapsed={collapsed} />
 						</div>
 					</details>
 

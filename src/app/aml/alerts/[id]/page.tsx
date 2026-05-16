@@ -264,19 +264,19 @@ export default function AmlAlertDetailPage() {
 							<p className="mt-2 text-lg leading-snug text-gray-700">{alert.title}</p>
 						</div>
 					</div>
-					<div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-stretch">
+					<div className="flex w-full shrink-0 flex-row flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
 						<Button
 							type="button"
 							variant="outline"
-							className="flex items-center justify-center gap-2"
+							className="flex shrink-0 items-center justify-center gap-2"
 							onClick={() => void load()}
 							disabled={loading || busy}
 						>
 							<RefreshCw className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`} aria-hidden />
 							{t("common.refresh")}
 						</Button>
-						<Link href={`/aml/cases/new?clientId=${alert.clientId}&alertIds=${alert.id}`} className="inline-flex">
-							<Button type="button" variant="default" className="w-full justify-center gap-2 sm:w-auto lg:w-full">
+						<Link href={`/aml/cases/new?clientId=${alert.clientId}&alertIds=${alert.id}`} className="inline-flex shrink-0">
+							<Button type="button" variant="default" className="justify-center gap-2">
 								<FolderKanban className="h-4 w-4 shrink-0" aria-hidden />
 								{t("aml.alertDetail.openCase")}
 							</Button>

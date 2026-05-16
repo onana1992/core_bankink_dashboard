@@ -25,9 +25,30 @@ export const AUDIT_ACTION_BADGE_CLASSES: Record<string, string> = {
 	KYC_CLIENT_ADDRESS_ADDED: "bg-sky-100 text-sky-800",
 	KYC_CLIENT_ADDRESS_UPDATED: "bg-blue-100 text-blue-800",
 	KYC_COMPLIANCE_TASK_CREATED: "bg-blue-100 text-blue-800",
-	KYC_COMPLIANCE_TASK_PATCHED: "bg-yellow-100 text-yellow-800"
+	KYC_COMPLIANCE_TASK_PATCHED: "bg-yellow-100 text-yellow-800",
+
+	// AML (voir services aml/* — logEvent action codes)
+	AML_CASE_CREATED: "bg-blue-100 text-blue-800",
+	AML_CASE_NOTE_ADDED: "bg-sky-100 text-sky-800",
+	AML_CASE_STATUS: "bg-amber-100 text-amber-800",
+	AML_DECLARATION_DRAFT: "bg-violet-100 text-violet-800",
+	AML_ALERT_CREATED: "bg-cyan-100 text-cyan-800",
+	AML_ALERT_MANUAL_CREATED: "bg-teal-100 text-teal-800",
+	AML_ALERT_ASSIGNED: "bg-indigo-100 text-indigo-800",
+	AML_ALERT_STATUS: "bg-orange-100 text-orange-800",
+	AML_ALERT_CLOSED: "bg-emerald-100 text-emerald-800",
+	AML_RISK_RECOMPUTED: "bg-fuchsia-100 text-fuchsia-800",
+	AML_RULE_DEFINITION_CREATED: "bg-blue-100 text-blue-800",
+	AML_RULE_DEFINITION_UPDATED: "bg-amber-100 text-amber-800",
+	AML_RULE_DEFINITION_DELETED: "bg-red-100 text-red-800",
+	AML_RULE_VERSION_PUBLISHED: "bg-emerald-100 text-emerald-800",
+	AML_RULE_VERSION_PATCHED: "bg-yellow-100 text-yellow-800"
 };
 
 export function getAuditActionBadgeClass(action: string): string {
-	return AUDIT_ACTION_BADGE_CLASSES[action] ?? "bg-gray-100 text-gray-800";
+	const mapped = AUDIT_ACTION_BADGE_CLASSES[action];
+	if (mapped) return mapped;
+	/** Codes AML futurs : badge coloré par défaut (évite le gris « inconnu » sur /aml/audit-trail). */
+	if (action.startsWith("AML_")) return "bg-teal-100 text-teal-800";
+	return "bg-gray-100 text-gray-800";
 }

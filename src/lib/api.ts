@@ -140,6 +140,8 @@ import type {
 	AddCaseNoteRequest,
 	PatchCaseStatusRequest,
 	CreateDeclarationResponse,
+	AmlCaseStatusHistoryResponse,
+	AmlDeclarationRecordResponse,
 	AmlAlertStatus,
 	AmlAlertSeverity,
 	AmlCaseStatus,
@@ -390,15 +392,17 @@ function readPagingNonNegative(obj: Record<string, unknown>, ...keys: string[]):
  * - mode classique ou DIRECT : totals à la racine ;
  * - `PageSerializationMode.VIA_DTO` (CoreBackendApplication) : `page: { totalElements, totalPages, number, size }`.
  */
-function normalizeOpsCustomersPagePayload(raw: unknown): {
-	content: Customer[];
+function normalizeSpringPagePayload<T>(raw: unknown): {
+	content: T[];
 	totalElements: number;
 	totalPages: number;
 	number: number;
 	size: number;
+	first?: boolean;
+	last?: boolean;
 } {
 	const o = raw !== null && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-	const content = Array.isArray(o.content) ? (o.content as Customer[]) : [];
+	const content = Array.isArray(o.content) ? (o.content as T[]) : [];
 
 	const dtoMeta =
 		o.page !== undefined && o.page !== null && typeof o.page === "object" && !Array.isArray(o.page)
@@ -431,7 +435,42 @@ function normalizeOpsCustomersPagePayload(raw: unknown): {
 	if (size === undefined && pageable) size = readPagingNonNegative(pageable, "pageSize", "page_size");
 	const fallbackSize = 20;
 	const safeSize = size !== undefined ? size : fallbackSize;
-	return { content, totalElements, totalPages, number, size: safeSize };
+
+	const firstRoot = o.first;
+	const lastRoot = o.last;
+	const firstMeta = dtoMeta?.first;
+	const lastMeta = dtoMeta?.last;
+
+	const out: {
+		content: T[];
+		totalElements: number;
+		totalPages: number;
+		number: number;
+		size: number;
+		first?: boolean;
+		last?: boolean;
+	} = {
+		content,
+		totalElements,
+		totalPages,
+		number,
+		size: safeSize
+	};
+	if (typeof firstRoot === "boolean") out.first = firstRoot;
+	else if (typeof firstMeta === "boolean") out.first = firstMeta;
+	if (typeof lastRoot === "boolean") out.last = lastRoot;
+	else if (typeof lastMeta === "boolean") out.last = lastMeta;
+	return out;
+}
+
+function normalizeOpsCustomersPagePayload(raw: unknown): {
+	content: Customer[];
+	totalElements: number;
+	totalPages: number;
+	number: number;
+	size: number;
+} {
+	return normalizeSpringPagePayload<Customer>(raw);
 }
 
 export const customersApi = {
@@ -2006,6 +2045,27 @@ export const auditApi = {
 		return handleJsonResponse<import("@/types").PagedResponse<AuditEvent>>(res);
 	},
 
+	async getAmlAuditEvents(params?: {
+		userId?: number;
+		fromDate?: string;
+		toDate?: string;
+		page?: number;
+		size?: number;
+	}): Promise<import("@/types").PagedResponse<AuditEvent>> {
+		const usp = new URLSearchParams();
+		if (params?.userId) usp.set("userId", String(params.userId));
+		if (params?.fromDate) usp.set("fromDate", params.fromDate);
+		if (params?.toDate) usp.set("toDate", params.toDate);
+		if (params?.page !== undefined) usp.set("page", String(params.page));
+		if (params?.size !== undefined) usp.set("size", String(params.size));
+		const query = usp.toString();
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/aml-events${query ? `?${query}` : ""}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<import("@/types").PagedResponse<AuditEvent>>(res);
+	},
+
 	async getEvent(id: number): Promise<AuditEvent> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/audit/events/${id}`, {
 			headers: getAuthHeaders(),
@@ -2938,7 +2998,11 @@ export const amlApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<AmlCasePage>(res);
+		const body = await handleJsonResponse<Record<string, unknown>>(res);
+		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
+			throw new Error("Liste dossiers AML : réponse invalide ou vide.");
+		}
+		return normalizeSpringPagePayload<AmlCaseSummaryResponse>(body);
 	},
 
 	async getCase(id: number | string): Promise<AmlCaseDetailResponse> {
@@ -2947,6 +3011,22 @@ export const amlApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async getCaseStatusHistory(caseId: number | string): Promise<AmlCaseStatusHistoryResponse[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/status-history`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlCaseStatusHistoryResponse[]>(res);
+	},
+
+	async getCaseDeclarations(caseId: number | string): Promise<AmlDeclarationRecordResponse[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/declarations`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlDeclarationRecordResponse[]>(res);
 	},
 
 	async addCaseNote(caseId: number | string, payload: AddCaseNoteRequest): Promise<AmlCaseNoteResponse> {

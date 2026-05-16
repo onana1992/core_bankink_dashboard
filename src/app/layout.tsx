@@ -6,7 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 
 export const metadata: Metadata = {
-	title: "Core Admin",
+	title: "CORE BANKING BY NANO-TECH",
 	description: "Core banking admin interface"
 };
 

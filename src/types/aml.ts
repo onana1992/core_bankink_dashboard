@@ -16,6 +16,7 @@ export type AmlAlertStatus = "NEW" | "ASSIGNED" | "UNDER_REVIEW" | "ESCALATED" |
 export type AmlCaseStatus = "OPEN" | "IN_REVIEW" | "ESCALATED" | "CLOSED";
 export type AmlClosureReason = "FALSE_POSITIVE" | "EXPLAINED" | "ESCALATED_DECLARATION" | "OTHER";
 export type AmlTriggerType = "RULE" | "MANUAL" | "SCREENING";
+export type AmlDeclarationStatus = "DRAFT" | "SUBMITTED" | "ACKNOWLEDGED" | "CLOSED";
 
 export type AmlRiskProfileDto = {
 	id: number;
@@ -110,7 +111,8 @@ export type CloseAlertRequest = {
 
 export type AmlCaseNoteResponse = {
 	id: number;
-	authorUserId: number;
+	authorUserId: number | null;
+	authorUsername: string | null;
 	body: string;
 	createdAt: string;
 };
@@ -121,6 +123,7 @@ export type AmlCaseDetailResponse = {
 	status: AmlCaseStatus;
 	clientId: number;
 	ownerUserId: number | null;
+	ownerUsername: string | null;
 	openedAt: string;
 	closedAt: string | null;
 	outcomeCode: string | null;
@@ -135,6 +138,7 @@ export type AmlCaseSummaryResponse = {
 	status: AmlCaseStatus;
 	clientId: number;
 	ownerUserId: number | null;
+	ownerUsername: string | null;
 	openedAt: string;
 	closedAt: string | null;
 	outcomeCode: string | null;
@@ -164,6 +168,28 @@ export type PatchCaseStatusRequest = {
 	status: AmlCaseStatus;
 	comment?: string | null;
 	outcomeCode?: string | null;
+};
+
+export type AmlCaseStatusHistoryResponse = {
+	id: number;
+	caseId: number;
+	fromStatus: AmlCaseStatus | null;
+	toStatus: AmlCaseStatus;
+	changedByUserId: number | null;
+	changedByUsername: string | null;
+	changedAt: string;
+	comment: string | null;
+};
+
+export type AmlDeclarationRecordResponse = {
+	id: number;
+	caseId: number;
+	status: AmlDeclarationStatus;
+	submittedAt: string | null;
+	externalReference: string | null;
+	notes: string | null;
+	createdByUserId: number | null;
+	createdByUsername: string | null;
 };
 
 export type AmlAlertPage = {
