@@ -89,7 +89,12 @@
 		"applyFilters": "Appliquer"
 	},
 	"topbar": {
-		"toggleSidebar": "Basculer la barre latérale"
+		"toggleSidebar": "Basculer la barre latérale",
+		"logout": "Déconnexion",
+		"userMenu": "Menu du compte",
+		"sessionLabel": "Espace de travail",
+		"sessionValue": "Back-office opérationnel",
+		"emailMissing": "Non renseignée"
 	},
 	"apiErrors": {
 		"network": "Impossible de se connecter au serveur. Vérifiez que le backend est démarré et accessible.",

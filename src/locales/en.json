@@ -99,7 +99,12 @@
 		"applyFilters": "Apply"
 	},
 	"topbar": {
-		"toggleSidebar": "Toggle sidebar"
+		"toggleSidebar": "Toggle sidebar",
+		"logout": "Log out",
+		"userMenu": "Account menu",
+		"sessionLabel": "Workspace",
+		"sessionValue": "Operational back-office",
+		"emailMissing": "Not on file"
 	},
 	"apiErrors": {
 		"network": "Unable to reach the server. Check that the backend is running and reachable.",

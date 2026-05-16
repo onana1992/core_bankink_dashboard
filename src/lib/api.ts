@@ -231,7 +231,11 @@ async function fetchWithAutoRefresh(
 	let response = await fetch(url, options);
 
 	// Si on reçoit une erreur 401, essayer de rafraîchir le token
-	if (response.status === 401 && !url.toString().includes('/api/auth/')) {
+	// Si 401 sur une route protégée (sauf login / refresh), tenter un refresh du token d'accès puis réessayer
+	const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.toString() : (url as Request).url;
+	const skipRefreshOn401 =
+		urlStr.includes('/api/auth/login') || urlStr.includes('/api/auth/refresh');
+	if (response.status === 401 && !skipRefreshOn401) {
 		const newToken = await refreshAccessToken();
 		
 		if (newToken) {
@@ -259,13 +263,37 @@ async function fetchWithAutoRefresh(
 	return response;
 }
 
+/** Normalise le profil renvoyé par `/api/auth/me` (camelCase attendu ; tolère snake_case). */
+function normalizeAuthUserPayload(raw: unknown): NonNullable<LoginResponse["user"]> {
+	if (!raw || typeof raw !== "object") {
+		throw new Error("Profil utilisateur indisponible");
+	}
+	const o = raw as Record<string, unknown>;
+	const str = (v: unknown): string => (typeof v === "string" ? v : v == null ? "" : String(v));
+	const num = (v: unknown): number =>
+		typeof v === "number" && Number.isFinite(v) ? v : Number(v) || 0;
+	const strList = (v: unknown): string[] =>
+		Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+	const firstRaw = o.firstName ?? o.first_name;
+	const lastRaw = o.lastName ?? o.last_name;
+	return {
+		id: num(o.id),
+		username: str(o.username),
+		email: str(o.email),
+		firstName: firstRaw == null || firstRaw === "" ? null : str(firstRaw),
+		lastName: lastRaw == null || lastRaw === "" ? null : str(lastRaw),
+		roles: strList(o.roles),
+		permissions: strList(o.permissions)
+	};
+}
+
 async function handleJsonResponse<T>(res: Response, silent: boolean = false): Promise<T> {
-	// Gérer les réponses vides (204 No Content, etc.) avant de vérifier res.ok
-	if (res.status === 204 || (res.status >= 200 && res.status < 300 && !res.headers.get('content-type')?.includes('application/json'))) {
+	// 204 : pas de corps
+	if (res.status === 204) {
 		return undefined as T;
 	}
 
-	// Lire le texte une seule fois au début
+	// Lire le texte une seule fois
 	let text: string = "";
 	try {
 		text = await res.text();
@@ -1657,6 +1685,19 @@ export const authApi = {
 			localStorage.setItem('accessToken', response.accessToken);
 		}
 		return response;
+	},
+
+	async getMe(): Promise<NonNullable<LoginResponse["user"]>> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/auth/me`, {
+			method: "GET",
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		const data = await handleJsonResponse<unknown>(res);
+		if (data == null) {
+			throw new Error("Profil utilisateur indisponible");
+		}
+		return normalizeAuthUserPayload(data);
 	},
 
 	async logout(payload: RefreshTokenRequest): Promise<void> {

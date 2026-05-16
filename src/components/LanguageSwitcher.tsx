@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Globe } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({ buttonClassName }: { buttonClassName?: string }) {
 	const { i18n } = useTranslation();
 	const [isOpen, setIsOpen] = useState(false);
 	const [mounted, setMounted] = useState(false);
@@ -90,12 +91,16 @@ export default function LanguageSwitcher() {
 	return (
 		<div className="relative" ref={dropdownRef}>
 			<button
+				type="button"
 				onClick={() => setIsOpen(!isOpen)}
-				className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-colors bg-white"
+				className={cn(
+					"flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 transition-colors hover:border-gray-300 hover:bg-gray-50",
+					buttonClassName
+				)}
 				aria-label="Switch language"
 				aria-expanded={isOpen}
 			>
-				<Globe className="h-4 w-4 text-gray-700" />
+				<Globe className="h-4 w-4 shrink-0 text-slate-600" />
 				{/* Libellé uniquement après hydratation : évite tout écart SSR/client (i18n, détecteur, stockage). */}
 				{mounted && (
 					<>
@@ -105,19 +110,21 @@ export default function LanguageSwitcher() {
 				)}
 			</button>
 			{isOpen && (
-				<div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-50 overflow-hidden">
+				<div className="absolute right-0 z-[100] mt-1.5 w-44 overflow-hidden rounded-lg border border-slate-200/90 bg-white py-1 shadow-lg shadow-slate-200/40">
 					{languages.map(lang => (
 						<button
 							key={lang.code}
 							onClick={() => switchLanguage(lang.code)}
-							className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-								currentLang === lang.code ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700"
+							className={`w-full px-3 py-2 text-left text-sm transition-colors ${
+								currentLang === lang.code
+									? "bg-slate-100 font-medium text-slate-900"
+									: "text-slate-700 hover:bg-slate-50"
 							}`}
 						>
 							<div className="flex items-center justify-between">
 								<span>{lang.label}</span>
 								{currentLang === lang.code && (
-									<span className="text-xs text-gray-500">✓</span>
+									<span className="text-xs text-slate-500">✓</span>
 								)}
 							</div>
 						</button>
