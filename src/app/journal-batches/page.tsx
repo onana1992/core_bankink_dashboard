@@ -280,13 +280,13 @@ export default function JournalBatchesPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.number")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.date")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.description")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.debit")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.credit")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.status")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("journalBatches.actions")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.number")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.date")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.description")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.debit")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.credit")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.status")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">

@@ -413,13 +413,13 @@ export default function JournalBatchDetailPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Compte GL</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
-									<th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Débit</th>
-									<th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Crédit</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Référence</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Compte GL</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
+									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Débit</th>
+									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Crédit</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Devise</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Référence</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">

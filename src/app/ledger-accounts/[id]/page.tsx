@@ -499,11 +499,11 @@ export default function LedgerAccountDetailPage() {
 							<table className="min-w-full divide-y divide-gray-200">
 								<thead className="bg-gray-50">
 									<tr>
-										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.date")}</th>
-										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.type")}</th>
-										<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.debit")}</th>
-										<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.credit")}</th>
-										<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.description")}</th>
+										<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.date")}</th>
+										<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.type")}</th>
+										<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.debit")}</th>
+										<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.credit")}</th>
+										<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("ledgerAccount.entries.description")}</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200 text-sm">

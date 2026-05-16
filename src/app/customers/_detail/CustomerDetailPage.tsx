@@ -5241,28 +5241,28 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 							<table className="min-w-full divide-y divide-slate-200">
 								<thead className="bg-slate-50/90">
 									<tr>
-										<th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.accountNumber")}
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.productCode")}
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("common.status")}
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.currency")}
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.balance")}
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.availableBalance")}
 										</th>
-										<th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.detail.accounts.openingDate")}
 										</th>
-										<th className="px-6 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+										<th className="px-6 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
 											{t("customer.table.actions")}
 										</th>
 									</tr>

@@ -5420,11 +5420,11 @@ function ProductGLMappingsTab({
 						<table className="min-w-full text-sm">
 							<thead>
 								<tr className="border-b border-gray-200 bg-gradient-to-r from-slate-50 to-gray-50">
-									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.type")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.ledgerAccount")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.currency")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.accountType")}</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">{t("product.detail.glMappings.table.actions")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.type")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.ledgerAccount")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.currency")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">{t("product.detail.glMappings.table.accountType")}</th>
+									<th className="px-4 py-3 text-right text-xs font-bold text-slate-600 uppercase tracking-wider w-28">{t("product.detail.glMappings.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-100 text-sm">

@@ -243,14 +243,14 @@ export default function LoansPage() {
 							<table className="min-w-full divide-y divide-gray-200">
 								<thead className="bg-gray-50">
 									<tr>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.accountNumber")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.clientId")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.product")}</th>
-										<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.balance")}</th>
-										<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.rate")}</th>
-										<th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.maturity")}</th>
-										<th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.status")}</th>
-										<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.list.table.actions")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.accountNumber")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.clientId")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.product")}</th>
+										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.balance")}</th>
+										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.rate")}</th>
+										<th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.maturity")}</th>
+										<th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.status")}</th>
+										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.actions")}</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200 text-sm">

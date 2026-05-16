@@ -200,12 +200,12 @@ export default function LoanApplicationsPage() {
 							<table className="min-w-full divide-y divide-gray-200">
 								<thead className="bg-gray-50">
 									<tr>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.applicationNumber")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.client")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.amount")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.status")}</th>
-										<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.requestedAt")}</th>
-										<th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.application.listTable.actions")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.applicationNumber")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.client")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.amount")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.status")}</th>
+										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.requestedAt")}</th>
+										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.application.listTable.actions")}</th>
 									</tr>
 								</thead>
 								<tbody className="bg-white divide-y divide-gray-200 text-sm">

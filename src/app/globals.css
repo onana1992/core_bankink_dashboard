@@ -87,3 +87,8 @@ a {
     opacity: 1;
   }
 }
+
+/* En-têtes de tableaux — graisse bold uniforme dans toute l'application */
+table thead th {
+  font-weight: 700 !important;
+}

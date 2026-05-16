@@ -257,13 +257,13 @@ function AmlCasesListInner() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.table.ref")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.filters.status")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.table.client")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.cases.columnOwner")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.cases.columnOpened")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.cases.columnClosed")}</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">{t("aml.table.actions")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.table.ref")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.filters.status")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.table.client")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.cases.columnOwner")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.cases.columnOpened")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.cases.columnClosed")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">{t("aml.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-gray-200 bg-white text-sm">

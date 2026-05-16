@@ -173,25 +173,25 @@ export default function BalanceSnapshotsPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Compte GL
 									</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Devise
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Ouverture
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Clôture
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Débit jour
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Crédit jour
 									</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Créé le
 									</th>
 								</tr>

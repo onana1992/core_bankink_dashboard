@@ -411,14 +411,14 @@ export default function LoanDetailPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.number")}</th>
-									<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.dueDate")}</th>
-									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.principal")}</th>
-									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.interest")}</th>
-									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.total")}</th>
-									<th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.outstanding")}</th>
-									<th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.status")}</th>
-									<th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">{t("loan.detail.table.detail")}</th>
+									<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.number")}</th>
+									<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.dueDate")}</th>
+									<th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.principal")}</th>
+									<th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.interest")}</th>
+									<th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.total")}</th>
+									<th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.outstanding")}</th>
+									<th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.status")}</th>
+									<th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.detail.table.detail")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">

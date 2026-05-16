@@ -224,16 +224,16 @@ export default function ServicesPage() {
 							<table className="min-w-full divide-y divide-slate-200">
 								<thead className="bg-slate-50/80">
 									<tr>
-										<th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
 											{t("service.table.name")}
 										</th>
-										<th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
 											{t("service.table.slug")}
 										</th>
-										<th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
 											{t("common.status")}
 										</th>
-										<th className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+										<th className="px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
 											{t("service.table.actions")}
 										</th>
 									</tr>

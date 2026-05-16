@@ -474,7 +474,7 @@ export default function TransactionsPage() {
 							<thead className="bg-gray-50">
 								<tr>
 									<th 
-										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
 											if (sortBy === "transactionNumber") {
 												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -493,10 +493,10 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.type")}</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.account")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.type")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.account")}</th>
 									<th 
-										className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
 											if (sortBy === "amount") {
 												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -515,9 +515,9 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.status")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.status")}</th>
 									<th 
-										className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+										className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
 										onClick={() => {
 											if (sortBy === "transactionDate") {
 												setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -536,7 +536,7 @@ export default function TransactionsPage() {
 											)}
 										</div>
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.actions")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("transaction.list.table.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">

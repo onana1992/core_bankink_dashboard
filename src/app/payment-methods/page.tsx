@@ -309,16 +309,16 @@ export default function PaymentMethodsCatalogPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										{t("paymentMethodsCatalogPage.code")}
 									</th>
-									<th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										{t("paymentMethodsCatalogPage.name")}
 									</th>
-									<th scope="col" className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th scope="col" className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										{t("common.status")}
 									</th>
-									<th scope="col" className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th scope="col" className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										{t("common.actions", { defaultValue: "Actions" })}
 									</th>
 								</tr>

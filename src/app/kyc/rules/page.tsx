@@ -592,13 +592,13 @@ export default function KycRulesCatalogPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.code")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.name")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.category")}</th>
-									<th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+									<th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.code")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.name")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.category")}</th>
+									<th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
 										{t("kycCatalog.rules.salience")}
 									</th>
-									<th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.actions")}</th>
+									<th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("kycCatalog.rules.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">

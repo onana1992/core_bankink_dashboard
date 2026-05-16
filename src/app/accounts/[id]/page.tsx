@@ -916,12 +916,12 @@ export default function AccountDetailPage() {
 						<table className="w-full">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-4 py-2 text-left text-sm font-medium">Numéro</th>
-									<th className="px-4 py-2 text-left text-sm font-medium">Type</th>
-									<th className="px-4 py-2 text-left text-sm font-medium">Montant</th>
-									<th className="px-4 py-2 text-left text-sm font-medium">Statut</th>
-									<th className="px-4 py-2 text-left text-sm font-medium">Date</th>
-									<th className="px-4 py-2 text-left text-sm font-medium">Actions</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Numéro</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Type</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Montant</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Statut</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Date</th>
+									<th className="px-4 py-2 text-left text-sm font-bold">Actions</th>
 								</tr>
 							</thead>
 							<tbody className="divide-y text-sm">

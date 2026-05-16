@@ -450,28 +450,28 @@ export default function ClosuresPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										ID
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Date
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Type
 									</th>
-									<th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-700">
 										Statut
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Débit
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Crédit
 									</th>
-									<th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-gray-700">
 										Équilibre
 									</th>
-									<th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-700">
+									<th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-700">
 										Actions
 									</th>
 								</tr>

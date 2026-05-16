@@ -15,7 +15,7 @@ export const OPS_TABLE = "min-w-full divide-y divide-ops-border";
 export const OPS_THEAD = "bg-ops-surface-muted";
 
 export const OPS_TH =
-	"px-6 py-3 text-left text-xs font-semibold text-ops-fg uppercase tracking-wider";
+	"px-6 py-3 text-left text-xs font-bold text-ops-fg uppercase tracking-wider";
 
 export const OPS_TR_HOVER = "hover:bg-ops-surface-muted/80 transition-colors";
 
