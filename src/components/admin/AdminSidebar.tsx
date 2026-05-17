@@ -11,7 +11,6 @@ import {
 	BookOpen,
 	Repeat,
 	FileText,
-	History,
 	ShieldAlert,
 	RefreshCcw,
 	CalendarCheck,
@@ -233,7 +232,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
-							<NavLink href="/aml/rules" label={t("sidebar.amlRules")} icon={ScrollText} collapsed={collapsed} />
+							<NavLink href="/aml/rules" label={t("sidebar.amlRules")} icon={Layers} collapsed={collapsed} />
 							<NavLink
 								href="/aml/cases"
 								label={t("sidebar.amlCases")}
@@ -241,7 +240,7 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 								collapsed={collapsed}
 								activeMatch="prefix"
 							/>
-							<NavLink href="/aml/audit-trail" label={t("sidebar.amlAuditTrail")} icon={History} collapsed={collapsed} />
+							<NavLink href="/aml/audit-trail" label={t("sidebar.amlAuditTrail")} icon={ScrollText} collapsed={collapsed} />
 							<NavLink href="/compliance/vigilance" label={t("sidebar.complianceVigilance")} icon={RefreshCcw} collapsed={collapsed} />
 						</div>
 					</details>
