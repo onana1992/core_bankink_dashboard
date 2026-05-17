@@ -4,8 +4,12 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { authApi } from "@/lib/api";
 import type { LoginResponse } from "@/types";
 
+type AuthUser = NonNullable<LoginResponse["user"]>;
+
+const USER_PROFILE_STORAGE_KEY = "authUserProfile";
+
 /** Reconstruit un profil minimal depuis l'access token (sub, userId, claims) pour l'UI après F5. */
-function userFromAccessToken(token: string): LoginResponse["user"] | null {
+function userFromAccessToken(token: string): AuthUser | null {
 	try {
 		const parts = token.split(".");
 		if (parts.length !== 3) return null;
@@ -62,6 +66,61 @@ function isAccessTokenExpired(token: string, skewSeconds: number): boolean {
 	}
 }
 
+function readStoredUserProfile(): AuthUser | null {
+	if (typeof window === "undefined") return null;
+	try {
+		const raw = sessionStorage.getItem(USER_PROFILE_STORAGE_KEY);
+		if (!raw) return null;
+		const o = JSON.parse(raw) as Record<string, unknown>;
+		if (typeof o.username !== "string" || !o.username.trim()) return null;
+		return {
+			id: typeof o.id === "number" && Number.isFinite(o.id) ? o.id : Number(o.id) || 0,
+			username: o.username,
+			email: typeof o.email === "string" ? o.email : "",
+			firstName: typeof o.firstName === "string" ? o.firstName : null,
+			lastName: typeof o.lastName === "string" ? o.lastName : null,
+			roles: Array.isArray(o.roles) ? o.roles.filter((r): r is string => typeof r === "string") : [],
+			permissions: Array.isArray(o.permissions)
+				? o.permissions.filter((p): p is string => typeof p === "string")
+				: []
+		};
+	} catch {
+		return null;
+	}
+}
+
+function persistUserProfile(user: AuthUser | null) {
+	if (typeof window === "undefined") return;
+	if (!user) {
+		sessionStorage.removeItem(USER_PROFILE_STORAGE_KEY);
+		return;
+	}
+	sessionStorage.setItem(USER_PROFILE_STORAGE_KEY, JSON.stringify(user));
+}
+
+/** Complète le profil JWT (sans email) avec le cache session ou l'inverse. */
+function mergeUserProfiles(primary: AuthUser | null, fallback: AuthUser | null): AuthUser | null {
+	if (!primary && !fallback) return null;
+	if (!primary) return fallback;
+	if (!fallback) return primary;
+	if (fallback.username !== primary.username) return primary;
+	return {
+		...primary,
+		email: primary.email?.trim() || fallback.email || "",
+		firstName: primary.firstName ?? fallback.firstName ?? null,
+		lastName: primary.lastName ?? fallback.lastName ?? null,
+		id: primary.id || fallback.id,
+		roles: primary.roles.length ? primary.roles : fallback.roles,
+		permissions: primary.permissions.length ? primary.permissions : fallback.permissions
+	};
+}
+
+function resolveSessionUser(): AuthUser | null {
+	const token = authApi.getAccessToken();
+	const jwtUser = token ? userFromAccessToken(token) : null;
+	return mergeUserProfiles(jwtUser, readStoredUserProfile());
+}
+
 interface AuthContextType {
 	user: LoginResponse["user"] | null;
 	isAuthenticated: boolean;
@@ -81,9 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const syncUserProfileFromApi = useCallback(async () => {
 		try {
 			const profile = await authApi.getMe();
+			persistUserProfile(profile);
 			setUser(profile);
 		} catch {
-			/* profil minimal JWT / login conservé */
+			const fallback = resolveSessionUser();
+			if (fallback) setUser(fallback);
 		}
 	}, []);
 
@@ -92,14 +153,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			const token = authApi.getAccessToken();
 			const refresh = authApi.getRefreshToken();
 
-			const applyUserFromStoredAccessToken = () => {
-				const t = authApi.getAccessToken();
-				setUser(t ? userFromAccessToken(t) : null);
+			const applySessionUser = () => {
+				setUser(resolveSessionUser());
 			};
 
 			if (!token) {
 				setIsAuthenticated(false);
 				setUser(null);
+				persistUserProfile(null);
 				setLoading(false);
 				return;
 			}
@@ -108,9 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			// sinon les pages OPS appellent l'API en 401 avant que fetchWithAutoRefresh ne finisse.
 			if (!isAccessTokenExpired(token, 60)) {
 				setIsAuthenticated(true);
-				applyUserFromStoredAccessToken();
+				applySessionUser();
+				await syncUserProfileFromApi();
 				setLoading(false);
-				void syncUserProfileFromApi();
 				return;
 			}
 
@@ -118,13 +179,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				try {
 					await authApi.refreshToken({ refreshToken: refresh });
 					setIsAuthenticated(true);
-					applyUserFromStoredAccessToken();
-					void syncUserProfileFromApi();
+					applySessionUser();
+					await syncUserProfileFromApi();
 				} catch {
 					if (typeof window !== "undefined") {
 						localStorage.removeItem("accessToken");
 						localStorage.removeItem("refreshToken");
 					}
+					persistUserProfile(null);
 					setIsAuthenticated(false);
 					setUser(null);
 				}
@@ -132,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 				if (typeof window !== "undefined") {
 					localStorage.removeItem("accessToken");
 				}
+				persistUserProfile(null);
 				setIsAuthenticated(false);
 				setUser(null);
 			}
@@ -144,14 +207,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const login = async (username: string, password: string) => {
 		const response = await authApi.login({ username, password });
 		if (response?.user) {
+			persistUserProfile(response.user);
 			setUser(response.user);
 		} else {
-			const t = authApi.getAccessToken();
-			setUser(t ? userFromAccessToken(t) : null);
+			const sessionUser = resolveSessionUser();
+			setUser(sessionUser);
 		}
 		setIsAuthenticated(true);
 		if (!response?.user?.email?.trim()) {
-			void syncUserProfileFromApi();
+			await syncUserProfileFromApi();
 		}
 	};
 
@@ -160,35 +224,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		if (refreshToken) {
 			try {
 				await authApi.logout({ refreshToken });
-			} catch (e) {
-				// Ignorer les erreurs lors du logout, mais supprimer quand même les tokens localement
-				if (typeof window !== 'undefined') {
-					localStorage.removeItem('accessToken');
-					localStorage.removeItem('refreshToken');
+			} catch {
+				if (typeof window !== "undefined") {
+					localStorage.removeItem("accessToken");
+					localStorage.removeItem("refreshToken");
 				}
 			}
-		} else {
-			// Si pas de refresh token, supprimer quand même les tokens locaux
-			if (typeof window !== 'undefined') {
-				localStorage.removeItem('accessToken');
-				localStorage.removeItem('refreshToken');
-			}
+		} else if (typeof window !== "undefined") {
+			localStorage.removeItem("accessToken");
+			localStorage.removeItem("refreshToken");
 		}
+		persistUserProfile(null);
 		setUser(null);
 		setIsAuthenticated(false);
 	};
 
 	const refreshToken = async () => {
-		const refreshToken = authApi.getRefreshToken();
-		if (refreshToken) {
+		const refreshTokenValue = authApi.getRefreshToken();
+		if (refreshTokenValue) {
 			try {
-				await authApi.refreshToken({ refreshToken });
+				await authApi.refreshToken({ refreshToken: refreshTokenValue });
 				setIsAuthenticated(true);
-				const t = authApi.getAccessToken();
-				setUser(t ? userFromAccessToken(t) : null);
-				void syncUserProfileFromApi();
-			} catch (e) {
-				// Si le refresh échoue, déconnecter l'utilisateur
+				setUser(resolveSessionUser());
+				await syncUserProfileFromApi();
+			} catch {
+				persistUserProfile(null);
 				setUser(null);
 				setIsAuthenticated(false);
 			}
@@ -218,4 +278,3 @@ export function useAuth() {
 	}
 	return context;
 }
-
