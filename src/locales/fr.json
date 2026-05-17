@@ -3529,7 +3529,11 @@
 	},
 	"login": {
 		"title": "Core Banking",
-		"subtitle": "Connectez-vous à votre compte",
+		"signInTitle": "Connexion",
+		"subtitle": "Connectez-vous à votre compte pour accéder au back-office.",
+		"secureAccess": "Accès sécurisé",
+		"brandHint": "Plateforme d'administration bancaire réservée aux utilisateurs autorisés.",
+		"footer": "© Nano-Tech — usage réservé au personnel autorisé.",
 		"username": "Nom d'utilisateur",
 		"usernamePlaceholder": "Entrez votre nom d'utilisateur",
 		"password": "Mot de passe",

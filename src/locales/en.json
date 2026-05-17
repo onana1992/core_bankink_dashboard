@@ -3510,7 +3510,11 @@
 	},
 	"login": {
 		"title": "Core Banking",
-		"subtitle": "Sign in to your account",
+		"signInTitle": "Sign in",
+		"subtitle": "Sign in to your account to access the back-office.",
+		"secureAccess": "Secure access",
+		"brandHint": "Banking administration platform for authorized users only.",
+		"footer": "© Nano-Tech — authorized personnel only.",
 		"username": "Username",
 		"usernamePlaceholder": "Enter your username",
 		"password": "Password",

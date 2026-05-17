@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
+import { LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -33,14 +34,12 @@ function LoginContent() {
 	}, [isAuthenticated, router]);
 
 	useEffect(() => {
-		// Lecture côté client uniquement : évite useSearchParams + Suspense (fallback SSR ≠ arbre hydraté).
 		const code = readLoginErrorFromUrl();
 		if (code === "session_expired") {
 			setError(t("login.errors.sessionExpired"));
 		} else if (code === "not_authenticated") {
 			setError(t("login.errors.notAuthenticated"));
 		}
-		// Ne pas appeler setError(null) ici : préserver erreurs validation / API login.
 	}, [pathname, t]);
 
 	async function handleSubmit(e: React.FormEvent) {
@@ -48,7 +47,6 @@ function LoginContent() {
 		setLoading(true);
 		setError(null);
 
-		// Validation côté client
 		if (!username.trim()) {
 			setError(t("login.errors.usernameRequired"));
 			setLoading(false);
@@ -63,8 +61,8 @@ function LoginContent() {
 		try {
 			await login(username.trim(), password);
 			router.push("/");
-		} catch (e: any) {
-			const errorMessage = e?.message ?? t("login.errors.loginError");
+		} catch (e: unknown) {
+			const errorMessage = e instanceof Error ? e.message : t("login.errors.loginError");
 			setError(errorMessage);
 			console.error("Login error:", e);
 		} finally {
@@ -73,61 +71,65 @@ function LoginContent() {
 	}
 
 	return (
-		<div className="min-h-screen bg-white flex flex-col">
-			<header className="w-full flex justify-end p-4">
+		<div className="relative flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
+			<div className="absolute right-4 top-4">
 				<LanguageSwitcher />
-			</header>
-			<div className="flex-1 flex items-center justify-center">
-				<div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-				<div className="text-center mb-8">
-					<h1 className="text-3xl font-bold text-gray-900 mb-2">{t("login.title")}</h1>
-					<p className="text-gray-600">{t("login.subtitle")}</p>
+			</div>
+
+			<div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+				<div className="mb-8 flex items-start gap-3">
+					<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-sky-700">
+						<LayoutDashboard className="h-5 w-5 text-white" aria-hidden />
+					</div>
+					<div className="min-w-0">
+						<h1 className="text-base font-bold leading-snug text-slate-900">{t("sidebar.coreAdmin")}</h1>
+						<p className="mt-0.5 text-sm text-slate-500">{t("sidebar.tailwindAdmin")}</p>
+					</div>
 				</div>
 
 				{error && (
-					<div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+					<div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
 						{error}
 					</div>
 				)}
 
-				<form onSubmit={handleSubmit} className="space-y-6">
+				<form onSubmit={handleSubmit} className="space-y-4">
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">
+						<label htmlFor="username" className="mb-1 block text-sm font-medium text-slate-700">
 							{t("login.username")}
 						</label>
 						<Input
+							id="username"
 							type="text"
 							value={username}
 							onChange={(e) => setUsername(e.target.value)}
 							required
+							autoComplete="username"
 							placeholder={t("login.usernamePlaceholder")}
 							className="w-full"
 						/>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-2">
+						<label htmlFor="password" className="mb-1 block text-sm font-medium text-slate-700">
 							{t("login.password")}
 						</label>
 						<Input
+							id="password"
 							type="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
 							required
+							autoComplete="current-password"
 							placeholder={t("login.passwordPlaceholder")}
 							className="w-full"
 						/>
 					</div>
 
-					<Button
-						type="submit"
-						disabled={loading}
-						className="w-full"
-					>
+					<Button type="submit" disabled={loading} className="w-full">
 						{loading ? t("login.submitting") : t("login.submit")}
 					</Button>
 				</form>
-				</div>
 			</div>
 		</div>
 	);
@@ -136,5 +138,3 @@ function LoginContent() {
 export default function LoginPage() {
 	return <LoginContent />;
 }
-
-
