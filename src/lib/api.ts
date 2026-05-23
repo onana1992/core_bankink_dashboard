@@ -121,6 +121,7 @@ import type {
 	CreateProductPaymentMethodRequest,
 	UpdateProductPaymentMethodRequest,
 	AmlRiskProfileDto,
+	ForceAmlRiskProfileRequest,
 	AmlRuleDefinitionResponse,
 	AmlRuleVersionResponse,
 	CreateRuleDefinitionRequest,
@@ -137,6 +138,8 @@ import type {
 	AmlCasePage,
 	AmlCaseNoteResponse,
 	CreateCaseRequest,
+	AssignCaseOwnerRequest,
+	AddCaseAlertsRequest,
 	AddCaseNoteRequest,
 	PatchCaseStatusRequest,
 	CreateDeclarationResponse,
@@ -2884,6 +2887,15 @@ export const amlApi = {
 		return handleJsonResponse<AmlRiskProfileDto>(res);
 	},
 
+	async forceRiskProfile(clientId: number | string, payload: ForceAmlRiskProfileRequest): Promise<AmlRiskProfileDto> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/risk-profiles/clients/${clientId}/force`, {
+			method: "POST",
+			headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlRiskProfileDto>(res);
+	},
+
 	async listRules(): Promise<AmlRuleDefinitionResponse[]> {
 		const res = await fetchWithAutoRefresh(`${AML_BASE}/rules`, {
 			headers: getAuthHeaders(),
@@ -3014,6 +3026,24 @@ export const amlApi = {
 
 	async createCase(payload: CreateCaseRequest): Promise<AmlCaseDetailResponse> {
 		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async reassignCaseOwner(caseId: number | string, payload: AssignCaseOwnerRequest): Promise<AmlCaseDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/owner`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlCaseDetailResponse>(res);
+	},
+
+	async addCaseAlerts(caseId: number | string, payload: AddCaseAlertsRequest): Promise<AmlCaseDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/alerts`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)

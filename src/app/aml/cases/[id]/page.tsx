@@ -13,6 +13,7 @@ import {
 	ListChecks,
 	Lock,
 	MessageSquare,
+	Plus,
 	RefreshCw,
 	Shield,
 	Tag,
@@ -57,6 +58,15 @@ const STATUS_TEXTAREA_CLASS =
 
 const NOTE_TEXTAREA_CLASS =
 	"w-full min-h-[88px] rounded-ops-md border border-ops-border bg-ops-surface px-3 py-2 text-sm text-ops-fg outline-none focus:border-ops-ring focus:ring-2 focus:ring-ops-ring/25";
+
+function parseAlertIds(raw: string): number[] {
+	return raw
+		.split(/[\s,;]+/)
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.map((p) => Number(p))
+		.filter((n) => Number.isFinite(n) && n > 0);
+}
 
 function caseStatusVariant(s: AmlCaseStatus): "neutral" | "success" | "warning" | "danger" | "info" {
 	switch (s) {
@@ -134,6 +144,8 @@ export default function AmlCaseDetailPage() {
 	const [outcomeCode, setOutcomeCode] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [statusEditorOpen, setStatusEditorOpen] = useState(false);
+	const [addAlertsOpen, setAddAlertsOpen] = useState(false);
+	const [addAlertIdsStr, setAddAlertIdsStr] = useState("");
 
 	const load = useCallback(async () => {
 		if (!id) return;
@@ -223,6 +235,34 @@ export default function AmlCaseDetailPage() {
 			setOutcomeCode("");
 			await load();
 			setStatusEditorOpen(false);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function addAlerts(e: React.FormEvent) {
+		e.preventDefault();
+		const alertIds = parseAlertIds(addAlertIdsStr).filter((aid) => !c?.alertIds.includes(aid));
+		if (alertIds.length === 0) {
+			setError(t("aml.cases.alertsRequired"));
+			return;
+		}
+		setBusy(true);
+		setError(null);
+		try {
+			const updated = await amlApi.addCaseAlerts(id, { alertIds });
+			setC(updated);
+			setAddAlertIdsStr("");
+			setAddAlertsOpen(false);
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(
+					new CustomEvent("show-toast", {
+						detail: { message: t("aml.cases.addAlertsSuccess"), type: "success" }
+					})
+				);
+			}
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : "Error");
 		} finally {
 			setBusy(false);
 		}
@@ -362,7 +402,13 @@ export default function AmlCaseDetailPage() {
 								</MetaField>
 								<MetaField label={t("aml.cases.columnOwner")} icon={UserCircle}>
 									{c.ownerUsername?.trim() ? (
-										<span className="text-sm font-medium text-ops-fg">{c.ownerUsername}</span>
+										c.ownerUserId != null ? (
+											<Link href={`/users/${c.ownerUserId}`} className="text-ops-ring hover:underline">
+												{c.ownerUsername}
+											</Link>
+										) : (
+											<span className="text-sm font-medium text-ops-fg">{c.ownerUsername}</span>
+										)
 									) : (
 										<span className="font-normal text-ops-fg-muted">—</span>
 									)}
@@ -383,10 +429,65 @@ export default function AmlCaseDetailPage() {
 							</div>
 
 							<div>
-								<h3 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ops-fg-muted">
-									<Shield className="h-4 w-4 shrink-0" aria-hidden />
-									{t("aml.cases.alertsTableTitle")}
-								</h3>
+								<div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+									<h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ops-fg-muted">
+										<Shield className="h-4 w-4 shrink-0" aria-hidden />
+										{t("aml.cases.alertsTableTitle")}
+									</h3>
+									{!isClosed ? (
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											className="h-9 shrink-0 gap-1.5"
+											onClick={() => setAddAlertsOpen((open) => !open)}
+											disabled={busy}
+										>
+											<Plus className="h-4 w-4" aria-hidden />
+											{t("aml.cases.addAlertsTitle")}
+										</Button>
+									) : null}
+								</div>
+
+								{!isClosed && addAlertsOpen ? (
+									<form
+										onSubmit={addAlerts}
+										className="mb-4 flex flex-col gap-3 rounded-ops-lg border border-ops-border bg-ops-surface-muted/40 p-4 sm:flex-row sm:flex-wrap sm:items-end"
+									>
+										<div className="min-w-[200px] flex-1 max-w-xl">
+											<label className="mb-2 block text-sm font-medium text-ops-fg" htmlFor="aml-case-add-alerts">
+												{t("aml.cases.alertIds")}
+											</label>
+											<Input
+												id="aml-case-add-alerts"
+												className="h-10 font-mono text-sm"
+												value={addAlertIdsStr}
+												onChange={(e) => setAddAlertIdsStr(e.target.value)}
+												placeholder={t("aml.cases.addAlertsPlaceholder")}
+												autoComplete="off"
+											/>
+											<p className="mt-1.5 text-xs text-ops-fg-muted">{t("aml.cases.addAlertsHint")}</p>
+										</div>
+										<div className="flex flex-wrap gap-2">
+											<Button type="submit" className="h-10 shrink-0 gap-2" disabled={busy || !addAlertIdsStr.trim()}>
+												{t("aml.cases.addAlertsSubmit")}
+											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												className="h-10 shrink-0"
+												disabled={busy}
+												onClick={() => {
+													setAddAlertsOpen(false);
+													setAddAlertIdsStr("");
+												}}
+											>
+												{t("common.cancel")}
+											</Button>
+										</div>
+									</form>
+								) : null}
+
 								{linkedAlertsLoading ? (
 									<p className="text-sm text-ops-fg-muted">{t("aml.loading")}</p>
 								) : linkedAlertRows.length === 0 ? (
@@ -443,6 +544,7 @@ export default function AmlCaseDetailPage() {
 										</table>
 									</div>
 								)}
+
 							</div>
 						</div>
 					)}

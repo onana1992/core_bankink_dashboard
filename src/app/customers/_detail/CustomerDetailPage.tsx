@@ -24,6 +24,7 @@ import {
 	OPS_TR_HOVER
 } from "@/components/ops/opsClasses";
 import { customersApi, accountsApi } from "@/lib/api";
+import { ComplianceTasksPanel } from "@/app/customers/_detail/ComplianceTasksPanel";
 import { customerDetailPath } from "@/lib/customerRoutes";
 import { formatAmount } from "@/lib/utils";
 import { formatNationalityLabel, getNationalitySelectOptions } from "@/lib/nationalityOptions";
@@ -139,7 +140,7 @@ function sanitizeReviewerNote(raw?: string | null): string | null {
 const KYC_COMPLIANCE_CHECKS_PAGE_SIZE = 20;
 
 /** Sous-onglets conformité : 1 Revue KYC, 2 Screening PEP & Sanctions, 3 Décision KYC, 4 Historique évaluations, 5 Piste d'audit KYC. */
-const COMPLIANCE_INNER_SUBTAB_ORDER = ["review", "screeningChecks", "decision", "riskRunsHistory", "auditTrail"] as const;
+const COMPLIANCE_INNER_SUBTAB_ORDER = ["review", "screeningChecks", "decision", "complianceTasks", "riskRunsHistory", "auditTrail"] as const;
 type ComplianceInnerTab = (typeof COMPLIANCE_INNER_SUBTAB_ORDER)[number];
 
 function kycCheckResultBadgeVariant(result: KycCheckResult): "success" | "danger" | "warning" {
@@ -335,6 +336,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 	const [kycRiskRunModalOpen, setKycRiskRunModalOpen] = useState(false);
 	const [kycRiskRunDetailLoading, setKycRiskRunDetailLoading] = useState(false);
 	const [kycRiskRunDetail, setKycRiskRunDetail] = useState<KycRiskRunDetail | null>(null);
+	const [complianceTasksRefreshToken, setComplianceTasksRefreshToken] = useState(0);
 
 	const loadComplianceData = async () => {
 		if (!id) return;
@@ -561,6 +563,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 				const a = await customersApi.getKycRiskAssessment(id, { pep: verifyPep });
 				if (!cancelled) {
 					setKycOnboardingRisk(a);
+					const needsComplianceTask =
+						a.riskBand === "HIGH" ||
+						a.riskBand === "MEDIUM" ||
+						a.decision === "EDD_REQUIRED" ||
+						a.decision === "ALLOW_REINFORCED_REVIEW";
+					if (needsComplianceTask) {
+						setComplianceTasksRefreshToken(n => n + 1);
+					}
 				}
 			} catch {
 				if (!cancelled) setKycOnboardingRisk(null);
@@ -1277,6 +1287,7 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 		try {
 			const c = await customersApi.verifyKyc(id, { pep: verifyPep });
 			setCustomer(c);
+			setComplianceTasksRefreshToken(n => n + 1);
 		} catch (e: any) {
 			const errorMessage = e?.message ?? t("customer.detail.kyc.verify.error");
 			setError(errorMessage);
@@ -4987,19 +4998,13 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 															{t("customer.detail.kyc.verify.reviewsNotApprovedHint")}
 														</p>
 													) : null}
-													{kycOnboardingRisk?.blocked === true ? (
-														<p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-800">
-															{t("customer.detail.kyc.onboardingRisk.blockedVerifyHint")}
-														</p>
-													) : null}
 													<Button
 														onClick={() => void doVerifyKyc()}
 														disabled={
 															kycSubmitting !== null ||
 															!canFinalizeKyc ||
 															!listScreeningPresence.hasListScreening ||
-															kycOnboardingRisk == null ||
-															kycOnboardingRisk.blocked === true
+															kycOnboardingRisk == null
 														}
 														size="sm"
 														className="bg-emerald-600 text-white hover:bg-emerald-700"
@@ -5059,6 +5064,14 @@ export function CustomerDetailPage({ expectedType }: { expectedType: CustomerTyp
 					</div>
 				)}
 
+						{complianceInnerTab === "complianceTasks" && id && !Number.isNaN(id) ? (
+							<ComplianceTasksPanel
+								customerId={id}
+								locale={locale}
+								refreshToken={complianceTasksRefreshToken}
+								onToast={payload => setToast(payload)}
+							/>
+						) : null}
 
 						{complianceInnerTab === "riskRunsHistory" && (
 							<div

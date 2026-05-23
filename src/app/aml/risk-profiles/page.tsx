@@ -4,11 +4,10 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Braces, Eye, Hash, User, X } from "lucide-react";
+import { Braces, Eye, Hash, RefreshCw, Shield, User, X } from "lucide-react";
 import { amlApi } from "@/lib/api";
-import type { AmlRiskProfileDto, AmlDiligenceLevel, AmlRiskLevel } from "@/types";
+import type { AmlRiskProfileDto, AmlDiligenceLevel, AmlRiskLevel, ForceAmlRiskProfileRequest } from "@/types";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 
@@ -37,6 +36,10 @@ function diligenceBadgeClass(level: AmlDiligenceLevel): string {
 		? "bg-violet-50 text-violet-900 ring-violet-200/80"
 		: "bg-slate-50 text-slate-800 ring-slate-200/80";
 }
+
+const RISK_LEVELS: AmlRiskLevel[] = ["LOW", "MEDIUM", "HIGH"];
+const DILIGENCE_LEVELS: AmlDiligenceLevel[] = ["STANDARD", "ENHANCED"];
+const FORCE_RATIONALE_MIN = 20;
 
 function AmlRiskProfileDetailModal({
 	profile,
@@ -186,17 +189,181 @@ function AmlRiskProfileDetailModal({
 	);
 }
 
+function AmlForceEddModal({
+	clientId,
+	riskLevel,
+	diligenceLevel,
+	rationale,
+	loading,
+	error,
+	onRiskLevelChange,
+	onDiligenceLevelChange,
+	onRationaleChange,
+	onSubmit,
+	onClose
+}: {
+	clientId: number;
+	riskLevel: AmlRiskLevel;
+	diligenceLevel: AmlDiligenceLevel;
+	rationale: string;
+	loading: boolean;
+	error: string | null;
+	onRiskLevelChange: (level: AmlRiskLevel) => void;
+	onDiligenceLevelChange: (level: AmlDiligenceLevel) => void;
+	onRationaleChange: (value: string) => void;
+	onSubmit: () => void;
+	onClose: () => void;
+}) {
+	const { t } = useTranslation();
+	const rationaleValid = rationale.trim().length >= FORCE_RATIONALE_MIN;
+
+	useEffect(() => {
+		const prevOverflow = document.body.style.overflow;
+		document.body.style.overflow = "hidden";
+		const onKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && !loading) onClose();
+		};
+		window.addEventListener("keydown", onKey);
+		return () => {
+			document.body.style.overflow = prevOverflow;
+			window.removeEventListener("keydown", onKey);
+		};
+	}, [onClose, loading]);
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="aml-force-edd-modal-title">
+			<button
+				type="button"
+				className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+				aria-label={t("aml.risk.modalClose")}
+				onClick={onClose}
+				disabled={loading}
+			/>
+			<div className="relative z-10 flex max-h-[min(92vh,640px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gray-200/90 bg-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+				<header className="shrink-0 border-b border-violet-200 bg-gradient-to-br from-violet-50 to-violet-100 px-5 py-4 sm:px-6">
+					<div className="flex items-start justify-between gap-4">
+						<div className="min-w-0 flex-1 space-y-1.5">
+							<h2 id="aml-force-edd-modal-title" className="text-lg font-semibold text-violet-950">
+								{t("aml.risk.eddForceModalTitle")}
+							</h2>
+							<p className="text-sm text-violet-900/90">
+								{t("aml.risk.detailClientLabel")}: <span className="font-semibold tabular-nums">{clientId}</span>
+							</p>
+						</div>
+						<button
+							type="button"
+							onClick={onClose}
+							disabled={loading}
+							className="shrink-0 rounded-lg p-2 text-violet-800 transition-colors hover:bg-violet-200/70 hover:text-violet-950 disabled:opacity-50"
+							aria-label={t("aml.risk.modalClose")}
+						>
+							<X className="h-5 w-5" />
+						</button>
+					</div>
+				</header>
+
+				<div className="flex flex-1 flex-col overflow-hidden bg-gradient-to-b from-gray-50/95 to-white">
+					<div className="flex-1 space-y-4 overflow-y-auto px-5 py-5 sm:px-6">
+						{error ? (
+							<div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
+								{error}
+							</div>
+						) : null}
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div>
+								<label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="aml-force-edd-risk-level">
+									{t("aml.risk.level")}
+								</label>
+								<select
+									id="aml-force-edd-risk-level"
+									className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+									value={riskLevel}
+									onChange={(e) => onRiskLevelChange(e.target.value as AmlRiskLevel)}
+									disabled={loading}
+								>
+									{RISK_LEVELS.map((level) => (
+										<option key={level} value={level}>
+											{level}
+										</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="aml-force-edd-diligence">
+									{t("aml.risk.diligence")}
+								</label>
+								<select
+									id="aml-force-edd-diligence"
+									className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+									value={diligenceLevel}
+									onChange={(e) => onDiligenceLevelChange(e.target.value as AmlDiligenceLevel)}
+									disabled={loading}
+								>
+									{DILIGENCE_LEVELS.map((level) => (
+										<option key={level} value={level}>
+											{level}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
+						<div>
+							<label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="aml-force-edd-rationale">
+								{t("aml.risk.forceRationale")}
+							</label>
+							<textarea
+								id="aml-force-edd-rationale"
+								className="min-h-[100px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+								value={rationale}
+								onChange={(e) => onRationaleChange(e.target.value)}
+								placeholder={t("aml.risk.forceRationalePlaceholder", { min: FORCE_RATIONALE_MIN })}
+								disabled={loading}
+								maxLength={2000}
+							/>
+							<p className="mt-1 text-xs text-gray-500">
+								{t("aml.risk.forceRationaleCount", {
+									count: rationale.trim().length,
+									min: FORCE_RATIONALE_MIN
+								})}
+							</p>
+						</div>
+					</div>
+
+					<div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-gray-100 bg-white/90 px-5 py-4 backdrop-blur-sm sm:px-6">
+						<Button type="button" variant="outline" onClick={onClose} disabled={loading} className="min-w-[7rem] border-gray-200">
+							{t("aml.risk.modalClose")}
+						</Button>
+						<Button type="button" onClick={onSubmit} disabled={loading || !rationaleValid} className="min-w-[7rem]">
+							{t("aml.risk.forceSubmit")}
+						</Button>
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 function AmlRiskProfilesInner() {
 	const { t } = useTranslation();
 	const searchParams = useSearchParams();
 	const clientIdFromUrl = searchParams.get("clientId");
-	const [clientId, setClientId] = useState("");
+	const resolvedClientId = useMemo(() => {
+		const p = clientIdFromUrl?.trim() ?? "";
+		if (!p || !/^\d+$/.test(p)) return null;
+		return Number(p);
+	}, [clientIdFromUrl]);
 	const [rows, setRows] = useState<AmlRiskProfileDto[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [page, setPage] = useState(0);
 	const [pageSize, setPageSize] = useState(10);
 	const [detailProfile, setDetailProfile] = useState<AmlRiskProfileDto | null>(null);
+	const [forceRiskLevel, setForceRiskLevel] = useState<AmlRiskLevel>("MEDIUM");
+	const [forceDiligenceLevel, setForceDiligenceLevel] = useState<AmlDiligenceLevel>("ENHANCED");
+	const [forceRationale, setForceRationale] = useState("");
+	const [forceModalOpen, setForceModalOpen] = useState(false);
+	const [forceSubmitting, setForceSubmitting] = useState(false);
+	const [forceModalError, setForceModalError] = useState<string | null>(null);
 
 	const stats = useMemo(() => {
 		let active = 0;
@@ -227,30 +394,17 @@ function AmlRiskProfilesInner() {
 		setPage(0);
 	}, [rows]);
 
-	const loadByClientNumericId = useCallback(async (id: number) => {
-		setLoading(true);
-		setError(null);
-		try {
-			const list = await amlApi.listRiskProfiles(id);
-			setRows(list ?? []);
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error");
-			setRows([]);
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-
 	useEffect(() => {
-		const p = clientIdFromUrl?.trim() ?? "";
-		if (!p || !/^\d+$/.test(p)) return;
-		setClientId(p);
+		if (resolvedClientId === null) {
+			setRows([]);
+			return;
+		}
 		let cancelled = false;
 		void (async () => {
 			setLoading(true);
 			setError(null);
 			try {
-				const list = await amlApi.listRiskProfiles(Number(p));
+				const list = await amlApi.listRiskProfiles(resolvedClientId);
 				if (!cancelled) setRows(list ?? []);
 			} catch (e: unknown) {
 				if (!cancelled) {
@@ -264,23 +418,14 @@ function AmlRiskProfilesInner() {
 		return () => {
 			cancelled = true;
 		};
-	}, [clientIdFromUrl]);
-
-	async function loadClick() {
-		const id = Number(clientId.trim());
-		if (!Number.isFinite(id) || id <= 0) {
-			setError(t("aml.risk.clientRequired"));
-			return;
-		}
-		await loadByClientNumericId(id);
-	}
+	}, [resolvedClientId]);
 
 	async function recompute() {
-		const id = Number(clientId.trim());
-		if (!Number.isFinite(id) || id <= 0) {
+		if (resolvedClientId === null) {
 			setError(t("aml.risk.clientRequired"));
 			return;
 		}
+		const id = resolvedClientId;
 		setLoading(true);
 		setError(null);
 		try {
@@ -301,6 +446,50 @@ function AmlRiskProfilesInner() {
 		}
 	}
 
+	const closeForceModal = useCallback(() => {
+		if (forceSubmitting) return;
+		setForceModalOpen(false);
+		setForceModalError(null);
+	}, [forceSubmitting]);
+
+	async function forceProfile() {
+		if (resolvedClientId === null) {
+			setForceModalError(t("aml.risk.clientRequired"));
+			return;
+		}
+		const id = resolvedClientId;
+		const rationale = forceRationale.trim();
+		if (rationale.length < FORCE_RATIONALE_MIN) {
+			setForceModalError(t("aml.risk.forceRationaleTooShort", { min: FORCE_RATIONALE_MIN }));
+			return;
+		}
+		setForceSubmitting(true);
+		setForceModalError(null);
+		try {
+			const payload: ForceAmlRiskProfileRequest = {
+				riskLevel: forceRiskLevel,
+				diligenceLevel: forceDiligenceLevel,
+				rationale
+			};
+			await amlApi.forceRiskProfile(id, payload);
+			const list = await amlApi.listRiskProfiles(id);
+			setRows(list ?? []);
+			setForceRationale("");
+			setForceModalOpen(false);
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(
+					new CustomEvent("show-toast", {
+						detail: { message: t("aml.risk.forceDone"), type: "success" }
+					})
+				);
+			}
+		} catch (e: unknown) {
+			setForceModalError(e instanceof Error ? e.message : "Error");
+		} finally {
+			setForceSubmitting(false);
+		}
+	}
+
 	const detailFactorsFormatted = useMemo(
 		() => (detailProfile ? formatFactorsJson(detailProfile.factorsJson) : null),
 		[detailProfile]
@@ -313,17 +502,50 @@ function AmlRiskProfilesInner() {
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">{t("aml.risk.title")}</h1>
-					<p className="text-gray-600 mt-1">{t("aml.risk.subtitle")}</p>
+					<p className="text-gray-600 mt-1">
+						{resolvedClientId !== null
+							? t("aml.risk.subtitleForClient", { clientId: resolvedClientId })
+							: t("aml.risk.subtitle")}
+					</p>
 				</div>
 				<div className="flex flex-wrap gap-3">
-					<Link href="/customers">
-						<Button type="button" variant="outline" className="flex items-center gap-2">
-							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-							</svg>
-							{t("aml.risk.openCustomers")}
-						</Button>
-					</Link>
+					<Button
+						type="button"
+						variant="outline"
+						className="flex items-center gap-2"
+						onClick={() => void recompute()}
+						disabled={loading || resolvedClientId === null}
+					>
+						<RefreshCw className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`} aria-hidden />
+						{t("aml.risk.recompute")}
+					</Button>
+					{resolvedClientId !== null ? (
+						<Link href={`/customers/${resolvedClientId}`}>
+							<Button type="button" variant="outline" className="flex items-center gap-2">
+								<User className="h-4 w-4 shrink-0" aria-hidden />
+								{t("aml.risk.openClient")}
+							</Button>
+						</Link>
+					) : (
+						<Link href="/customers">
+							<Button type="button" variant="outline" className="flex items-center gap-2">
+								<User className="h-4 w-4 shrink-0" aria-hidden />
+								{t("aml.risk.openCustomers")}
+							</Button>
+						</Link>
+					)}
+					<Button
+						type="button"
+						className="flex items-center gap-2"
+						onClick={() => {
+							setForceModalError(null);
+							setForceModalOpen(true);
+						}}
+						disabled={resolvedClientId === null}
+					>
+						<Shield className="h-5 w-5 shrink-0" aria-hidden />
+						{t("aml.risk.eddForce")}
+					</Button>
 				</div>
 			</div>
 
@@ -379,28 +601,6 @@ function AmlRiskProfilesInner() {
 							</svg>
 						</div>
 					</div>
-				</div>
-			</div>
-			<p className="text-xs text-gray-500 -mt-2">{t("aml.risk.statsHint")}</p>
-
-			<div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-				<div className="flex items-center gap-2 mb-4">
-					<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-					</svg>
-					<h2 className="text-lg font-semibold text-gray-900">{t("aml.filters.title")}</h2>
-				</div>
-				<div className="flex flex-wrap gap-4 items-end">
-					<div className="min-w-[200px] flex-1">
-						<label className="block text-sm font-medium text-gray-700 mb-2">{t("aml.filters.clientId")}</label>
-						<Input className="h-10" value={clientId} onChange={(e) => setClientId(e.target.value)} placeholder="ID" />
-					</div>
-					<Button type="button" className="h-10" onClick={() => void loadClick()} disabled={loading}>
-						{t("aml.risk.loadHistory")}
-					</Button>
-					<Button type="button" variant="outline" className="h-10" onClick={() => void recompute()} disabled={loading}>
-						{t("aml.risk.recompute")}
-					</Button>
 				</div>
 			</div>
 
@@ -497,6 +697,22 @@ function AmlRiskProfilesInner() {
 					profile={detailProfile}
 					factorsFormatted={detailFactorsFormatted}
 					onClose={closeRiskDetailModal}
+				/>
+			) : null}
+
+			{forceModalOpen && resolvedClientId !== null ? (
+				<AmlForceEddModal
+					clientId={resolvedClientId}
+					riskLevel={forceRiskLevel}
+					diligenceLevel={forceDiligenceLevel}
+					rationale={forceRationale}
+					loading={forceSubmitting}
+					error={forceModalError}
+					onRiskLevelChange={setForceRiskLevel}
+					onDiligenceLevelChange={setForceDiligenceLevel}
+					onRationaleChange={setForceRationale}
+					onSubmit={() => void forceProfile()}
+					onClose={closeForceModal}
 				/>
 			) : null}
 		</div>

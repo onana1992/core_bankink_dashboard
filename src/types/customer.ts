@@ -17,7 +17,7 @@ export interface KycCheck {
 	checkedAt?: string;
 }
 
-export type ComplianceTaskType = "EDD_REVIEW" | "AML_REKYC_FOLLOWUP";
+export type ComplianceTaskType = "EDD_REVIEW" | "REINFORCED_KYC_AML_REVIEW";
 export type ComplianceTaskStatus = "OPEN" | "DONE" | "CANCELLED";
 
 export interface ComplianceTask {

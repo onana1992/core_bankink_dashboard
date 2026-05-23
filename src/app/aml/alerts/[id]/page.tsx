@@ -22,16 +22,67 @@ import {
 	Wallet
 } from "lucide-react";
 import { amlApi, usersApi } from "@/lib/api";
-import type { AmlAlertResponse, AmlAlertStatus, AmlClosureReason, AmlAlertSeverity, User } from "@/types";
+import type { AmlAlertResponse, AmlAlertStatus, AmlClosureReason, AmlAlertSeverity, User as AppUser } from "@/types";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import Input from "@/components/ui/Input";
+import { OPS_CARD_HEADER, OPS_CARD_SHELL, OPS_SELECT, OpsField, OpsInlineAlert, OpsSelect } from "@/components/ops";
 
 const STATUSES: AmlAlertStatus[] = ["NEW", "ASSIGNED", "UNDER_REVIEW", "ESCALATED", "CLOSED"];
 const CLOSURES: AmlClosureReason[] = ["FALSE_POSITIVE", "EXPLAINED", "ESCALATED_DECLARATION", "OTHER"];
 
-const SELECT_CLASS =
-	"w-full h-10 px-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none";
+const OPS_INPUT_CLASS =
+	`${OPS_SELECT} h-10 py-0 shadow-none`;
+
+const OPS_TEXTAREA_CLASS =
+	"w-full min-h-[5.5rem] resize-y rounded-ops-md border border-ops-border bg-ops-surface px-3 py-2 text-sm text-ops-fg shadow-sm focus:border-ops-ring focus:outline-none focus:ring-2 focus:ring-ops-ring/25";
+
+function ActionBlock({
+	title,
+	description,
+	icon: Icon,
+	tone = "default",
+	children
+}: {
+	title: string;
+	description?: string;
+	icon: ElementType;
+	tone?: "default" | "closure";
+	children: React.ReactNode;
+}) {
+	const headerTone =
+		tone === "closure"
+			? "border-amber-200/80 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20"
+			: "border-ops-border/60 bg-ops-surface-muted/50";
+	const iconTone =
+		tone === "closure"
+			? "bg-amber-100/80 text-amber-800 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-900/50"
+			: "bg-ops-surface text-ops-fg-muted ring-ops-border";
+
+	return (
+		<section className="border-b border-ops-border last:border-b-0">
+			<div className={`border-b px-5 py-3.5 sm:px-6 ${headerTone}`}>
+				<div className="flex items-start gap-3">
+					<div
+						className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-ops-md ring-1 ${iconTone}`}
+						aria-hidden
+					>
+						<Icon className="h-4 w-4" />
+					</div>
+					<div className="min-w-0 pt-0.5">
+						<h3 className="text-sm font-semibold tracking-tight text-ops-fg">{title}</h3>
+						{description ? <p className="mt-0.5 text-xs leading-relaxed text-ops-fg-muted">{description}</p> : null}
+					</div>
+				</div>
+			</div>
+			<div className="bg-ops-surface px-5 py-5 sm:px-6">{children}</div>
+		</section>
+	);
+}
+
+function ActionRow({ children }: { children: React.ReactNode }) {
+	return <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
+}
 
 function severityVariant(s: AmlAlertSeverity): "neutral" | "info" | "warning" | "danger" {
 	if (s === "CRITICAL" || s === "HIGH") return "danger";
@@ -40,7 +91,7 @@ function severityVariant(s: AmlAlertSeverity): "neutral" | "info" | "warning" | 
 	return "neutral";
 }
 
-function formatUserLabel(u: User): string {
+function formatUserLabel(u: AppUser): string {
 	const name = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
 	if (name) return `${u.username} — ${name}`;
 	if (u.email) return `${u.username} (${u.email})`;
@@ -71,14 +122,12 @@ function MetaField({
 	className?: string;
 }) {
 	return (
-		<div
-			className={`rounded-xl border border-gray-200/90 bg-gradient-to-b from-gray-50/90 to-white p-4 shadow-sm ${className}`}
-		>
-			<div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-				<Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
+		<div className={`rounded-ops-xl border border-ops-border bg-ops-surface-muted/40 p-4 shadow-sm ${className}`}>
+			<div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ops-fg-muted">
+				<Icon className="h-3.5 w-3.5 shrink-0 text-ops-fg-muted" aria-hidden />
 				{label}
 			</div>
-			<div className="mt-2 min-h-[1.25rem] text-sm font-medium text-gray-900">{children}</div>
+			<div className="mt-2 min-h-[1.25rem] text-sm font-medium text-ops-fg">{children}</div>
 		</div>
 	);
 }
@@ -91,13 +140,14 @@ export default function AmlAlertDetailPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [assigneeId, setAssigneeId] = useState("");
-	const [assignUsers, setAssignUsers] = useState<User[]>([]);
+	const [assignUsers, setAssignUsers] = useState<AppUser[]>([]);
 	const [assignUsersLoading, setAssignUsersLoading] = useState(true);
 	const [assignUsersError, setAssignUsersError] = useState<string | null>(null);
 	const [nextStatus, setNextStatus] = useState<AmlAlertStatus | "">("");
 	const [closureReason, setClosureReason] = useState<AmlClosureReason>("FALSE_POSITIVE");
 	const [closureComment, setClosureComment] = useState("");
 	const [busy, setBusy] = useState(false);
+	const [existingCaseId, setExistingCaseId] = useState("");
 
 	const load = useCallback(async () => {
 		if (!id) return;
@@ -151,8 +201,13 @@ export default function AmlAlertDetailPage() {
 		setBusy(true);
 		setError(null);
 		try {
+			const selected = assignUsers.find((u) => u.id === uid);
 			const a = await amlApi.assignAlert(id, { assigneeUserId: uid });
-			setAlert(a);
+			setAlert({
+				...a,
+				assignedToUserId: a.assignedToUserId ?? uid,
+				assignedToUsername: a.assignedToUsername?.trim() || selected?.username || null
+			});
 			setNextStatus(a.status);
 			setAssigneeId("");
 		} catch (e: unknown) {
@@ -170,6 +225,28 @@ export default function AmlAlertDetailPage() {
 			const a = await amlApi.patchAlertStatus(id, { status: nextStatus });
 			setAlert(a);
 			setNextStatus(a.status);
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : "Error");
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function addToExistingCase() {
+		const caseId = Number(existingCaseId);
+		if (!Number.isFinite(caseId) || caseId <= 0) return;
+		setBusy(true);
+		setError(null);
+		try {
+			await amlApi.addCaseAlerts(caseId, { alertIds: [Number(id)] });
+			setExistingCaseId("");
+			if (typeof window !== "undefined") {
+				window.dispatchEvent(
+					new CustomEvent("show-toast", {
+						detail: { message: t("aml.cases.addAlertsSuccess"), type: "success" }
+					})
+				);
+			}
 		} catch (e: unknown) {
 			setError(e instanceof Error ? e.message : "Error");
 		} finally {
@@ -206,6 +283,13 @@ export default function AmlAlertDetailPage() {
 			return alert.factsJson;
 		}
 	}, [alert?.factsJson]);
+
+	const assignedUsername = useMemo(() => {
+		const fromApi = alert?.assignedToUsername?.trim();
+		if (fromApi) return fromApi;
+		if (!alert?.assignedToUserId) return null;
+		return assignUsers.find((u) => u.id === alert.assignedToUserId)?.username ?? null;
+	}, [alert?.assignedToUsername, alert?.assignedToUserId, assignUsers]);
 
 	const backLinkClass =
 		"inline-flex items-center gap-1.5 rounded-lg border border-transparent px-2 py-1.5 text-sm font-medium text-gray-600 transition hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900";
@@ -294,19 +378,19 @@ export default function AmlAlertDetailPage() {
 				</div>
 			)}
 
-			<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-				<div className="border-b border-gray-200 bg-gray-50/95 px-5 py-3.5">
-					<h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{t("aml.alertDetail.context")}</h2>
+			<div className={OPS_CARD_SHELL}>
+				<div className={OPS_CARD_HEADER}>
+					<h2 className="text-sm font-semibold uppercase tracking-wide text-ops-fg">{t("aml.alertDetail.context")}</h2>
 				</div>
-				<div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+				<div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 sm:px-6">
 					<MetaField label={t("aml.detail.client")} icon={User}>
-						<Link href={`/customers/${alert.clientId}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+						<Link href={`/customers/${alert.clientId}`} className="text-ops-ring hover:underline">
 							{alert.clientId}
 						</Link>
 					</MetaField>
 					{alert.accountId != null ? (
 						<MetaField label={t("aml.detail.account")} icon={Wallet}>
-							<Link href={`/accounts/${alert.accountId}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+							<Link href={`/accounts/${alert.accountId}`} className="text-ops-ring hover:underline">
 								{alert.accountId}
 							</Link>
 						</MetaField>
@@ -317,7 +401,7 @@ export default function AmlAlertDetailPage() {
 					)}
 					{alert.transactionId != null ? (
 						<MetaField label={t("aml.detail.transaction")} icon={ArrowLeftRight}>
-							<Link href={`/transactions/${alert.transactionId}`} className="text-blue-600 hover:text-blue-800 hover:underline">
+							<Link href={`/transactions/${alert.transactionId}`} className="text-ops-ring hover:underline">
 								{alert.transactionId}
 							</Link>
 						</MetaField>
@@ -327,11 +411,23 @@ export default function AmlAlertDetailPage() {
 						</MetaField>
 					)}
 					<MetaField label={t("aml.detail.assigned")} icon={UserCircle}>
-						{alert.assignedToUserId ?? <span className="font-normal text-gray-400">—</span>}
+						{assignedUsername ? (
+							<Link href={`/users/${alert.assignedToUserId}`} className="text-ops-ring hover:underline">
+								{assignedUsername}
+							</Link>
+						) : alert.assignedToUserId != null ? (
+							assignUsersLoading ? (
+								<span className="font-normal text-gray-400">…</span>
+							) : (
+								<span className="font-mono text-xs font-normal text-gray-600">#{alert.assignedToUserId}</span>
+							)
+						) : (
+							<span className="font-normal text-gray-400">—</span>
+						)}
 					</MetaField>
 					<MetaField label={t("aml.detail.ruleVersion")} icon={Scale} className="sm:col-span-2 lg:col-span-1">
 						<span className="font-mono text-xs font-normal text-gray-800">
-							{alert.ruleDefinitionId ?? "—"} / {alert.ruleVersionId ?? "—"}
+							{alert.ruleCode ?? "—"} / {alert.ruleVersionNumber ?? "—"}
 						</span>
 					</MetaField>
 					<MetaField label={t("aml.detail.idempotency")} icon={Fingerprint} className="sm:col-span-2 lg:col-span-2">
@@ -339,10 +435,10 @@ export default function AmlAlertDetailPage() {
 					</MetaField>
 				</div>
 
-				<div className="border-t border-gray-200 bg-slate-50/60 px-5 py-3.5">
-					<h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{t("aml.alertDetail.timeline")}</h2>
+				<div className="border-t border-ops-border bg-ops-surface-muted/50 px-5 py-3.5 sm:px-6">
+					<h2 className="text-sm font-semibold uppercase tracking-wide text-ops-fg-muted">{t("aml.alertDetail.timeline")}</h2>
 				</div>
-				<div className="grid gap-3 p-5 sm:grid-cols-3">
+				<div className="grid gap-3 p-5 sm:grid-cols-3 sm:px-6 sm:pb-6">
 					<MetaField label={t("aml.detail.createdAt")} icon={CalendarClock}>
 						{formatDateTime(alert.createdAt, lang)}
 					</MetaField>
@@ -363,10 +459,10 @@ export default function AmlAlertDetailPage() {
 				</div>
 			</div>
 
-			<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-				<div className="flex items-center gap-2 border-b border-gray-200 bg-gray-50/95 px-5 py-3.5">
-					<Code2 className="h-4 w-4 text-gray-500" aria-hidden />
-					<h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">{t("aml.detail.facts")}</h2>
+			<div className={OPS_CARD_SHELL}>
+				<div className={`${OPS_CARD_HEADER} flex items-center gap-2`}>
+					<Code2 className="h-4 w-4 text-ops-fg-muted" aria-hidden />
+					<h2 className="text-sm font-semibold uppercase tracking-wide text-ops-fg">{t("aml.detail.facts")}</h2>
 				</div>
 				<div className="p-1 sm:p-2">
 					<pre className="max-h-[28rem] overflow-auto rounded-xl bg-slate-950 p-4 font-mono text-xs leading-relaxed text-slate-100 ring-1 ring-slate-800/80 sm:text-[13px]">
@@ -376,20 +472,26 @@ export default function AmlAlertDetailPage() {
 			</div>
 
 			{alert.status !== "CLOSED" && (
-				<div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-					<div className="border-b border-gray-200 bg-gradient-to-r from-slate-50 to-gray-50 px-5 py-4">
-						<h2 className="text-lg font-semibold text-gray-900">{t("aml.alertDetail.actions")}</h2>
+				<div className={OPS_CARD_SHELL}>
+					<div className={`${OPS_CARD_HEADER} flex items-center gap-3`}>
+						<div
+							className="flex h-9 w-9 shrink-0 items-center justify-center rounded-ops-md bg-ops-surface text-ops-fg-muted ring-1 ring-ops-border"
+							aria-hidden
+						>
+							<ListChecks className="h-4 w-4" />
+						</div>
+						<div>
+							<h2 className="text-lg font-semibold tracking-tight text-ops-fg">{t("aml.alertDetail.actions")}</h2>
+							<p className="mt-0.5 text-xs text-ops-fg-muted">{t("aml.alertDetail.actionsHint")}</p>
+						</div>
 					</div>
-					<div className="divide-y divide-gray-100">
-						<div className="flex flex-col gap-4 p-5 sm:flex-row sm:flex-wrap sm:items-end">
-							<div className="min-w-[220px] flex-1 max-w-xl">
-								<label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700" htmlFor="aml-alert-assignee">
-									<User className="h-4 w-4 text-gray-400" aria-hidden />
-									{t("aml.alertDetail.assignToUser")}
-								</label>
-								<select
+
+					<ActionBlock title={t("aml.alertDetail.assignToUser")} icon={UserPlus}>
+						<ActionRow>
+							<OpsField htmlFor="aml-alert-assignee" label={t("aml.alertDetail.assignSelectPlaceholder")} className="min-w-[220px] flex-1">
+								<OpsSelect
 									id="aml-alert-assignee"
-									className={SELECT_CLASS}
+									className="h-10"
 									value={assigneeId}
 									onChange={(e) => setAssigneeId(e.target.value)}
 									disabled={busy || assignUsersLoading || assignUsersError != null}
@@ -402,78 +504,132 @@ export default function AmlAlertDetailPage() {
 											{formatUserLabel(u)}
 										</option>
 									))}
-								</select>
-								{assignUsersError ? (
-									<p className="mt-2 text-sm text-red-600">
-										{t("aml.alertDetail.usersLoadError")} {assignUsersError}
-									</p>
-								) : null}
-							</div>
+								</OpsSelect>
+							</OpsField>
 							<Button
 								type="button"
-								className="h-10 shrink-0 gap-2 sm:min-w-[8rem]"
+								className="h-10 w-full shrink-0 gap-2 sm:w-auto sm:min-w-[9.5rem]"
 								onClick={assign}
 								disabled={busy || !assigneeId || assignUsersLoading}
 							>
 								<UserPlus className="h-4 w-4" aria-hidden />
 								{t("aml.alertDetail.assign")}
 							</Button>
-						</div>
+						</ActionRow>
+						{assignUsersError ? (
+							<OpsInlineAlert variant="error" className="mt-4">
+								{t("aml.alertDetail.usersLoadError")} {assignUsersError}
+							</OpsInlineAlert>
+						) : null}
+					</ActionBlock>
 
-						<div className="flex flex-col gap-4 p-5 sm:flex-row sm:flex-wrap sm:items-end">
-							<div className="min-w-[200px]">
-								<label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
-									<ListChecks className="h-4 w-4 text-gray-400" aria-hidden />
-									{t("aml.filters.status")}
-								</label>
-								<select
-									className={SELECT_CLASS}
+					<ActionBlock
+						title={t("aml.alertDetail.linkToCase")}
+						description={t("aml.alertDetail.linkToCaseHint")}
+						icon={FolderKanban}
+					>
+						<ActionRow>
+							<OpsField htmlFor="aml-alert-existing-case" label={t("aml.cases.existingCaseId")} className="min-w-[220px] flex-1">
+								<Input
+									id="aml-alert-existing-case"
+									className={OPS_INPUT_CLASS}
+									value={existingCaseId}
+									onChange={(e) => setExistingCaseId(e.target.value)}
+									placeholder={t("aml.cases.existingCaseId")}
+									inputMode="numeric"
+									disabled={busy}
+								/>
+							</OpsField>
+							<Button
+								type="button"
+								variant="outline"
+								className="h-10 w-full shrink-0 gap-2 sm:w-auto sm:min-w-[10rem]"
+								onClick={() => void addToExistingCase()}
+								disabled={busy || !existingCaseId.trim()}
+							>
+								<FolderKanban className="h-4 w-4" aria-hidden />
+								{t("aml.cases.addToCaseSubmit")}
+							</Button>
+						</ActionRow>
+					</ActionBlock>
+
+					<ActionBlock title={t("aml.filters.status")} description={t("aml.alertDetail.updateStatusHint")} icon={RefreshCw}>
+						<ActionRow>
+							<OpsField htmlFor="aml-alert-status" label={t("aml.filters.status")} className="min-w-[200px] flex-1 sm:max-w-xs">
+								<OpsSelect
+									id="aml-alert-status"
+									className="h-10"
 									value={nextStatus || alert.status}
 									onChange={(e) => setNextStatus(e.target.value as AmlAlertStatus)}
+									disabled={busy}
 								>
 									{STATUSES.map((s) => (
 										<option key={s} value={s}>
 											{s}
 										</option>
 									))}
-								</select>
-							</div>
-							<Button type="button" variant="outline" className="h-10 shrink-0 gap-2" onClick={patchStatus} disabled={busy || !nextStatus}>
+								</OpsSelect>
+							</OpsField>
+							<Button
+								type="button"
+								variant="outline"
+								className="h-10 w-full shrink-0 gap-2 sm:w-auto sm:min-w-[10rem]"
+								onClick={patchStatus}
+								disabled={busy || !nextStatus || nextStatus === alert.status}
+							>
 								<RefreshCw className="h-4 w-4" aria-hidden />
 								{t("aml.alertDetail.updateStatus")}
 							</Button>
-						</div>
+						</ActionRow>
+					</ActionBlock>
 
-						<div className="space-y-4 p-5">
-							<label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-								<Lock className="h-4 w-4 text-gray-400" aria-hidden />
-								{t("aml.alertDetail.closure")}
-							</label>
-							<div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-								<select
-									className={`${SELECT_CLASS} lg:min-w-[220px]`}
-									value={closureReason}
-									onChange={(e) => setClosureReason(e.target.value as AmlClosureReason)}
+					<ActionBlock
+						title={t("aml.alertDetail.closure")}
+						description={t("aml.alertDetail.closureHint")}
+						icon={Lock}
+						tone="closure"
+					>
+						<div className="space-y-4">
+							<ActionRow>
+								<OpsField htmlFor="aml-alert-closure-reason" label={t("aml.detail.closureReason")} className="min-w-[200px] flex-1 sm:max-w-xs">
+									<OpsSelect
+										id="aml-alert-closure-reason"
+										className="h-10"
+										value={closureReason}
+										onChange={(e) => setClosureReason(e.target.value as AmlClosureReason)}
+										disabled={busy}
+									>
+										{CLOSURES.map((c) => (
+											<option key={c} value={c}>
+												{c}
+											</option>
+										))}
+									</OpsSelect>
+								</OpsField>
+								<Button
+									type="button"
+									variant="secondary"
+									className="h-10 w-full shrink-0 gap-2 sm:w-auto sm:min-w-[10rem]"
+									onClick={close}
+									disabled={busy}
 								>
-									{CLOSURES.map((c) => (
-										<option key={c} value={c}>
-											{c}
-										</option>
-									))}
-								</select>
-								<Input
-									className="h-10 min-w-0 flex-1 lg:min-w-[240px]"
-									placeholder={t("aml.alertDetail.closureComment")}
-									value={closureComment}
-									onChange={(e) => setClosureComment(e.target.value)}
-								/>
-								<Button type="button" variant="secondary" className="h-10 shrink-0 gap-2 lg:min-w-[10rem]" onClick={close} disabled={busy}>
 									<Lock className="h-4 w-4" aria-hidden />
 									{t("aml.alertDetail.closeAlert")}
 								</Button>
-							</div>
+							</ActionRow>
+							<OpsField htmlFor="aml-alert-closure-comment" label={t("aml.alertDetail.closureComment")}>
+								<textarea
+									id="aml-alert-closure-comment"
+									className={OPS_TEXTAREA_CLASS}
+									placeholder={t("aml.alertDetail.closureComment")}
+									value={closureComment}
+									onChange={(e) => setClosureComment(e.target.value)}
+									rows={3}
+									disabled={busy}
+								/>
+							</OpsField>
 						</div>
-					</div>
+					</ActionBlock>
 				</div>
 			)}
 		</div>
