@@ -30,6 +30,13 @@ export type AmlRiskProfileDto = {
 	active: boolean;
 };
 
+/** Corps de `POST /api/ops/aml/risk-profiles/clients/{id}/force` (UC-A02). */
+export type ForceAmlRiskProfileRequest = {
+	riskLevel: AmlRiskLevel;
+	diligenceLevel: AmlDiligenceLevel;
+	rationale: string;
+};
+
 export type AmlRuleDefinitionResponse = {
 	id: number;
 	code: string;
@@ -74,12 +81,15 @@ export type AmlAlertResponse = {
 	triggerType: AmlTriggerType;
 	ruleDefinitionId: number | null;
 	ruleVersionId: number | null;
+	ruleCode: string | null;
+	ruleVersionNumber: number | null;
 	clientId: number;
 	accountId: number | null;
 	transactionId: number | null;
 	title: string;
 	factsJson: string | null;
 	assignedToUserId: number | null;
+	assignedToUsername: string | null;
 	createdAt: string;
 	updatedAt: string;
 	closedAt: string | null;
@@ -158,6 +168,14 @@ export type CreateCaseRequest = {
 	clientId: number;
 	alertIds: number[];
 	ownerUserId?: number | null;
+};
+
+export type AssignCaseOwnerRequest = {
+	ownerUserId: number | null;
+};
+
+export type AddCaseAlertsRequest = {
+	alertIds: number[];
 };
 
 export type AddCaseNoteRequest = {
