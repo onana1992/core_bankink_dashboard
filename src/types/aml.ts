@@ -17,6 +17,9 @@ export type AmlCaseStatus = "OPEN" | "IN_REVIEW" | "ESCALATED" | "CLOSED";
 export type AmlClosureReason = "FALSE_POSITIVE" | "EXPLAINED" | "ESCALATED_DECLARATION" | "OTHER";
 export type AmlTriggerType = "RULE" | "MANUAL" | "SCREENING";
 export type AmlDeclarationStatus = "DRAFT" | "SUBMITTED" | "ACKNOWLEDGED" | "CLOSED";
+export type AmlDeclarationType = "SUSPICION" | "OTHER";
+export type AmlTransmissionChannel = "PORTAL" | "EMAIL_SECURE" | "PHYSICAL" | "OTHER";
+export type AmlCaseNoteType = "GENERAL" | "NON_DECLARATION_JUSTIFIED";
 
 export type AmlRiskProfileDto = {
 	id: number;
@@ -201,13 +204,124 @@ export type AmlCaseStatusHistoryResponse = {
 
 export type AmlDeclarationRecordResponse = {
 	id: number;
+	publicRef: string | null;
 	caseId: number;
 	status: AmlDeclarationStatus;
+	declarationType: AmlDeclarationType;
+	suspicionSummary: string | null;
 	submittedAt: string | null;
 	externalReference: string | null;
+	transmissionChannel: AmlTransmissionChannel | null;
 	notes: string | null;
 	createdByUserId: number | null;
 	createdByUsername: string | null;
+	createdAt: string | null;
+	validatedAt: string | null;
+	acknowledgedAt: string | null;
+	factsSnapshotJson: string | null;
+};
+
+/** Snapshot figé à la soumission (validation interne). */
+export type AmlDeclarationFactsSnapshot = {
+	casePublicRef?: string;
+	capturedAt?: string;
+	client?: {
+		id: number;
+		displayName: string;
+		type: string;
+		incorporationCountry: string;
+	};
+	riskProfile?: {
+		riskLevel: string;
+		riskScore: number;
+		diligenceLevel: string;
+		computedAt: string;
+	};
+	alerts?: Array<{
+		publicRef: string;
+		severity: string;
+		title: string;
+		factsJson: string | null;
+		transactionId: number | null;
+		createdAt: string;
+	}>;
+	notes?: Array<{
+		noteType: string;
+		body: string;
+		createdAt: string;
+	}>;
+	screening?: Array<{
+		type: string;
+		result: string;
+		checkedAt: string;
+	}>;
+};
+
+export type CreateDeclarationRequest = {
+	declarationType?: AmlDeclarationType;
+	suspicionSummary?: string;
+	suspicionStartDate?: string;
+	suspicionEndDate?: string;
+	amountInvolved?: number;
+	currency?: string;
+	notes?: string;
+};
+
+export type UpdateDeclarationRequest = CreateDeclarationRequest;
+
+export type AcknowledgeTransmissionRequest = {
+	submittedAt: string;
+	externalReference: string;
+	transmissionChannel: AmlTransmissionChannel;
+	notes?: string;
+};
+
+export type CloseDeclarationRequest = {
+	closureReason: string;
+};
+
+export type AmlDeclarationDetailResponse = AmlDeclarationRecordResponse & {
+	casePublicRef: string | null;
+	clientId: number | null;
+	suspicionStartDate: string | null;
+	suspicionEndDate: string | null;
+	amountInvolved: number | null;
+	currency: string | null;
+	transmittedByUserId: number | null;
+	transmittedByUsername: string | null;
+	validatedByUserId: number | null;
+	validatedByUsername: string | null;
+	closedAt: string | null;
+	closureReason: string | null;
+	attachments: AmlDeclarationAttachmentResponse[];
+};
+
+export type AmlDeclarationAttachmentResponse = {
+	id: number;
+	proofType: string;
+	originalFilename: string;
+	contentType: string | null;
+	sha256Hex: string;
+	uploadedByUserId: number | null;
+	uploadedByUsername: string | null;
+	uploadedAt: string;
+};
+
+export type AmlDeclarationStatusHistoryResponse = {
+	id: number;
+	fromStatus: AmlDeclarationStatus | null;
+	toStatus: AmlDeclarationStatus;
+	changedByUserId: number | null;
+	changedByUsername: string | null;
+	changedAt: string;
+	comment: string | null;
+};
+
+export type AmlDeclarationMetricsResponse = {
+	submittedThisMonth: number;
+	acknowledgedThisMonth: number;
+	draftCount: number;
+	submittedPendingTransmission: number;
 };
 
 export type AmlAlertPage = {

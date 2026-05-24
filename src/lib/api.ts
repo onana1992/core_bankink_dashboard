@@ -142,9 +142,17 @@ import type {
 	AddCaseAlertsRequest,
 	AddCaseNoteRequest,
 	PatchCaseStatusRequest,
-	CreateDeclarationResponse,
 	AmlCaseStatusHistoryResponse,
 	AmlDeclarationRecordResponse,
+	CreateDeclarationRequest,
+	UpdateDeclarationRequest,
+	AcknowledgeTransmissionRequest,
+	CloseDeclarationRequest,
+	AmlDeclarationDetailResponse,
+	AmlDeclarationStatusHistoryResponse,
+	AmlDeclarationMetricsResponse,
+	AmlDeclarationAttachmentResponse,
+	AmlDeclarationStatus,
 	AmlAlertStatus,
 	AmlAlertSeverity,
 	AmlCaseStatus,
@@ -3118,12 +3126,109 @@ export const amlApi = {
 		return handleJsonResponse<AmlCaseDetailResponse>(res);
 	},
 
-	async createDeclaration(caseId: number | string): Promise<CreateDeclarationResponse> {
+	async createDeclaration(
+		caseId: number | string,
+		payload?: CreateDeclarationRequest
+	): Promise<AmlDeclarationRecordResponse> {
 		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases/${caseId}/declarations`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: payload ? JSON.stringify(payload) : undefined
+		});
+		return handleJsonResponse<AmlDeclarationRecordResponse>(res);
+	},
+
+	async getDeclaration(id: number | string): Promise<AmlDeclarationDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlDeclarationDetailResponse>(res);
+	},
+
+	async patchDeclaration(id: number | string, payload: UpdateDeclarationRequest): Promise<AmlDeclarationDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}`, {
+			method: "PATCH",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlDeclarationDetailResponse>(res);
+	},
+
+	async submitDeclaration(id: number | string): Promise<AmlDeclarationDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}/submit`, {
 			method: "POST",
 			headers: getAuthHeaders()
 		});
-		return handleJsonResponse<CreateDeclarationResponse>(res);
+		return handleJsonResponse<AmlDeclarationDetailResponse>(res);
+	},
+
+	async acknowledgeDeclaration(
+		id: number | string,
+		payload: AcknowledgeTransmissionRequest
+	): Promise<AmlDeclarationDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}/acknowledge`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlDeclarationDetailResponse>(res);
+	},
+
+	async closeDeclaration(id: number | string, payload: CloseDeclarationRequest): Promise<AmlDeclarationDetailResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}/close`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<AmlDeclarationDetailResponse>(res);
+	},
+
+	async getDeclarationHistory(id: number | string): Promise<AmlDeclarationStatusHistoryResponse[]> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/${id}/history`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlDeclarationStatusHistoryResponse[]>(res);
+	},
+
+	async listDeclarationsWorklist(status?: AmlDeclarationStatus): Promise<AmlDeclarationDetailResponse[]> {
+		const q = status ? `?status=${encodeURIComponent(status)}` : "";
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations${q}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlDeclarationDetailResponse[]>(res);
+	},
+
+	async getDeclarationMetrics(): Promise<AmlDeclarationMetricsResponse> {
+		const res = await fetchWithAutoRefresh(`${AML_BASE}/declarations/metrics`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AmlDeclarationMetricsResponse>(res);
+	},
+
+	exportDeclarationUrl(id: number | string, format: "pdf" | "json" = "pdf"): string {
+		const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+		const base = `${AML_BASE}/declarations/${id}/export?format=${format}`;
+		return token ? `${base}` : base;
+	},
+
+	async uploadDeclarationAttachment(
+		id: number | string,
+		file: File,
+		proofType = "RECEIPT"
+	): Promise<AmlDeclarationAttachmentResponse> {
+		const form = new FormData();
+		form.append("file", file);
+		const headers = getAuthHeaders();
+		delete (headers as Record<string, string>)["Content-Type"];
+		const res = await fetchWithAutoRefresh(
+			`${AML_BASE}/declarations/${id}/attachments?proofType=${encodeURIComponent(proofType)}`,
+			{ method: "POST", headers, body: form }
+		);
+		return handleJsonResponse<AmlDeclarationAttachmentResponse>(res);
 	}
 };
 

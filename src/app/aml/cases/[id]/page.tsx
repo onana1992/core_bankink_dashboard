@@ -9,7 +9,6 @@ import {
 	ArrowLeft,
 	CalendarClock,
 	ExternalLink,
-	FileWarning,
 	ListChecks,
 	Lock,
 	MessageSquare,
@@ -32,6 +31,7 @@ import type {
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
+import AmlDeclarationPanel from "@/components/aml/AmlDeclarationPanel";
 import {
 	OPS_CARD_HEADER,
 	OPS_CARD_SHELL,
@@ -263,26 +263,6 @@ export default function AmlCaseDetailPage() {
 			}
 		} catch (err: unknown) {
 			setError(err instanceof Error ? err.message : "Error");
-		} finally {
-			setBusy(false);
-		}
-	}
-
-	async function declaration() {
-		setBusy(true);
-		setError(null);
-		try {
-			await amlApi.createDeclaration(id);
-			if (typeof window !== "undefined") {
-				window.dispatchEvent(
-					new CustomEvent("show-toast", {
-						detail: { message: `${t("aml.cases.declarationCreated")}`, type: "success" }
-					})
-				);
-			}
-			await load();
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error");
 		} finally {
 			setBusy(false);
 		}
@@ -747,62 +727,13 @@ export default function AmlCaseDetailPage() {
 					)}
 
 					{activeTab === "declaration" && (
-						<div className="space-y-6">
-							<div className="flex flex-wrap items-start gap-4">
-								<div className="min-w-0 flex-1 space-y-2">
-									<div className="flex items-center gap-2 text-sm font-semibold text-ops-fg">
-										<FileWarning className="h-4 w-4 shrink-0 text-ops-fg-muted" aria-hidden />
-										{t("aml.cases.declarationSection")}
-									</div>
-									<p className="text-sm text-ops-fg-muted">{t("aml.cases.declarationHint")}</p>
-								</div>
-								<Button type="button" variant="secondary" onClick={declaration} disabled={busy} className="shrink-0">
-									{t("aml.cases.createDeclaration")}
-								</Button>
-							</div>
-
-							<div>
-								<h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ops-fg-muted">
-									{t("aml.cases.declarationsTitle")}
-								</h3>
-								{declarations.length === 0 ? (
-									<p className="rounded-ops-lg border border-dashed border-ops-border bg-ops-surface-muted/40 py-8 text-center text-sm text-ops-fg-muted">
-										{t("aml.cases.declarationsEmpty")}
-									</p>
-								) : (
-									<div className={OPS_TABLE_WRAP}>
-										<table className={OPS_TABLE}>
-											<thead className={OPS_THEAD}>
-												<tr>
-													<th className={OPS_TH}>{t("aml.cases.declColId")}</th>
-													<th className={OPS_TH}>{t("aml.cases.declColStatus")}</th>
-													<th className={OPS_TH}>{t("aml.cases.declColCreatedBy")}</th>
-													<th className={OPS_TH}>{t("aml.cases.declColSubmitted")}</th>
-													<th className={OPS_TH}>{t("aml.cases.declColExternalRef")}</th>
-													<th className={OPS_TH}>{t("aml.cases.declColNotes")}</th>
-												</tr>
-											</thead>
-											<tbody className="divide-y divide-ops-border bg-ops-surface">
-												{declarations.map((d) => (
-													<tr key={d.id} className={OPS_TR_HOVER}>
-														<td className={`${OPS_TD} font-mono`}>{d.id}</td>
-														<td className={OPS_TD}>
-															<Badge variant="neutral">{d.status}</Badge>
-														</td>
-														<td className={OPS_TD}>{d.createdByUsername?.trim() || "—"}</td>
-														<td className={OPS_TD}>{formatDateTime(d.submittedAt, lang)}</td>
-														<td className={`${OPS_TD} font-mono text-xs`}>{d.externalReference ?? "—"}</td>
-														<td className={`${OPS_TD} max-w-xs truncate text-xs`} title={d.notes ?? undefined}>
-															{d.notes?.trim() ? d.notes : "—"}
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
-							</div>
-						</div>
+						<AmlDeclarationPanel
+							caseId={id}
+							declarations={declarations}
+							onRefresh={load}
+							busy={busy}
+							setBusy={setBusy}
+						/>
 					)}
 				</div>
 			</div>
