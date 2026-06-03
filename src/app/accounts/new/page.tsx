@@ -153,14 +153,28 @@ export default function NewAccountPage() {
 		(!fee.effectiveTo || new Date(fee.effectiveTo) >= new Date())
 	);
 
-	const hasOpeningFees = !!openingFee;
+	// Frais d'ouverture à 0 XAF : pas de compte source requis (premier compte courant possible)
+	const openingFeeRequiresSourceAccount = (fee: typeof openingFee, amount?: number): boolean => {
+		if (!fee) return false;
+		if (fee.feeCalculationBase === "FIXED") {
+			return (fee.feeAmount ?? 0) > 0;
+		}
+		if ((fee.feePercentage ?? 0) > 0) {
+			const base = amount ?? 0;
+			if (base <= 0) return (fee.minFee ?? 0) > 0;
+			return true;
+		}
+		return (fee.minFee ?? 0) > 0;
+	};
+
+	const hasOpeningFees = openingFeeRequiresSourceAccount(openingFee, form.openingAmount);
 
 	// Calculer le montant des frais d'ouverture (pour affichage uniquement, pas pour pré-remplir)
 	const calculateOpeningFeeAmount = (): number | undefined => {
 		if (!openingFee) return undefined;
 		
-		// Pour les frais fixes, utiliser feeAmount
-		if (openingFee.feeCalculationBase === "FIXED" && openingFee.feeAmount) {
+		// Pour les frais fixes, utiliser feeAmount (y compris 0)
+		if (openingFee.feeCalculationBase === "FIXED" && openingFee.feeAmount != null) {
 			return openingFee.feeAmount;
 		}
 		
@@ -391,7 +405,7 @@ export default function NewAccountPage() {
 									<p className="text-sm text-gray-700 mb-2">{selectedProduct.description}</p>
 								)}
 								<div className="grid grid-cols-2 gap-3 text-sm">
-									{typeof selectedProduct.minBalance === 'number' && (
+									{typeof selectedProduct.minBalance === 'number' && selectedProduct.minBalance > 0 && (
 										<div>
 											<span className="text-gray-600">{t("account.new.minAmount", { 
 												amount: selectedProduct.minBalance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 
@@ -399,7 +413,7 @@ export default function NewAccountPage() {
 											})}</span>
 										</div>
 									)}
-									{typeof selectedProduct.maxBalance === 'number' && (
+									{typeof selectedProduct.maxBalance === 'number' && selectedProduct.maxBalance > 0 && (
 										<div>
 											<span className="text-gray-600">{t("account.new.maxAmount", { 
 												amount: selectedProduct.maxBalance.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 
@@ -470,15 +484,9 @@ export default function NewAccountPage() {
 							min="0"
 							value={form.openingAmount ?? ""}
 							onChange={(e) => update("openingAmount", e.target.value ? Number(e.target.value) : undefined)}
-							placeholder="0.00"
 							className="w-full"
 						/>
-						{selectedProduct && (
-							<p className="text-xs text-gray-500 mt-2">
-								{t("account.new.currencyLabel", { currency: selectedProduct.currency })}
-							</p>
-						)}
-						{openingFee && openingFeeAmount && (
+						{openingFee && openingFeeAmount != null && openingFeeAmount > 0 && (
 							<div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
 								<div className="flex items-center gap-2">
 									<svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,22 +501,6 @@ export default function NewAccountPage() {
 								</div>
 							</div>
 						)}
-					</div>
-
-					{/* Devise */}
-					<div>
-						<label className="block text-sm font-semibold text-gray-900 mb-2">
-							{t("account.new.currency")}
-						</label>
-						<Input
-							value={form.currency ?? selectedProduct?.currency ?? "XAF"}
-							onChange={(e) => update("currency", e.target.value || undefined)}
-							placeholder="XAF"
-							maxLength={3}
-							disabled
-							className="w-full bg-gray-50 cursor-not-allowed"
-						/>
-						<p className="text-xs text-gray-500 mt-2">{t("account.new.currencyHint")}</p>
 					</div>
 
 					{/* Compte source pour les frais d'ouverture */}

@@ -3,20 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import { chartOfAccountsApi } from "@/lib/api";
 import type { CreateChartOfAccountRequest, ChartOfAccount, AccountType } from "@/types";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
-const ACCOUNT_TYPE_OPTIONS: { value: AccountType; label: string }[] = [
-	{ value: "ASSET", label: "Actif" },
-	{ value: "LIABILITY", label: "Passif" },
-	{ value: "EQUITY", label: "Capitaux propres" },
-	{ value: "REVENUE", label: "Produit" },
-	{ value: "EXPENSE", label: "Charge" }
-];
+const ACCOUNT_TYPES: AccountType[] = ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"];
 
 export default function NewChartOfAccountPage() {
+	const { t, i18n } = useTranslation();
 	const router = useRouter();
 	const [form, setForm] = useState<CreateChartOfAccountRequest>({
 		code: "",
@@ -35,6 +32,10 @@ export default function NewChartOfAccountPage() {
 	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
 	useEffect(() => {
+		// Re-render when language changes
+	}, [i18n.language]);
+
+	useEffect(() => {
 		loadRootAccounts();
 	}, []);
 
@@ -43,8 +44,7 @@ export default function NewChartOfAccountPage() {
 		try {
 			const data = await chartOfAccountsApi.getRootAccounts();
 			setRootAccounts(Array.isArray(data) ? data : []);
-		} catch (e: any) {
-			// Optionnel : ne pas bloquer la page si la liste des racines échoue
+		} catch {
 			setRootAccounts([]);
 		} finally {
 			setLoading(false);
@@ -54,10 +54,10 @@ export default function NewChartOfAccountPage() {
 	function validate(): boolean {
 		const errors: Record<string, string> = {};
 		if (!form.code?.trim()) {
-			errors.code = "Le code est requis";
+			errors.code = t("chartOfAccount.form.codeRequired");
 		}
 		if (!form.name?.trim()) {
-			errors.name = "Le nom est requis";
+			errors.name = t("chartOfAccount.form.nameRequired");
 		}
 		setValidationErrors(errors);
 		return Object.keys(errors).length === 0;
@@ -83,8 +83,9 @@ export default function NewChartOfAccountPage() {
 
 			const created = await chartOfAccountsApi.create(payload);
 			router.push(`/chart-of-accounts/${created.id}`);
-		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors de la création du compte comptable");
+		} catch (e: unknown) {
+			const message = e instanceof Error ? e.message : undefined;
+			setError(message ?? t("chartOfAccount.createError"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -92,15 +93,14 @@ export default function NewChartOfAccountPage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Breadcrumb et en-tête */}
 			<nav className="flex items-center gap-2 text-sm text-gray-600">
 				<Link href="/chart-of-accounts" className="hover:text-gray-900">
-					Plan Comptable
+					{t("chartOfAccount.form.breadcrumb")}
 				</Link>
 				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
 				</svg>
-				<span className="text-gray-900 font-medium">Nouveau compte</span>
+				<span className="text-gray-900 font-medium">{t("chartOfAccount.form.newBreadcrumb")}</span>
 			</nav>
 
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -112,8 +112,8 @@ export default function NewChartOfAccountPage() {
 							</svg>
 						</div>
 						<div>
-							<h1 className="text-2xl font-bold text-gray-900">Nouveau compte comptable</h1>
-							<p className="text-gray-500 mt-1">Créez un nouveau compte dans le plan comptable.</p>
+							<h1 className="text-2xl font-bold text-gray-900">{t("chartOfAccount.form.newTitle")}</h1>
+							<p className="text-gray-500 mt-1">{t("chartOfAccount.form.newSubtitle")}</p>
 						</div>
 					</div>
 				</div>
@@ -132,27 +132,27 @@ export default function NewChartOfAccountPage() {
 				<div className="p-6 space-y-4">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+							<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.code")}</label>
 							<Input
 								value={form.code}
 								onChange={e => {
 									setForm({ ...form, code: e.target.value });
 									if (validationErrors.code) setValidationErrors({ ...validationErrors, code: "" });
 								}}
-								placeholder="ex: 101"
+								placeholder={t("chartOfAccount.form.codePlaceholder")}
 								required
 							/>
 							{validationErrors.code && <p className="text-xs text-red-600 mt-1">{validationErrors.code}</p>}
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+							<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.name")}</label>
 							<Input
 								value={form.name}
 								onChange={e => {
 									setForm({ ...form, name: e.target.value });
 									if (validationErrors.name) setValidationErrors({ ...validationErrors, name: "" });
 								}}
-								placeholder="ex: Caisse"
+								placeholder={t("chartOfAccount.form.namePlaceholder")}
 								required
 							/>
 							{validationErrors.name && <p className="text-xs text-red-600 mt-1">{validationErrors.name}</p>}
@@ -160,50 +160,51 @@ export default function NewChartOfAccountPage() {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Type de compte *</label>
+						<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.accountType")}</label>
 						<select
 							value={form.accountType}
 							onChange={e => setForm({ ...form, accountType: e.target.value as AccountType })}
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						>
-							{ACCOUNT_TYPE_OPTIONS.map(opt => (
-								<option key={opt.value} value={opt.value}>
-									{opt.label}
+							{ACCOUNT_TYPES.map(type => (
+								<option key={type} value={type}>
+									{t(`chartOfAccount.accountTypes.${type}`)}
 								</option>
 							))}
 						</select>
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+						<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.description")}</label>
 						<textarea
 							className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 							value={form.description || ""}
 							onChange={e => setForm({ ...form, description: e.target.value })}
 							rows={3}
-							placeholder="Description optionnelle"
+							placeholder={t("chartOfAccount.form.descriptionPlaceholder")}
 						/>
 					</div>
 
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Compte parent (code)</label>
+							<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.parentAccount")}</label>
 							<select
 								value={form.parentCode || ""}
 								onChange={e => setForm({ ...form, parentCode: e.target.value || undefined })}
 								className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								disabled={loading}
 							>
-								<option value="">— Aucun (compte racine) —</option>
+								<option value="">{t("chartOfAccount.form.noParent")}</option>
 								{rootAccounts.map(acc => (
 									<option key={acc.id} value={acc.code}>
 									{acc.code} — {acc.name}
 									</option>
 								))}
 							</select>
-							<p className="text-xs text-gray-500 mt-1">Laissez vide pour un compte racine.</p>
+							<p className="text-xs text-gray-500 mt-1">{t("chartOfAccount.form.parentHint")}</p>
 						</div>
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">Niveau</label>
+							<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.level")}</label>
 							<Input
 								type="number"
 								min={1}
@@ -214,11 +215,11 @@ export default function NewChartOfAccountPage() {
 					</div>
 
 					<div>
-						<label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+						<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.form.category")}</label>
 						<Input
 							value={form.category || ""}
 							onChange={e => setForm({ ...form, category: e.target.value })}
-							placeholder="Optionnel"
+							placeholder={t("chartOfAccount.form.categoryPlaceholder")}
 							maxLength={50}
 						/>
 					</div>
@@ -231,7 +232,7 @@ export default function NewChartOfAccountPage() {
 								onChange={e => setForm({ ...form, isActive: e.target.checked })}
 								className="rounded"
 							/>
-							<span className="text-sm text-gray-700">Compte actif</span>
+							<span className="text-sm text-gray-700">{t("chartOfAccount.form.active")}</span>
 						</label>
 					</div>
 				</div>
@@ -239,11 +240,11 @@ export default function NewChartOfAccountPage() {
 				<div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
 					<Link href="/chart-of-accounts">
 						<Button type="button" variant="outline">
-							Annuler
+							{t("chartOfAccount.cancel")}
 						</Button>
 					</Link>
 					<Button type="submit" disabled={submitting}>
-						{submitting ? "Création..." : "Créer le compte"}
+						{submitting ? t("chartOfAccount.form.creating") : t("chartOfAccount.form.create")}
 					</Button>
 				</div>
 			</form>

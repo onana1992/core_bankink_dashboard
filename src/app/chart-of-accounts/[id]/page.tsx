@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import "@/lib/i18n";
 import { chartOfAccountsApi } from "@/lib/api";
+import { translateApiError } from "@/lib/translateApiError";
 import { showToast } from "@/lib/toast";
 import type { ChartOfAccount, AccountType, UpdateChartOfAccountRequest } from "@/types";
 import Button from "@/components/ui/Button";
@@ -11,6 +14,8 @@ import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
 
 export default function ChartOfAccountDetailPage() {
+	const { t, i18n } = useTranslation();
+	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const params = useParams();
 	const router = useRouter();
 	const accountId = params.id as string;
@@ -27,6 +32,10 @@ export default function ChartOfAccountDetailPage() {
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+	useEffect(() => {
+		// Re-render when language changes
+	}, [i18n.language]);
 
 	useEffect(() => {
 		if (accountId) {
@@ -61,22 +70,16 @@ export default function ChartOfAccountDetailPage() {
 					setChildren([]);
 				}
 			}
-		} catch (e: any) {
-			setError(e?.message ?? "Erreur lors du chargement du compte comptable");
+		} catch (e: unknown) {
+			const raw = e instanceof Error ? e.message : "";
+			setError(raw ? translateApiError(raw, t) : t("chartOfAccount.detail.loadError"));
 		} finally {
 			setLoading(false);
 		}
 	}
 
 	function getAccountTypeLabel(type: AccountType): string {
-		const labels: Record<AccountType, string> = {
-			ASSET: "Actif",
-			LIABILITY: "Passif",
-			EQUITY: "Capitaux propres",
-			REVENUE: "Produit",
-			EXPENSE: "Charge"
-		};
-		return labels[type] || type;
+		return t(`chartOfAccount.accountTypes.${type}`) || type;
 	}
 
 	function getAccountTypeBadgeVariant(type: AccountType): "neutral" | "success" | "warning" | "danger" | "info" {
@@ -99,7 +102,7 @@ export default function ChartOfAccountDetailPage() {
 	function validateForm(): boolean {
 		const errors: Record<string, string> = {};
 		if (!editForm.name?.trim()) {
-			errors.name = "Le nom est requis";
+			errors.name = t("chartOfAccount.detail.nameRequired");
 		}
 		setValidationErrors(errors);
 		return Object.keys(errors).length === 0;
@@ -114,10 +117,11 @@ export default function ChartOfAccountDetailPage() {
 		try {
 			await chartOfAccountsApi.update(account.id, editForm);
 			setShowEditForm(false);
+			showToast(t("chartOfAccount.detail.updateSuccess"), "success");
 			loadAccount();
-		} catch (e: any) {
-			const errorMessage = e?.message || "Erreur lors de la modification";
-			setError(errorMessage);
+		} catch (e: unknown) {
+			const raw = e instanceof Error ? e.message : "";
+			setError(raw ? translateApiError(raw, t) : t("chartOfAccount.updateError"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -126,26 +130,37 @@ export default function ChartOfAccountDetailPage() {
 	async function handleToggleActive() {
 		if (!account) return;
 		try {
+			const activating = !account.isActive;
 			await chartOfAccountsApi.update(account.id, {
-				isActive: !account.isActive
+				isActive: activating
 			});
+			showToast(
+				activating ? t("chartOfAccount.detail.activateSuccess") : t("chartOfAccount.detail.deactivateSuccess"),
+				"success"
+			);
 			loadAccount();
-		} catch (e: any) {
-			showToast(e?.message || "Erreur lors de la modification", "error");
+		} catch (e: unknown) {
+			const raw = e instanceof Error ? e.message : "";
+			showToast(raw ? translateApiError(raw, t) : t("chartOfAccount.updateError"), "error");
 		}
 	}
 
 	async function handleDelete() {
 		if (!account) return;
-		if (!confirm(`Êtes-vous sûr de vouloir supprimer le compte comptable "${account.name}" ?\n\nCette action est irréversible.`)) {
+		if (!confirm(t("chartOfAccount.detail.confirmDelete", { name: account.name }))) {
 			return;
 		}
 		try {
 			await chartOfAccountsApi.delete(account.id);
 			router.push("/chart-of-accounts");
-		} catch (e: any) {
-			showToast(e?.message || "Erreur lors de la suppression", "error");
+		} catch (e: unknown) {
+			const raw = e instanceof Error ? e.message : "";
+			showToast(raw ? translateApiError(raw, t) : t("chartOfAccount.deleteError"), "error");
 		}
+	}
+
+	function displayValue(value: string | null | undefined): string {
+		return value?.trim() ? value : t("chartOfAccount.detail.noValue");
 	}
 
 	if (loading) {
@@ -153,7 +168,7 @@ export default function ChartOfAccountDetailPage() {
 			<div className="space-y-6">
 				<div className="bg-white p-12 rounded-xl shadow-sm border border-gray-200 text-center">
 					<div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-					<p className="mt-4 text-gray-600">Chargement du compte comptable...</p>
+					<p className="mt-4 text-gray-600">{t("chartOfAccount.detail.loading")}</p>
 				</div>
 			</div>
 		);
@@ -167,8 +182,8 @@ export default function ChartOfAccountDetailPage() {
 						<path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
 					</svg>
 					<div>
-						<div className="font-medium">Erreur</div>
-						<div className="text-sm mt-1">{error ?? "Compte comptable non trouvé"}</div>
+						<div className="font-medium">{t("common.error")}</div>
+						<div className="text-sm mt-1">{error ?? t("chartOfAccount.detail.notFound")}</div>
 					</div>
 				</div>
 				<Link href="/chart-of-accounts">
@@ -176,7 +191,7 @@ export default function ChartOfAccountDetailPage() {
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
 						</svg>
-						Retour à la liste
+						{t("common.back")}
 					</Button>
 				</Link>
 			</div>
@@ -185,10 +200,9 @@ export default function ChartOfAccountDetailPage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Breadcrumb */}
 			<nav className="flex items-center gap-2 text-sm text-gray-600">
 				<Link href="/chart-of-accounts" className="hover:text-gray-900">
-					Plan Comptable
+					{t("sidebar.chartOfAccounts")}
 				</Link>
 				<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -212,7 +226,7 @@ export default function ChartOfAccountDetailPage() {
 								{getAccountTypeLabel(account.accountType)}
 							</Badge>
 							<Badge variant={account.isActive ? "success" : "neutral"}>
-								{account.isActive ? "Actif" : "Inactif"}
+								{account.isActive ? t("chartOfAccount.table.active") : t("chartOfAccount.table.inactive")}
 							</Badge>
 						</div>
 					</div>
@@ -222,25 +236,25 @@ export default function ChartOfAccountDetailPage() {
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 						</svg>
-						Actualiser
+						{t("common.refresh")}
 					</Button>
 					<Button onClick={() => setShowEditForm(!showEditForm)} variant="outline" className="flex items-center gap-2">
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
 						</svg>
-						{showEditForm ? "Annuler" : "Modifier"}
+						{showEditForm ? t("common.cancel") : t("common.edit")}
 					</Button>
 					<Button onClick={handleToggleActive} variant="outline" className="flex items-center gap-2">
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={account.isActive ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"} />
 						</svg>
-						{account.isActive ? "Désactiver" : "Activer"}
+						{account.isActive ? t("chartOfAccount.detail.deactivate") : t("chartOfAccount.detail.activate")}
 					</Button>
 					<Button onClick={handleDelete} variant="outline" className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:border-red-300">
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 						</svg>
-						Supprimer
+						{t("common.delete")}
 					</Button>
 				</div>
 			</div>
@@ -259,7 +273,7 @@ export default function ChartOfAccountDetailPage() {
 			{showEditForm && (
 				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 					<div className="flex justify-between items-center mb-4">
-						<h2 className="text-lg font-semibold text-gray-900">Modifier le compte comptable</h2>
+						<h2 className="text-lg font-semibold text-gray-900">{t("chartOfAccount.detail.editTitle")}</h2>
 						<Button
 							type="button"
 							variant="outline"
@@ -268,6 +282,7 @@ export default function ChartOfAccountDetailPage() {
 								setShowEditForm(false);
 								setValidationErrors({});
 							}}
+							aria-label={t("chartOfAccount.detail.closeForm")}
 						>
 							✕
 						</Button>
@@ -275,7 +290,7 @@ export default function ChartOfAccountDetailPage() {
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div className="grid grid-cols-2 gap-4">
 							<div className="col-span-2">
-								<label className="block text-sm font-medium text-gray-700 mb-1">Nom *</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("common.name")} *</label>
 								<Input
 									value={editForm.name || ""}
 									onChange={e => {
@@ -291,7 +306,7 @@ export default function ChartOfAccountDetailPage() {
 								)}
 							</div>
 							<div className="col-span-2">
-								<label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.detail.description")}</label>
 								<textarea
 									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 									value={editForm.description || ""}
@@ -300,7 +315,7 @@ export default function ChartOfAccountDetailPage() {
 								/>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">Catégorie</label>
+								<label className="block text-sm font-medium text-gray-700 mb-1">{t("chartOfAccount.detail.category")}</label>
 								<Input
 									value={editForm.category || ""}
 									onChange={e => setEditForm({ ...editForm, category: e.target.value })}
@@ -315,16 +330,16 @@ export default function ChartOfAccountDetailPage() {
 										onChange={e => setEditForm({ ...editForm, isActive: e.target.checked })}
 										className="rounded"
 									/>
-									<span className="text-sm text-gray-700">Actif</span>
+									<span className="text-sm text-gray-700">{t("chartOfAccount.form.active")}</span>
 								</label>
 							</div>
 						</div>
 						<div className="flex justify-end gap-2 mt-4">
 							<Button type="button" variant="outline" onClick={() => setShowEditForm(false)}>
-								Annuler
+								{t("common.cancel")}
 							</Button>
 							<Button type="submit" disabled={submitting}>
-								{submitting ? "Modification..." : "Enregistrer"}
+								{submitting ? t("chartOfAccount.saving") : t("common.update")}
 							</Button>
 						</div>
 					</form>
@@ -342,38 +357,57 @@ export default function ChartOfAccountDetailPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
 							</span>
-							Informations générales
+							{t("chartOfAccount.detail.generalInfo")}
 						</h3>
 					</div>
 					<dl className="divide-y divide-gray-100">
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Description</dt>
-							<dd className="text-sm text-gray-900">{account.description || "-"}</dd>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.code")}</dt>
+							<dd className="text-sm text-gray-900 font-mono font-medium">{account.code}</dd>
 						</div>
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Catégorie</dt>
-							<dd className="text-sm text-gray-900">{account.category || "-"}</dd>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.accountType")}</dt>
+							<dd className="text-sm text-gray-900">
+								<Badge variant={getAccountTypeBadgeVariant(account.accountType)}>
+									{getAccountTypeLabel(account.accountType)}
+								</Badge>
+							</dd>
 						</div>
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Niveau</dt>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.status")}</dt>
+							<dd className="text-sm text-gray-900">
+								<Badge variant={account.isActive ? "success" : "neutral"}>
+									{account.isActive ? t("chartOfAccount.table.active") : t("chartOfAccount.table.inactive")}
+								</Badge>
+							</dd>
+						</div>
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.description")}</dt>
+							<dd className="text-sm text-gray-900">{displayValue(account.description)}</dd>
+						</div>
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.category")}</dt>
+							<dd className="text-sm text-gray-900">{displayValue(account.category)}</dd>
+						</div>
+						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.level")}</dt>
 							<dd className="text-sm text-gray-900 font-medium">{account.level}</dd>
 						</div>
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Compte parent</dt>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.parentAccount")}</dt>
 							<dd className="text-sm text-gray-900">
 								{account.parentCode ? (
 									<Link href={`/chart-of-accounts/by-code/${account.parentCode}`} className="text-blue-600 hover:text-blue-800 hover:underline font-mono">
 										{account.parentCode}
 									</Link>
 								) : (
-									<span className="text-gray-400 italic">Aucun (compte racine)</span>
+									<span className="text-gray-400 italic">{t("chartOfAccount.detail.noParent")}</span>
 								)}
 							</dd>
 						</div>
 					</dl>
 				</div>
 
-				{/* Card Dates et historique */}
 				<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 					<div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 border-b border-gray-200">
 						<h3 className="text-base font-semibold text-gray-800 flex items-center gap-2.5">
@@ -382,26 +416,26 @@ export default function ChartOfAccountDetailPage() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
 							</span>
-							Dates et historique
+							{t("chartOfAccount.detail.datesHistory")}
 						</h3>
 					</div>
 					<dl className="divide-y divide-gray-100">
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Créé le</dt>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("common.createdAt")}</dt>
 							<dd className="text-sm text-gray-900">
-								{account.createdAt ? new Date(account.createdAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+								{account.createdAt ? new Date(account.createdAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) : t("chartOfAccount.detail.noValue")}
 							</dd>
 						</div>
 						<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Modifié le</dt>
+							<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("common.updatedAt")}</dt>
 							<dd className="text-sm text-gray-900">
-								{account.updatedAt ? new Date(account.updatedAt).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }) : "-"}
+								{account.updatedAt ? new Date(account.updatedAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" }) : t("chartOfAccount.detail.noValue")}
 							</dd>
 						</div>
 						{account.createdBy && (
 							<div className="px-6 py-4 flex flex-col sm:flex-row sm:items-start gap-1">
-								<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">Créé par</dt>
-								<dd className="text-sm text-gray-900">Utilisateur #{account.createdBy}</dd>
+								<dt className="text-sm font-medium text-gray-500 shrink-0 sm:w-36">{t("chartOfAccount.detail.createdBy")}</dt>
+								<dd className="text-sm text-gray-900">{t("chartOfAccount.detail.createdByUser", { id: account.createdBy })}</dd>
 							</div>
 						)}
 					</dl>
@@ -415,7 +449,7 @@ export default function ChartOfAccountDetailPage() {
 						<svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
 						</svg>
-						Sous-comptes ({children.length})
+						{t("chartOfAccount.detail.subAccounts", { count: children.length })}
 					</h2>
 				</div>
 				{children.length === 0 ? (
@@ -423,20 +457,20 @@ export default function ChartOfAccountDetailPage() {
 						<svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
 						</svg>
-						<p className="text-gray-500 text-lg font-medium">Aucun sous-compte</p>
-						<p className="text-gray-400 text-sm mt-2">Ce compte n'a pas de sous-comptes associés</p>
+						<p className="text-gray-500 text-lg font-medium">{t("chartOfAccount.detail.noSubAccounts")}</p>
+						<p className="text-gray-400 text-sm mt-2">{t("chartOfAccount.detail.noSubAccountsHint")}</p>
 					</div>
 				) : (
 					<div className="overflow-x-auto">
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Code</th>
-									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48 max-w-xs">Nom</th>
-									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Type</th>
-									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Niveau</th>
-									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Statut</th>
-									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("chartOfAccount.table.code")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48 max-w-xs">{t("common.name")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("common.type")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("chartOfAccount.table.level")}</th>
+									<th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("common.status")}</th>
+									<th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("common.actions")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">
@@ -460,7 +494,7 @@ export default function ChartOfAccountDetailPage() {
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap">
 											<Badge variant={child.isActive ? "success" : "neutral"}>
-												{child.isActive ? "Actif" : "Inactif"}
+												{child.isActive ? t("chartOfAccount.table.active") : t("chartOfAccount.table.inactive")}
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
@@ -470,7 +504,7 @@ export default function ChartOfAccountDetailPage() {
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
 													</svg>
-													Voir
+													{t("chartOfAccount.table.view")}
 												</Button>
 											</Link>
 										</td>

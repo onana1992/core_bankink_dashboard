@@ -969,7 +969,11 @@ export const productsApi = {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
-		return handleJsonResponse<{ content: Product[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		const body = await handleJsonResponse<Record<string, unknown>>(res);
+		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
+			throw new Error("Liste produits : réponse invalide ou vide.");
+		}
+		return normalizeSpringPagePayload<Product>(body);
 	},
 
 	async create(payload: CreateProductRequest): Promise<Product> {
@@ -2336,6 +2340,14 @@ export const ledgerAccountsApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<LedgerEntry[]>(res);
+	},
+
+	async recalculateBalance(id: number | string): Promise<{ ledgerAccountId: number; date: string; balance: number }> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/ledger-accounts/${id}/recalculate-balance`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse(res);
 	}
 };
 

@@ -118,7 +118,21 @@ export interface CreateProductFeeRequest {
 }
 
 // Limits
-export type LimitType = "MIN_BALANCE" | "MAX_BALANCE" | "MIN_TRANSACTION" | "MAX_TRANSACTION" | "DAILY_LIMIT" | "WEEKLY_LIMIT" | "MONTHLY_LIMIT" | "ANNUAL_LIMIT" | "CARD_LIMIT";
+export type LimitType =
+	| "MIN_BALANCE"
+	| "MAX_BALANCE"
+	| "MIN_TRANSACTION"
+	| "MAX_TRANSACTION"
+	| "MIN_DEPOSIT_AMOUNT"
+	| "MAX_DEPOSIT_AMOUNT"
+	| "MIN_LOAN_AMOUNT"
+	| "MAX_LOAN_AMOUNT"
+	| "DAILY_LIMIT"
+	| "WEEKLY_LIMIT"
+	| "MONTHLY_LIMIT"
+	| "ANNUAL_LIMIT"
+	| "WITHDRAWAL_LIMIT"
+	| "CARD_LIMIT";
 export type PeriodType = "TRANSACTION" | "DAILY" | "WEEKLY" | "MONTHLY" | "ANNUAL" | "LIFETIME";
 
 export interface ProductLimit {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { ledgerAccountsApi, chartOfAccountsApi } from "@/lib/api";
-import { formatAmount } from "@/lib/utils";
+import { computeLedgerBalanceFromTotals, formatAmount } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import type { LedgerAccount, AccountType, LedgerAccountStatus, ChartOfAccount, UpdateLedgerAccountRequest, LedgerEntry } from "@/types";
 import Button from "@/components/ui/Button";
@@ -187,13 +187,16 @@ export default function LedgerAccountDetailPage() {
 	const entriesStats = useMemo(() => {
 		const totalDebit = entries.reduce((sum, e) => sum + (e.debitAmount || 0), 0);
 		const totalCredit = entries.reduce((sum, e) => sum + (e.creditAmount || 0), 0);
+		const balance = account
+			? computeLedgerBalanceFromTotals(account.accountType, totalDebit, totalCredit)
+			: 0;
 		return {
 			totalEntries: entries.length,
 			totalDebit,
 			totalCredit,
-			balance: totalDebit - totalCredit
+			balance
 		};
-	}, [entries]);
+	}, [entries, account]);
 
 	if (loading) {
 		return (
@@ -377,8 +380,9 @@ export default function LedgerAccountDetailPage() {
 					<div className="text-3xl font-bold text-gray-900">
 						{formatAmount(account.balance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
+					{/* GL : pas de holds — solde disponible = solde comptable (recalculé à chaque lecture) */}
 					<div className="text-sm text-gray-500 mt-1">
-						{t("ledgerAccount.detail.availableBalance")}: {formatAmount(account.availableBalance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
+						{t("ledgerAccount.detail.availableBalance")}: {formatAmount(account.balance ?? account.availableBalance ?? 0, account.currency, i18n.language === "fr" ? "fr-FR" : "en-US")}
 					</div>
 				</div>
 				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
