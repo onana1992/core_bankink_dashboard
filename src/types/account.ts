@@ -43,6 +43,8 @@ export interface OpenProductRequest {
 	periodId?: number;
 	currency?: string;
 	sourceAccountId?: number; // Compte source pour les frais d'ouverture (optionnel)
+	/** true = capital initial par virement interne ; absent/false = dépôt guichet (DEPOSIT) */
+	fundOpeningFromSourceAccount?: boolean;
 }
 
 export interface CloseAccountRequest {
