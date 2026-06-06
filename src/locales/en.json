@@ -1596,6 +1596,7 @@
 					"maxPeriodDays": "Maximum period (days)",
 					"calculationMethod": "Calculation method *",
 					"compoundingFrequency": "Compounding frequency",
+					"accrualMode": "Payout mode",
 					"effectiveFrom": "Effective from *",
 					"effectiveTo": "Effective to",
 					"isActive": "Active",
@@ -1622,6 +1623,8 @@
 					"QUARTERLY": "Quarterly",
 					"YEARLY": "Yearly"
 				},
+				"dailyAccrual": "Daily accrual",
+				"monthlyPayout": "Monthly payout",
 				"table": {
 					"type": "Type",
 					"value": "Rate",
@@ -1634,7 +1637,6 @@
 					"actions": "Actions"
 				},
 				"confirmDelete": "Are you sure you want to delete this interest rate?",
-				"debugRatesLoaded": "Debug: {{count}} rates loaded",
 				"modal": {
 					"title": "Interest rate details",
 					"rateType": "Rate type",
@@ -1645,6 +1647,7 @@
 					"maxPeriodDays": "Maximum period (days)",
 					"calculationMethod": "Calculation method",
 					"compoundingFrequency": "Compounding frequency",
+					"accrualMode": "Payout mode",
 					"effectiveFrom": "Effective from",
 					"effectiveTo": "Effective to",
 					"status": "Status",
@@ -1653,7 +1656,8 @@
 					"close": "Close"
 				},
 				"error": {
-					"invalidRateValue": "Rate value must be a valid number"
+					"invalidRateValue": "Rate value must be a valid number",
+					"compoundingFrequencyRequired": "Compounding frequency is required for compound interest"
 				}
 			},
 			"fees": {

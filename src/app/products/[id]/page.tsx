@@ -8,6 +8,13 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import { productsApi, productGLMappingsApi } from "@/lib/api";
+import {
+	formatInterestRateMethodLabel,
+	normalizeCompoundingFrequency,
+	compoundingFrequencyModalLabel,
+	compoundingFrequencyModalValue,
+	shouldShowCompoundingFrequencyInModal
+} from "@/lib/interestRate";
 import { showToast } from "@/lib/toast";
 import ProductPaymentMethodsTab from "@/components/products/ProductPaymentMethodsTab";
 import {
@@ -986,6 +993,55 @@ function ProductOverviewTab({
 	);
 }
 
+function CompoundingFrequencyField({
+	calculationMethod,
+	value,
+	onChange,
+	t
+}: {
+	calculationMethod: CalculationMethod;
+	value?: CompoundingFrequency;
+	onChange: (value: CompoundingFrequency | undefined) => void;
+	t: (key: string) => string;
+}) {
+	const isCompound = calculationMethod === "COMPOUND";
+	return (
+		<div>
+			<label className="block text-sm mb-1">
+				{isCompound
+					? t("product.detail.rates.form.compoundingFrequency")
+					: t("product.detail.rates.form.accrualMode")}
+			</label>
+			<select
+				className="w-full rounded-md border bg-white px-3 py-2 text-sm"
+				value={value ?? ""}
+				onChange={e =>
+					onChange(e.target.value ? (e.target.value as CompoundingFrequency) : undefined)
+				}
+				required={isCompound}
+			>
+				<option value="">
+					{isCompound
+						? t("product.detail.rates.form.selectOption")
+						: t("product.detail.rates.monthlyPayout")}
+				</option>
+				<option value="DAILY">
+					{isCompound
+						? t("product.detail.rates.compoundingFrequencies.DAILY")
+						: t("product.detail.rates.dailyAccrual")}
+				</option>
+				{isCompound && (
+					<>
+						<option value="MONTHLY">{t("product.detail.rates.compoundingFrequencies.MONTHLY")}</option>
+						<option value="QUARTERLY">{t("product.detail.rates.compoundingFrequencies.QUARTERLY")}</option>
+						<option value="YEARLY">{t("product.detail.rates.compoundingFrequencies.YEARLY")}</option>
+					</>
+				)}
+			</select>
+		</div>
+	);
+}
+
 // Component for Interest Rates Tab
 function InterestRatesTab({
 	productId,
@@ -1034,6 +1090,30 @@ function InterestRatesTab({
 		}
 	}, [showForm]);
 
+	function handleCalculationMethodChange(calculationMethod: CalculationMethod) {
+		setForm({
+			...form,
+			calculationMethod,
+			compoundingFrequency: normalizeCompoundingFrequency(calculationMethod, form.compoundingFrequency)
+		});
+	}
+
+	function buildInterestRatePayload(rateValue: number): CreateProductInterestRateRequest {
+		return {
+			...form,
+			rateValue,
+			compoundingFrequency: normalizeCompoundingFrequency(form.calculationMethod, form.compoundingFrequency)
+		};
+	}
+
+	function validateCompoundingFrequency(): boolean {
+		if (form.calculationMethod === "COMPOUND" && !form.compoundingFrequency) {
+			setError(t("product.detail.rates.error.compoundingFrequencyRequired"));
+			return false;
+		}
+		return true;
+	}
+
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
 		setSubmitting(true);
@@ -1046,7 +1126,11 @@ function InterestRatesTab({
 				setSubmitting(false);
 				return;
 			}
-			await productsApi.addInterestRate(productId, { ...form, rateValue });
+			if (!validateCompoundingFrequency()) {
+				setSubmitting(false);
+				return;
+			}
+			await productsApi.addInterestRate(productId, buildInterestRatePayload(rateValue));
 			onCloseForm();
 			setForm({
 				rateType: "DEPOSIT",
@@ -1151,7 +1235,7 @@ function InterestRatesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.calculationMethod}
-								onChange={e => setForm({ ...form, calculationMethod: e.target.value as CalculationMethod })}
+								onChange={e => handleCalculationMethodChange(e.target.value as CalculationMethod)}
 								required
 							>
 								<option value="SIMPLE">{t("product.detail.rates.calculationMethods.SIMPLE")}</option>
@@ -1159,22 +1243,14 @@ function InterestRatesTab({
 								<option value="FLOATING">{t("product.detail.rates.calculationMethods.FLOATING")}</option>
 							</select>
 						</div>
-						{form.calculationMethod === "COMPOUND" && (
-							<div>
-								<label className="block text-sm mb-1">{t("product.detail.rates.form.compoundingFrequency")}</label>
-								<select
-									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-									value={form.compoundingFrequency ?? ""}
-									onChange={e => setForm({ ...form, compoundingFrequency: e.target.value as CompoundingFrequency })}
-								>
-									<option value="">{t("product.detail.rates.form.selectOption")}</option>
-									<option value="DAILY">{t("product.detail.rates.compoundingFrequencies.DAILY")}</option>
-									<option value="MONTHLY">{t("product.detail.rates.compoundingFrequencies.MONTHLY")}</option>
-									<option value="QUARTERLY">{t("product.detail.rates.compoundingFrequencies.QUARTERLY")}</option>
-									<option value="YEARLY">{t("product.detail.rates.compoundingFrequencies.YEARLY")}</option>
-								</select>
-							</div>
-						)}
+						<CompoundingFrequencyField
+							calculationMethod={form.calculationMethod}
+							value={form.compoundingFrequency}
+							onChange={compoundingFrequency =>
+								setForm({ ...form, compoundingFrequency })
+							}
+							t={t}
+						/>
 						<div>
 							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input
@@ -1198,13 +1274,6 @@ function InterestRatesTab({
 						<Button type="button" variant="outline" onClick={onCloseForm}>{t("product.detail.rates.form.cancel")}</Button>
 					</div>
 				</form>
-			)}
-
-			{/* Debug info - à retirer en production */}
-			{process.env.NODE_ENV === 'development' && (
-				<div className="text-xs text-gray-400 mb-2">
-					{t("product.detail.rates.debugRatesLoaded", { count: rates.length })}
-				</div>
 			)}
 
 			{rates.length === 0 ? (
@@ -1239,8 +1308,7 @@ function InterestRatesTab({
 											: "-"}
 									</td>
 									<td className="px-4 py-2">
-										{t(`product.detail.rates.calculationMethods.${rate.calculationMethod}`)}
-										{rate.compoundingFrequency && ` (${t(`product.detail.rates.compoundingFrequencies.${rate.compoundingFrequency}`)})`}
+										{formatInterestRateMethodLabel(rate, t)}
 									</td>
 									<td className="px-4 py-2">
 										<Badge variant={rate.isActive ? "success" : "neutral"}>
@@ -1309,7 +1377,10 @@ function InterestRatesTab({
 																	minPeriodDays: rate.minPeriodDays ?? undefined,
 																	maxPeriodDays: rate.maxPeriodDays ?? undefined,
 																	calculationMethod: rate.calculationMethod,
-																	compoundingFrequency: rate.compoundingFrequency ?? undefined,
+																	compoundingFrequency: normalizeCompoundingFrequency(
+																		rate.calculationMethod,
+																		rate.compoundingFrequency
+																	),
 																	effectiveFrom: rate.effectiveFrom,
 																	effectiveTo: rate.effectiveTo ?? undefined,
 																	isActive: rate.isActive
@@ -1460,15 +1531,17 @@ function InterestRatesTab({
 									</label>
 									<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.rates.calculationMethods.${selectedRate.calculationMethod}`)}</div>
 								</div>
-								{selectedRate.compoundingFrequency && (
+								{shouldShowCompoundingFrequencyInModal(selectedRate) && (
 									<div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
 										<label className="text-xs font-medium text-yellow-700 uppercase tracking-wide mb-2 flex items-center gap-1">
 											<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
 											</svg>
-											{t("product.detail.rates.modal.compoundingFrequency")}
+											{compoundingFrequencyModalLabel(selectedRate, t)}
 										</label>
-										<div className="mt-1 font-semibold text-gray-900">{t(`product.detail.rates.compoundingFrequencies.${selectedRate.compoundingFrequency}`)}</div>
+										<div className="mt-1 font-semibold text-gray-900">
+											{compoundingFrequencyModalValue(selectedRate, t)}
+										</div>
 									</div>
 								)}
 							</div>
@@ -1536,7 +1609,11 @@ function InterestRatesTab({
 							setSubmitting(false);
 							return;
 						}
-						await productsApi.updateInterestRate(productId, selectedRate.id, { ...form, rateValue });
+						if (!validateCompoundingFrequency()) {
+							setSubmitting(false);
+							return;
+						}
+						await productsApi.updateInterestRate(productId, selectedRate.id, buildInterestRatePayload(rateValue));
 						setShowEditForm(false);
 						setSelectedRate(null);
 						setEditRateValueInput("");
@@ -1636,7 +1713,7 @@ function InterestRatesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={form.calculationMethod}
-								onChange={e => setForm({ ...form, calculationMethod: e.target.value as CalculationMethod })}
+								onChange={e => handleCalculationMethodChange(e.target.value as CalculationMethod)}
 								required
 							>
 								<option value="SIMPLE">{t("product.detail.rates.calculationMethods.SIMPLE")}</option>
@@ -1644,22 +1721,14 @@ function InterestRatesTab({
 								<option value="FLOATING">{t("product.detail.rates.calculationMethods.FLOATING")}</option>
 							</select>
 						</div>
-						{form.calculationMethod === "COMPOUND" && (
-							<div>
-								<label className="block text-sm mb-1">{t("product.detail.rates.form.compoundingFrequency")}</label>
-								<select
-									className="w-full rounded-md border bg-white px-3 py-2 text-sm"
-									value={form.compoundingFrequency ?? ""}
-									onChange={e => setForm({ ...form, compoundingFrequency: e.target.value as CompoundingFrequency })}
-								>
-									<option value="">{t("product.detail.rates.form.selectOption")}</option>
-									<option value="DAILY">{t("product.detail.rates.compoundingFrequencies.DAILY")}</option>
-									<option value="MONTHLY">{t("product.detail.rates.compoundingFrequencies.MONTHLY")}</option>
-									<option value="QUARTERLY">{t("product.detail.rates.compoundingFrequencies.QUARTERLY")}</option>
-									<option value="YEARLY">{t("product.detail.rates.compoundingFrequencies.YEARLY")}</option>
-								</select>
-							</div>
-						)}
+						<CompoundingFrequencyField
+							calculationMethod={form.calculationMethod}
+							value={form.compoundingFrequency}
+							onChange={compoundingFrequency =>
+								setForm({ ...form, compoundingFrequency })
+							}
+							t={t}
+						/>
 						<div>
 							<label className="block text-sm mb-1">{t("product.detail.rates.form.effectiveFrom")}</label>
 							<Input

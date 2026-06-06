@@ -1586,6 +1586,7 @@
 					"maxPeriodDays": "Période maximum (jours)",
 					"calculationMethod": "Méthode de calcul *",
 					"compoundingFrequency": "Fréquence de capitalisation",
+					"accrualMode": "Mode de versement",
 					"effectiveFrom": "Date d'effet *",
 					"effectiveTo": "Date de fin",
 					"isActive": "Actif",
@@ -1612,6 +1613,8 @@
 					"QUARTERLY": "Trimestriel",
 					"YEARLY": "Annuel"
 				},
+				"dailyAccrual": "Courus quotidiens",
+				"monthlyPayout": "Versement mensuel",
 				"table": {
 					"type": "Type",
 					"value": "Taux",
@@ -1624,7 +1627,6 @@
 					"actions": "Actions"
 				},
 				"confirmDelete": "Êtes-vous sûr de vouloir supprimer ce taux d'intérêt ?",
-				"debugRatesLoaded": "Debug : {{count}} taux chargés",
 				"modal": {
 					"title": "Détails du taux d'intérêt",
 					"rateType": "Type de taux",
@@ -1635,6 +1637,7 @@
 					"maxPeriodDays": "Période maximum (jours)",
 					"calculationMethod": "Méthode de calcul",
 					"compoundingFrequency": "Fréquence de capitalisation",
+					"accrualMode": "Mode de versement",
 					"effectiveFrom": "Date d'effet",
 					"effectiveTo": "Date de fin",
 					"status": "Statut",
@@ -1643,7 +1646,8 @@
 					"close": "Fermer"
 				},
 				"error": {
-					"invalidRateValue": "La valeur du taux doit être un nombre valide"
+					"invalidRateValue": "La valeur du taux doit être un nombre valide",
+					"compoundingFrequencyRequired": "La fréquence de capitalisation est requise pour les intérêts composés"
 				}
 			},
 			"fees": {
