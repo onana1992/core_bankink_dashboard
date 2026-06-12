@@ -14,4 +14,5 @@ export * from './paymentMethod';
 export * from './aml';
 export * from './kycCatalog';
 export * from './ui';
+export * from './systemClock';
 

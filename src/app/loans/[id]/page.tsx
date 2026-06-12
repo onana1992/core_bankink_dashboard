@@ -94,7 +94,10 @@ export default function LoanDetailPage() {
 			const accounts = await accountsApi.getClientAccounts(clientId);
 			// Exclure le compte prêt et ne garder que les comptes ACTIVE
 			const eligible = accounts.filter(
-				(a) => a.id !== loan?.id && a.status === "ACTIVE"
+				(a) =>
+					a.id !== loan?.id &&
+					a.status === "ACTIVE" &&
+					(a.product?.category === "CURRENT_ACCOUNT" || a.product?.category === "SAVINGS_ACCOUNT")
 			);
 			setClientAccounts(eligible);
 		} catch (e: any) {
@@ -121,7 +124,10 @@ export default function LoanDetailPage() {
 	}
 
 	const hasPendingOrPartial = schedule.some((r) => r.status === "PENDING" || r.status === "PARTIAL");
-	const canRepay = loan?.status === "ACTIVE" && Number(loan?.balance ?? 0) > 0;
+	const canRepay =
+		loan?.status === "ACTIVE" &&
+		loan?.disbursedAt != null &&
+		Number(loan?.balance ?? 0) > 0;
 
 	async function openRepayModal() {
 		if (!clientId) return;

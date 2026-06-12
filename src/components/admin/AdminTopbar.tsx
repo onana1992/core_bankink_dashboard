@@ -5,6 +5,7 @@ import { ChevronDown, LogOut, PanelLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import SystemClockWidget from "@/components/admin/SystemClockWidget";
 import type { LoginResponse } from "@/types";
 
 function initials(user: NonNullable<LoginResponse["user"]>): string {
@@ -57,6 +58,7 @@ export default function AdminTopbar({ onToggleSidebar }: { onToggleSidebar?: () 
 				</div>
 
 				<div className="flex shrink-0 items-center gap-2 md:gap-3">
+					<SystemClockWidget />
 					<div className="hidden h-6 w-px bg-slate-200 sm:block" aria-hidden />
 					<LanguageSwitcher
 						buttonClassName="h-10 gap-2 rounded-xl border-slate-200/90 bg-white px-3 py-0 text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50"

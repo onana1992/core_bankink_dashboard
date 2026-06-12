@@ -1,3 +1,7 @@
+import type { Account } from "./account";
+import type { Customer } from "./customer";
+import type { Product, ProductFee, ProductPeriod } from "./product";
+
 export type LoanScheduleStatus = "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
 
 export interface LoanScheduleItem {
@@ -77,9 +81,55 @@ export interface LoanApplication {
 	accountId?: number | null;
 	createdAt?: string;
 	updatedAt?: string;
-	client?: { id: number; displayName: string; email?: string | null };
-	product?: { id: number; code: string; name: string; category: string };
-	period?: { id: number; periodName: string; periodMonths?: number };
+	client?: {
+		id: number;
+		displayName: string;
+		email?: string | null;
+		phone?: string | null;
+		status?: string;
+		riskScore?: number | null;
+	};
+	product?: {
+		id: number;
+		code: string;
+		name: string;
+		category: string;
+		currency?: string;
+		description?: string | null;
+		minBalance?: number | null;
+		maxBalance?: number | null;
+		defaultInterestRate?: number | null;
+	};
+	period?: {
+		id: number;
+		periodName: string;
+		periodDays?: number;
+		periodMonths?: number | null;
+		periodYears?: number | null;
+		interestRate?: number | null;
+		minAmount?: number | null;
+		maxAmount?: number | null;
+	};
+	account?: {
+		id: number;
+		accountNumber: string;
+		status?: string;
+		balance?: number;
+		interestRate?: number | null;
+		disbursedAt?: string | null;
+		maturityDate?: string | null;
+	};
+}
+
+export interface LoanApplicationDetailContext {
+	customer?: Customer | null;
+	product?: Product | null;
+	period?: ProductPeriod | null;
+	sourceAccount?: Account | null;
+	openingFee?: ProductFee | null;
+	simulation?: LoanSimulationResult | null;
+	estimatedOpeningFeeAmount?: number | null;
+	estimatedAnnualRate?: number | null;
 }
 
 export interface SubmitLoanApplicationRequest {

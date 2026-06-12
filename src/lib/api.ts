@@ -159,7 +159,9 @@ import type {
 	KycRuleDefinitionResponse,
 	CreateKycRuleDefinitionRequest,
 	UpdateKycRuleDefinitionRequest,
-	PagedResponse
+	PagedResponse,
+	SystemClockStatus,
+	UpdateSystemClockRequest
 } from "@/types";
 
 // Validate and set API base URL
@@ -949,6 +951,40 @@ export const complianceApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<VigilanceLastRun>(res);
+	}
+};
+
+export const systemClockApi = {
+	async getStatus(options?: { silent?: boolean }): Promise<SystemClockStatus | null> {
+		const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+		if (!token) {
+			return null;
+		}
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/system-clock`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		if (!res.ok) {
+			if (options?.silent) return null;
+		}
+		return handleJsonResponse<SystemClockStatus>(res, options?.silent);
+	},
+
+	async update(body: UpdateSystemClockRequest): Promise<SystemClockStatus> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/system-clock`, {
+			method: "PUT",
+			headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+			body: JSON.stringify(body)
+		});
+		return handleJsonResponse<SystemClockStatus>(res);
+	},
+
+	async reset(): Promise<SystemClockStatus> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/system-clock/reset`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<SystemClockStatus>(res);
 	}
 };
 
