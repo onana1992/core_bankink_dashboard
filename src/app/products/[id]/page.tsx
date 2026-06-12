@@ -16,6 +16,12 @@ import {
 	shouldShowCompoundingFrequencyInModal
 } from "@/lib/interestRate";
 import { showToast } from "@/lib/toast";
+import {
+	getAllowedAccountTypesForMapping,
+	getDefaultGlMappingType,
+	getGlMappingTypesForCategory,
+	getRequiredGlMappingTypesForCategory
+} from "@/lib/productGlMapping";
 import ProductPaymentMethodsTab from "@/components/products/ProductPaymentMethodsTab";
 import {
 	Edit2,
@@ -559,6 +565,7 @@ export default function ProductDetailPage() {
 				{activeTab === "gl-mappings" && (
 					<ProductGLMappingsTab
 						productId={id}
+						productCategory={product?.category}
 						mappings={glMappings}
 						loading={loadingConfigs}
 						onAdd={() => setShowMappingForm(true)}
@@ -5139,6 +5146,7 @@ function EligibilityRulesTab({
 // Component for Product GL Mappings Tab
 function ProductGLMappingsTab({
 	productId,
+	productCategory,
 	mappings,
 	loading,
 	onAdd,
@@ -5148,6 +5156,7 @@ function ProductGLMappingsTab({
 	onCloseForm
 }: {
 	productId: string;
+	productCategory?: import("@/types").ProductCategory;
 	mappings: import("@/types").ProductGLMapping[];
 	loading?: boolean;
 	onAdd: () => void;
@@ -5157,8 +5166,9 @@ function ProductGLMappingsTab({
 	onCloseForm: () => void;
 }) {
 	const { t } = useTranslation();
+	const availableMappingTypes = getGlMappingTypesForCategory(productCategory);
 	const [form, setForm] = useState<import("@/types").CreateProductGLMappingRequest>({
-		mappingType: "ASSET_ACCOUNT",
+		mappingType: getDefaultGlMappingType(productCategory),
 		ledgerAccountId: 0
 	});
 	const [editingMapping, setEditingMapping] = useState<import("@/types").ProductGLMapping | null>(null);
@@ -5203,16 +5213,7 @@ function ProductGLMappingsTab({
 			} else if (selectedAccount.status !== "ACTIVE") {
 				errors.ledgerAccountId = t("product.detail.glMappings.validation.accountMustBeActive");
 			} else {
-				const requiredTypes: Record<import("@/types").MappingType, import("@/types").AccountType[]> = {
-					ASSET_ACCOUNT: ["ASSET"],
-					LIABILITY_ACCOUNT: ["LIABILITY"],
-					FEE_ACCOUNT: ["EXPENSE", "REVENUE"],
-					INTEREST_ACCOUNT: ["EXPENSE", "REVENUE"],
-					REVENUE_ACCOUNT: ["REVENUE"],
-					EXPENSE_ACCOUNT: ["EXPENSE"]
-				};
-
-				const allowedTypes = requiredTypes[form.mappingType];
+				const allowedTypes = getAllowedAccountTypesForMapping(form.mappingType);
 				if (!allowedTypes.includes(selectedAccount.accountType)) {
 					const typesStr = allowedTypes.map(at => t(`product.detail.glMappings.accountTypes.${at}`)).join(" ou ");
 					errors.ledgerAccountId = t("product.detail.glMappings.validation.accountTypeMismatch", {
@@ -5251,7 +5252,7 @@ function ProductGLMappingsTab({
 			} else {
 				await productGLMappingsApi.create(productId, form);
 			}
-			setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+			setForm({ mappingType: getDefaultGlMappingType(productCategory), ledgerAccountId: 0 });
 			setEditingMapping(null);
 			onCloseForm();
 			onRefresh();
@@ -5263,30 +5264,19 @@ function ProductGLMappingsTab({
 	}
 
 	function getRequiredAccountTypes(mappingType: import("@/types").MappingType): string {
-		const typeKeys: Record<import("@/types").MappingType, "ASSET" | "LIABILITY" | "EXPENSE_OR_REVENUE" | "REVENUE" | "EXPENSE"> = {
-			ASSET_ACCOUNT: "ASSET",
-			LIABILITY_ACCOUNT: "LIABILITY",
-			FEE_ACCOUNT: "EXPENSE_OR_REVENUE",
-			INTEREST_ACCOUNT: "EXPENSE_OR_REVENUE",
-			REVENUE_ACCOUNT: "REVENUE",
-			EXPENSE_ACCOUNT: "EXPENSE"
-		};
-		const key = typeKeys[mappingType];
-		return key ? t(`product.detail.glMappings.requiredTypes.${key}`) : "";
+		const allowedTypes = getAllowedAccountTypesForMapping(mappingType);
+		if (allowedTypes.length === 1) {
+			return t(`product.detail.glMappings.requiredTypes.${allowedTypes[0]}`);
+		}
+		if (allowedTypes.includes("EXPENSE") && allowedTypes.includes("REVENUE")) {
+			return t("product.detail.glMappings.requiredTypes.EXPENSE_OR_REVENUE");
+		}
+		return allowedTypes.map(at => t(`product.detail.glMappings.accountTypes.${at}`)).join(" / ");
 	}
 
 	function filterLedgerAccountsByMappingType(mappingType: import("@/types").MappingType): import("@/types").LedgerAccount[] {
-		const requiredTypes: Record<import("@/types").MappingType, import("@/types").AccountType[]> = {
-			ASSET_ACCOUNT: ["ASSET"],
-			LIABILITY_ACCOUNT: ["LIABILITY"],
-			FEE_ACCOUNT: ["EXPENSE", "REVENUE"],
-			INTEREST_ACCOUNT: ["EXPENSE", "REVENUE"],
-			REVENUE_ACCOUNT: ["REVENUE"],
-			EXPENSE_ACCOUNT: ["EXPENSE"]
-		};
-
-		const allowedTypes = requiredTypes[mappingType] || [];
-		return ledgerAccounts.filter(account => 
+		const allowedTypes = getAllowedAccountTypesForMapping(mappingType);
+		return ledgerAccounts.filter(account =>
 			account.status === "ACTIVE" && allowedTypes.includes(account.accountType)
 		);
 	}
@@ -5308,8 +5298,7 @@ function ProductGLMappingsTab({
 		);
 	}
 
-	// Validation des mappings obligatoires
-	const requiredMappings: import("@/types").MappingType[] = ["LIABILITY_ACCOUNT"]; // Exemple: les comptes courants nécessitent un LIABILITY_ACCOUNT
+	const requiredMappings = getRequiredGlMappingTypesForCategory(productCategory);
 	const missingMappings = requiredMappings.filter(
 		reqType => !mappings.some(m => m.mappingType === reqType)
 	);
@@ -5320,6 +5309,9 @@ function ProductGLMappingsTab({
 				<div>
 					<h3 className="text-lg font-semibold text-gray-900">{t("product.detail.glMappings.title")}</h3>
 					<p className="text-sm text-gray-600 mt-1">{t("product.detail.glMappings.subtitle")}</p>
+					{productCategory === "LOAN" && (
+						<p className="text-sm text-blue-700 mt-2">{t("product.detail.glMappings.loanMappingHint")}</p>
+					)}
 					{missingMappings.length > 0 && (
 						<div className="mt-3 p-3 bg-orange-50 border-l-4 border-orange-400 rounded-r-md">
 							<p className="text-sm text-orange-800 flex items-center gap-2">
@@ -5363,7 +5355,7 @@ function ProductGLMappingsTab({
 							onClick={() => {
 								onCloseForm();
 								setEditingMapping(null);
-								setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+								setForm({ mappingType: getDefaultGlMappingType(productCategory), ledgerAccountId: 0 });
 								setValidationErrors({});
 							}}
 						>
@@ -5392,12 +5384,11 @@ function ProductGLMappingsTab({
 										required
 										disabled={!!editingMapping}
 									>
-										<option value="ASSET_ACCOUNT">{t("product.detail.glMappings.mappingTypes.ASSET_ACCOUNT")}</option>
-										<option value="LIABILITY_ACCOUNT">{t("product.detail.glMappings.mappingTypes.LIABILITY_ACCOUNT")}</option>
-										<option value="FEE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.FEE_ACCOUNT")}</option>
-										<option value="INTEREST_ACCOUNT">{t("product.detail.glMappings.mappingTypes.INTEREST_ACCOUNT")}</option>
-										<option value="REVENUE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.REVENUE_ACCOUNT")}</option>
-										<option value="EXPENSE_ACCOUNT">{t("product.detail.glMappings.mappingTypes.EXPENSE_ACCOUNT")}</option>
+										{availableMappingTypes.map(type => (
+											<option key={type} value={type}>
+												{t(`product.detail.glMappings.mappingTypes.${type}`)}
+											</option>
+										))}
 									</select>
 									<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
 										<svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -5461,7 +5452,7 @@ function ProductGLMappingsTab({
 								onClick={() => {
 									onCloseForm();
 									setEditingMapping(null);
-									setForm({ mappingType: "ASSET_ACCOUNT", ledgerAccountId: 0 });
+									setForm({ mappingType: getDefaultGlMappingType(productCategory), ledgerAccountId: 0 });
 									setValidationErrors({});
 								}}
 							>

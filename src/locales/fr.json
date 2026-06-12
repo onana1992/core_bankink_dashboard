@@ -2117,13 +2117,24 @@
 				"footerDisplay": "Affichage de {{count}} mapping",
 				"footerDisplayPlural": "Affichage de {{count}} mappings",
 				"mappingTypes": {
-					"ASSET_ACCOUNT": "Compte actif",
+					"ASSET_ACCOUNT": "Encours sain (3261)",
 					"LIABILITY_ACCOUNT": "Compte passif",
-					"FEE_ACCOUNT": "Compte frais",
-					"INTEREST_ACCOUNT": "Compte intérêts",
+					"FEE_ACCOUNT": "Commissions / pénalités (715)",
+					"INTEREST_ACCOUNT": "Intérêts perçus (713)",
 					"REVENUE_ACCOUNT": "Compte revenus",
-					"EXPENSE_ACCOUNT": "Compte charges"
+					"EXPENSE_ACCOUNT": "Compte charges",
+					"NPL_UNPAID_ACCOUNT": "Créances impayées (3312)",
+					"NPL_IMMOBILIZED_ACCOUNT": "Créances immobilisées (3322)",
+					"NPL_DOUBTFUL_ACCOUNT": "Créances douteuses (3352)",
+					"LOAN_ACCRUAL_ACCOUNT": "Intérêts courus (4712)",
+					"PROVISION_CHARGE_ACCOUNT": "Dotations provisions (6913)",
+					"PROVISION_RELEASE_ACCOUNT": "Reprises provisions (7913)",
+					"PROV_DOUBTFUL_LT1Y_ACCOUNT": "Provision douteux < 1 an (3931)",
+					"PROV_DOUBTFUL_1T2Y_ACCOUNT": "Provision douteux 1-2 ans (3932)",
+					"PROV_DOUBTFUL_GT2Y_ACCOUNT": "Provision douteux > 2 ans (3933)",
+					"WRITEOFF_ACCOUNT": "Pertes / abandon (6922)"
 				},
+				"loanMappingHint": "Pour un produit prêt, configurez tous les comptes GL du cycle opérationnel et prudentiel (classification, provisions, cut-off).",
 				"accountTypes": {
 					"ASSET": "Actif",
 					"LIABILITY": "Passif",

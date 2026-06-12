@@ -2127,13 +2127,24 @@
 				"footerDisplay": "Showing {{count}} mapping",
 				"footerDisplayPlural": "Showing {{count}} mappings",
 				"mappingTypes": {
-					"ASSET_ACCOUNT": "Asset Account",
+					"ASSET_ACCOUNT": "Performing loan balance (3261)",
 					"LIABILITY_ACCOUNT": "Liability Account",
-					"FEE_ACCOUNT": "Fee Account",
-					"INTEREST_ACCOUNT": "Interest Account",
+					"FEE_ACCOUNT": "Fees / penalties (715)",
+					"INTEREST_ACCOUNT": "Interest received (713)",
 					"REVENUE_ACCOUNT": "Revenue Account",
-					"EXPENSE_ACCOUNT": "Expense Account"
+					"EXPENSE_ACCOUNT": "Expense Account",
+					"NPL_UNPAID_ACCOUNT": "Unpaid receivables (3312)",
+					"NPL_IMMOBILIZED_ACCOUNT": "Non-performing receivables (3322)",
+					"NPL_DOUBTFUL_ACCOUNT": "Doubtful receivables (3352)",
+					"LOAN_ACCRUAL_ACCOUNT": "Accrued interest (4712)",
+					"PROVISION_CHARGE_ACCOUNT": "Provision charge (6913)",
+					"PROVISION_RELEASE_ACCOUNT": "Provision release (7913)",
+					"PROV_DOUBTFUL_LT1Y_ACCOUNT": "Doubtful provision < 1y (3931)",
+					"PROV_DOUBTFUL_1T2Y_ACCOUNT": "Doubtful provision 1-2y (3932)",
+					"PROV_DOUBTFUL_GT2Y_ACCOUNT": "Doubtful provision > 2y (3933)",
+					"WRITEOFF_ACCOUNT": "Write-off loss (6922)"
 				},
+				"loanMappingHint": "For loan products, configure all GL accounts for operations and prudential treatment (classification, provisions, accruals).",
 				"accountTypes": {
 					"ASSET": "Asset",
 					"LIABILITY": "Liability",
