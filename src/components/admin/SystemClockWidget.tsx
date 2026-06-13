@@ -2,7 +2,7 @@
 
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Clock, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/contexts/AuthContext";
 import { systemClockApi } from "@/lib/api";
@@ -13,8 +13,8 @@ const DEFAULT_TIME_ZONE = "America/Toronto";
 
 function toInputValue(iso: string | undefined): string {
 	if (!iso) return "";
-	const match = iso.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/);
-	return match ? match[1] : iso.slice(0, 19);
+	const match = iso.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+	return match ? match[1] : iso.slice(0, 16);
 }
 
 function toApiDateTime(input: string): string {
@@ -71,10 +71,12 @@ export default function SystemClockWidget() {
 	const [error, setError] = useState<string | null>(null);
 	const [offline, setOffline] = useState(false);
 	const [localTick, setLocalTick] = useState(wallClockNowIso(DEFAULT_TIME_ZONE));
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const inputDirtyRef = useRef(false);
 	const displayZone = status?.zone ?? DEFAULT_TIME_ZONE;
 
 	const load = useCallback(
-		async (silent = true) => {
+		async (silent = true, forceSyncInput = false) => {
 			if (!isAuthenticated || authLoading) return;
 			try {
 				const data = await systemClockApi.getStatus({ silent });
@@ -84,7 +86,12 @@ export default function SystemClockWidget() {
 				}
 				setStatus(data);
 				setEnabled(data.enabled);
-				setInputValue(toInputValue(data.effectiveDateTime));
+				if (forceSyncInput || !inputDirtyRef.current) {
+					setInputValue(toInputValue(data.effectiveDateTime));
+					if (forceSyncInput) {
+						inputDirtyRef.current = false;
+					}
+				}
 				setOffline(false);
 				setError(null);
 			} catch (e) {
@@ -100,9 +107,12 @@ export default function SystemClockWidget() {
 	useEffect(() => {
 		if (authLoading || !isAuthenticated) return;
 		void load(true);
-		const id = window.setInterval(() => void load(true), 5000);
+		const id = window.setInterval(() => {
+			if (dropdownOpen && inputDirtyRef.current) return;
+			void load(true);
+		}, 5000);
 		return () => window.clearInterval(id);
-	}, [load, authLoading, isAuthenticated]);
+	}, [load, authLoading, isAuthenticated, dropdownOpen]);
 
 	useEffect(() => {
 		const id = window.setInterval(() => setLocalTick(wallClockNowIso(displayZone)), 1000);
@@ -126,6 +136,7 @@ export default function SystemClockWidget() {
 			setStatus(data);
 			setEnabled(data.enabled);
 			setInputValue(toInputValue(data.effectiveDateTime));
+			inputDirtyRef.current = false;
 			setOffline(false);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
@@ -146,6 +157,7 @@ export default function SystemClockWidget() {
 			setStatus(data);
 			setEnabled(data.enabled);
 			setInputValue(toInputValue(data.effectiveDateTime));
+			inputDirtyRef.current = false;
 			setOffline(false);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
@@ -163,6 +175,7 @@ export default function SystemClockWidget() {
 			setStatus(data);
 			setEnabled(false);
 			setInputValue(toInputValue(data.systemDateTime));
+			inputDirtyRef.current = false;
 			setOffline(false);
 		} catch (e) {
 			setError(e instanceof Error ? e.message : String(e));
@@ -178,7 +191,15 @@ export default function SystemClockWidget() {
 	const simulated = status?.simulated ?? false;
 
 	return (
-		<DropdownMenu.Root>
+		<DropdownMenu.Root
+			open={dropdownOpen}
+			onOpenChange={(open) => {
+				setDropdownOpen(open);
+				if (open) {
+					void load(true, true);
+				}
+			}}
+		>
 			<DropdownMenu.Trigger asChild>
 				<button
 					type="button"
@@ -224,9 +245,12 @@ export default function SystemClockWidget() {
 							<span className="text-xs font-medium text-slate-600">{t("systemClock.dateTimeLabel")}</span>
 							<input
 								type="datetime-local"
-								step={1}
+								step={60}
 								value={inputValue}
-								onChange={(e) => setInputValue(e.target.value)}
+								onChange={(e) => {
+									inputDirtyRef.current = true;
+									setInputValue(e.target.value);
+								}}
 								onKeyDown={(e) => e.stopPropagation()}
 								onClick={(e) => e.stopPropagation()}
 								className="w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"

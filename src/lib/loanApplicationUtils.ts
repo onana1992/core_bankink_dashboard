@@ -9,22 +9,51 @@ export function periodMonths(period?: ProductPeriod | LoanApplication["period"] 
 	return 12;
 }
 
+function compareGridTier(a: ProductInterestRate, b: ProductInterestRate): number {
+	const minA = a.minAmount ?? -Infinity;
+	const minB = b.minAmount ?? -Infinity;
+	if (minA !== minB) return minB - minA;
+	const periodA = a.minPeriodDays ?? -Infinity;
+	const periodB = b.minPeriodDays ?? -Infinity;
+	if (periodA !== periodB) return periodB - periodA;
+	return a.id - b.id;
+}
+
 export function resolveAnnualRatePercent(
 	period?: ProductPeriod | LoanApplication["period"] | null,
 	product?: Product | null,
-	lendingRates: ProductInterestRate[] = []
+	lendingRates: ProductInterestRate[] = [],
+	principal = 0
 ): number | null {
 	if (period?.interestRate != null && period.interestRate > 0) {
 		return period.interestRate;
 	}
-	if (product?.defaultInterestRate != null && product.defaultInterestRate > 0) {
-		return product.defaultInterestRate;
-	}
+
+	const periodDays = period?.periodDays ?? null;
 	const today = new Date().toISOString().slice(0, 10);
 	const active = lendingRates
 		.filter((r) => r.isActive && r.rateType === "LENDING")
-		.filter((r) => r.effectiveFrom <= today && (!r.effectiveTo || r.effectiveTo >= today));
-	return active[0]?.rateValue ?? null;
+		.filter((r) => r.effectiveFrom <= today && (!r.effectiveTo || r.effectiveTo >= today))
+		.filter((r) => {
+			if (principal > 0) {
+				if (r.minAmount != null && principal < r.minAmount) return false;
+				if (r.maxAmount != null && principal > r.maxAmount) return false;
+			}
+			if (periodDays != null) {
+				if (r.minPeriodDays != null && periodDays < r.minPeriodDays) return false;
+				if (r.maxPeriodDays != null && periodDays > r.maxPeriodDays) return false;
+			}
+			return true;
+		})
+		.sort(compareGridTier);
+
+	if (active[0]?.rateValue != null && active[0].rateValue > 0) {
+		return active[0].rateValue;
+	}
+	if (product?.defaultInterestRate != null && product.defaultInterestRate > 0) {
+		return product.defaultInterestRate;
+	}
+	return null;
 }
 
 export function findActiveOpeningFee(fees: ProductFee[], currency: string): ProductFee | null {

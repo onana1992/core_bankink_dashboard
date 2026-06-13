@@ -83,6 +83,11 @@ export default function NewLoanPage() {
 	}, [form.clientId, customers]);
 
 	const selectedProduct = products.find((p) => p.id === form.productId);
+	const selectedPeriod = periods.find((p) => p.id === form.periodId);
+	const amountMin =
+		selectedPeriod?.minAmount ?? selectedProduct?.minBalance ?? 0;
+	const amountMax =
+		selectedPeriod?.maxAmount ?? selectedProduct?.maxBalance ?? undefined;
 
 	const filteredCustomers = customers.filter((c) => {
 		if (!clientSearch.trim()) return true;
@@ -115,6 +120,14 @@ export default function NewLoanPage() {
 		if (selectedProduct && (form.openingAmount < (selectedProduct.minBalance ?? 0) || form.openingAmount > (selectedProduct.maxBalance ?? Infinity))) {
 			showToast("Le montant est hors des limites du produit.", "error");
 			return;
+		}
+		if (selectedPeriod && selectedProduct) {
+			const minPeriod = selectedPeriod.minAmount ?? selectedProduct.minBalance ?? 0;
+			const maxPeriod = selectedPeriod.maxAmount ?? selectedProduct.maxBalance ?? Infinity;
+			if (form.openingAmount < minPeriod || form.openingAmount > maxPeriod) {
+				showToast("Le montant est hors des limites de la période.", "error");
+				return;
+			}
 		}
 		if (periods.length > 0 && !form.periodId) {
 			showToast("Veuillez sélectionner une durée.", "error");
@@ -287,31 +300,44 @@ export default function NewLoanPage() {
 										<option key={p.id} value={p.id}>{p.name} ({p.code})</option>
 									))}
 								</select>
-								{selectedProduct && (
-									<p className="mt-1 text-xs text-gray-500">
-										Montant : {selectedProduct.minBalance} – {selectedProduct.maxBalance} {selectedProduct.currency}
-									</p>
-								)}
 							</div>
 						</div>
-						{periods.length > 0 && (
+						{form.productId > 0 && (
 							<div>
 								<label className="block text-sm font-medium text-gray-700 mb-2">
-									Durée <span className="text-red-500">*</span>
+									Durée {periods.length > 0 && <span className="text-red-500">*</span>}
 								</label>
-								<select
-									className={inputClass}
-									value={form.periodId ?? ""}
-									onChange={(e) => update("periodId", e.target.value ? Number(e.target.value) : undefined)}
-									required
-								>
-									<option value="">Sélectionner une période</option>
-									{periods.map((p) => (
-										<option key={p.id} value={p.id}>
-											{p.periodName} – Taux {p.interestRate ?? 0} %
-										</option>
-									))}
-								</select>
+								{periods.length === 0 ? (
+									<p className="text-sm text-amber-700 py-2">{t("loan.simulate.noPeriods")}</p>
+								) : (
+									<>
+										<select
+											className={inputClass}
+											value={form.periodId ?? ""}
+											onChange={(e) => update("periodId", e.target.value ? Number(e.target.value) : undefined)}
+											required
+										>
+											<option value="">Sélectionner une période</option>
+											{periods.map((p) => (
+												<option key={p.id} value={p.id}>
+													{p.periodName} – Taux {p.interestRate ?? 0} %
+												</option>
+											))}
+										</select>
+										{selectedPeriod && selectedProduct && (
+											<p className="mt-1 text-xs text-gray-500">
+												{t("loan.simulate.amountRange", {
+													min: selectedPeriod.minAmount ?? selectedProduct.minBalance ?? 0,
+													max:
+														selectedPeriod.maxAmount ??
+														selectedProduct.maxBalance ??
+														"—",
+													currency: selectedProduct.currency ?? ""
+												})}
+											</p>
+										)}
+									</>
+								)}
 							</div>
 						)}
 					</div>
@@ -335,8 +361,8 @@ export default function NewLoanPage() {
 							<Input
 								type="number"
 								step="0.01"
-								min={selectedProduct?.minBalance ?? 0}
-								max={selectedProduct?.maxBalance ?? undefined}
+								min={amountMin}
+								max={amountMax}
 								value={form.openingAmount ?? ""}
 								onChange={(e) => update("openingAmount", e.target.value ? Number(e.target.value) : undefined)}
 								placeholder="Montant"

@@ -216,15 +216,15 @@ export interface ProductPenalty {
 export interface CreateProductPenaltyRequest {
 	penaltyType: PenaltyType;
 	penaltyName: string;
-	penaltyAmount?: number;
-	penaltyPercentage?: number;
+	penaltyAmount?: number | null;
+	penaltyPercentage?: number | null;
 	calculationBase: PenaltyCalculationBase;
-	minPenalty?: number;
-	maxPenalty?: number;
+	minPenalty?: number | null;
+	maxPenalty?: number | null;
 	currency?: string;
-	gracePeriodDays?: number;
+	gracePeriodDays?: number | null;
 	effectiveFrom: string;
-	effectiveTo?: string;
+	effectiveTo?: string | null;
 	isActive?: boolean;
 }
 

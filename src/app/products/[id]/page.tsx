@@ -2101,8 +2101,13 @@ function FeesTab({
 									</td>
 									<td className="px-4 py-2">{fee.feeName}</td>
 									<td className="px-4 py-2">
-										{fee.feeAmount != null ? `${fee.feeAmount} ${fee.currency}` : ""}
-										{fee.feePercentage != null ? `${fee.feePercentage}%` : ""}
+										{fee.feeCalculationBase === "FIXED"
+											? (fee.feeAmount != null ? `${fee.feeAmount} ${fee.currency}` : "-")
+											: fee.feePercentage != null
+												? `${fee.feePercentage}%`
+												: fee.feeAmount != null
+													? `${fee.feeAmount} ${fee.currency}`
+													: "-"}
 									</td>
 									<td className="px-4 py-2">{t(`product.detail.fees.calculationBases.${fee.feeCalculationBase}`)}</td>
 									<td className="px-4 py-2">{fee.isWaivable ? t("common.yes") : t("common.no")}</td>
@@ -3767,6 +3772,19 @@ function PeriodsTab({
 	);
 }
 
+function buildPenaltyUpdatePayload(form: CreateProductPenaltyRequest): CreateProductPenaltyRequest {
+	const isFixed = form.calculationBase === "FIXED";
+	return {
+		...form,
+		penaltyAmount: isFixed ? (form.penaltyAmount ?? null) : null,
+		penaltyPercentage: isFixed ? null : (form.penaltyPercentage ?? null),
+		minPenalty: form.minPenalty ?? null,
+		maxPenalty: form.maxPenalty ?? null,
+		gracePeriodDays: form.gracePeriodDays ?? null,
+		effectiveTo: form.effectiveTo || null,
+	};
+}
+
 // Component for Penalties Tab
 function PenaltiesTab({
 	productId,
@@ -3998,8 +4016,13 @@ function PenaltiesTab({
 									<td className="px-4 py-2">{t(`product.detail.penalties.penaltyTypes.${penalty.penaltyType}`)}</td>
 									<td className="px-4 py-2">{penalty.penaltyName}</td>
 									<td className="px-4 py-2">
-										{penalty.penaltyAmount != null ? `${penalty.penaltyAmount} ${penalty.currency}` : ""}
-										{penalty.penaltyPercentage != null ? `${penalty.penaltyPercentage}%` : ""}
+										{penalty.calculationBase === "FIXED"
+											? (penalty.penaltyAmount != null ? `${penalty.penaltyAmount} ${penalty.currency}` : "-")
+											: penalty.penaltyPercentage != null
+												? `${penalty.penaltyPercentage}%`
+												: penalty.penaltyAmount != null
+													? `${penalty.penaltyAmount} ${penalty.currency}`
+													: "-"}
 									</td>
 									<td className="px-4 py-2">{t(`product.detail.penalties.calculationBases.${penalty.calculationBase}`)}</td>
 									<td className="px-4 py-2">{penalty.gracePeriodDays != null ? `${penalty.gracePeriodDays} ${t("product.detail.penalties.table.days")}` : "-"}</td>
@@ -4286,20 +4309,7 @@ function PenaltiesTab({
 					setSubmitting(true);
 					setError(null);
 					try {
-						await productsApi.updatePenalty(productId, selectedPenalty.id, {
-							penaltyType: editForm.penaltyType,
-							penaltyName: editForm.penaltyName,
-							penaltyAmount: editForm.penaltyAmount,
-							penaltyPercentage: editForm.penaltyPercentage,
-							calculationBase: editForm.calculationBase,
-							minPenalty: editForm.minPenalty,
-							maxPenalty: editForm.maxPenalty,
-							currency: editForm.currency,
-							gracePeriodDays: editForm.gracePeriodDays,
-							effectiveFrom: editForm.effectiveFrom,
-							effectiveTo: editForm.effectiveTo,
-							isActive: editForm.isActive
-						});
+						await productsApi.updatePenalty(productId, selectedPenalty.id, buildPenaltyUpdatePayload(editForm));
 						setShowEditForm(false);
 						setSelectedPenalty(null);
 						onRefresh();
@@ -4355,7 +4365,16 @@ function PenaltiesTab({
 							<select
 								className="w-full rounded-md border bg-white px-3 py-2 text-sm"
 								value={editForm.calculationBase}
-								onChange={e => setEditForm({ ...editForm, calculationBase: e.target.value as PenaltyCalculationBase })}
+								onChange={e => {
+									const calculationBase = e.target.value as PenaltyCalculationBase;
+									setEditForm({
+										...editForm,
+										calculationBase,
+										...(calculationBase === "FIXED"
+											? { penaltyPercentage: undefined }
+											: { penaltyAmount: undefined }),
+									});
+								}}
 								required
 							>
 								<option value="FIXED">{t("product.detail.penalties.calculationBases.FIXED")}</option>

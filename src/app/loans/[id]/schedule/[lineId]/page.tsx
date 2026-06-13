@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import Badge from "@/components/ui/Badge";
 import { loansApi } from "@/lib/api";
+import { installmentRemainingDue } from "@/lib/loanScheduleUtils";
 import { formatAmount } from "@/lib/utils";
 import type { Account, LoanScheduleItem } from "@/types";
 
@@ -149,21 +150,27 @@ export default function LoanScheduleLineDetailPage() {
 					</dl>
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div className="rounded-xl bg-blue-50/80 border border-blue-100 p-4">
+							<p className="text-xs font-semibold uppercase tracking-wider text-blue-700/80 mb-1">{t("loan.detail.scheduleLineRemainingDue")}</p>
+							<p className="text-xl font-bold text-blue-900">{formatAmount(installmentRemainingDue(line), currency, locale)}</p>
+						</div>
 						<div className="rounded-xl bg-amber-50/80 border border-amber-100 p-4">
 							<p className="text-xs font-semibold uppercase tracking-wider text-amber-700/80 mb-1">{t("loan.detail.table.outstanding")}</p>
 							<p className="text-xl font-bold text-amber-900">{formatAmount(line.outstandingPrincipal, currency, locale)}</p>
+							<p className="text-xs text-amber-700/70 mt-1">{t("loan.detail.scheduleLineOutstandingHint")}</p>
 						</div>
-						<div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{t("loan.detail.table.status")}</p>
-							<Badge className={
-								line.status === "PAID" ? "bg-green-100 text-green-800 border-green-200" :
-								line.status === "OVERDUE" ? "bg-red-100 text-red-800 border-red-200" :
-								line.status === "PARTIAL" ? "bg-amber-100 text-amber-800 border-amber-200" :
-								"bg-slate-100 text-slate-800 border-slate-200"
-							}>
-								{line.status}
-							</Badge>
-						</div>
+					</div>
+
+					<div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+						<p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">{t("loan.detail.table.status")}</p>
+						<Badge className={
+							line.status === "PAID" ? "bg-green-100 text-green-800 border-green-200" :
+							line.status === "OVERDUE" ? "bg-red-100 text-red-800 border-red-200" :
+							line.status === "PARTIAL" ? "bg-amber-100 text-amber-800 border-amber-200" :
+							"bg-slate-100 text-slate-800 border-slate-200"
+						}>
+							{line.status}
+						</Badge>
 					</div>
 
 					{(Number(line.paidPrincipal ?? 0) > 0 || Number(line.paidInterest ?? 0) > 0) && (
