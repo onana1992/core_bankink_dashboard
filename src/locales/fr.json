@@ -3380,7 +3380,35 @@
 				"overview": "Aperçu",
 				"schedule": "Échéancier",
 				"repayments": "Remboursements",
+				"accountingEntries": "Écritures compte",
 				"classification": "Classification"
+			},
+			"accountingEntries": {
+				"title": "Écritures comptables",
+				"subtitle": "Écritures de transaction et du Grand Livre liées à ce prêt",
+				"loading": "Chargement des écritures…",
+				"empty": "Aucune écriture comptable enregistrée pour ce prêt.",
+				"source": {
+					"TRANSACTION_ENTRY": "Transaction",
+					"LEDGER_ENTRY": "Grand Livre"
+				},
+				"table": {
+					"date": "Date",
+					"source": "Origine",
+					"type": "Sens",
+					"amount": "Montant",
+					"glAccount": "Compte GL",
+					"reference": "Référence",
+					"actions": "Actions"
+				},
+				"view": "Voir",
+				"modal": {
+					"title": "Détail de l'écriture",
+					"close": "Fermer",
+					"description": "Description",
+					"createdAt": "Enregistrée le",
+					"transaction": "Transaction liée"
+				}
 			},
 			"repayments": {
 				"title": "Remboursements effectués",
@@ -3421,6 +3449,51 @@
 					"accrualSuspended": "Intérêts suspendus",
 					"override": "Décision manuelle",
 					"updatedAt": "Dernière mise à jour"
+				},
+				"remission": {
+					"requestButton": "Demander une rémission",
+					"pendingTitle": "Demande de rémission en attente de validation",
+					"requestedAt": "Soumise le {{date}} par opérateur #{{user}}",
+					"approveButton": "Approuver",
+					"rejectButton": "Rejeter",
+					"cancelButton": "Annuler la demande",
+					"makerHint": "Un autre opérateur doit valider cette demande (contrôle à 4 yeux).",
+					"historyTitle": "Historique des demandes de rémission",
+					"loading": "Chargement des demandes…",
+					"empty": "Aucune demande de rémission enregistrée.",
+					"submitted": "Demande de rémission soumise.",
+					"approved": "Rémission approuvée et exécutée.",
+					"rejected": "Demande de rémission rejetée.",
+					"cancelled": "Demande de rémission annulée.",
+					"submitError": "Erreur lors de la soumission de la demande.",
+					"approveError": "Erreur lors de l'approbation.",
+					"rejectError": "Erreur lors du rejet.",
+					"cancelError": "Erreur lors de l'annulation.",
+					"reasonTooShort": "Le justificatif doit contenir au moins 20 caractères.",
+					"modalTitle": "Demande de rémission de stade",
+					"modalHint": "La rémission sera exécutée après validation par un second opérateur (maker-checker).",
+					"targetStageLabel": "Stade cible",
+					"reasonLabel": "Justificatif / motif comité crédit",
+					"reasonPlaceholder": "Décrivez le recouvrement, la décision du comité, les pièces justificatives… (min. 20 caractères)",
+					"submitButton": "Soumettre la demande",
+					"submitting": "Soumission…",
+					"rejectModalTitle": "Rejeter la demande de rémission",
+					"rejectReasonPlaceholder": "Motif du rejet (min. 20 caractères)",
+					"rejectConfirm": "Confirmer le rejet",
+					"rejecting": "Rejet…",
+					"status": {
+						"PENDING": "En attente",
+						"APPROVED": "Approuvée",
+						"REJECTED": "Rejetée",
+						"CANCELLED": "Annulée"
+					},
+					"table": {
+						"date": "Date",
+						"transition": "Transition",
+						"status": "Statut",
+						"reason": "Justificatif",
+						"actors": "Acteurs"
+					}
 				}
 			}
 		},

@@ -3361,7 +3361,35 @@
 				"overview": "Overview",
 				"schedule": "Schedule",
 				"repayments": "Repayments",
+				"accountingEntries": "Account entries",
 				"classification": "Classification"
+			},
+			"accountingEntries": {
+				"title": "Accounting entries",
+				"subtitle": "Transaction and general ledger entries linked to this loan",
+				"loading": "Loading entries…",
+				"empty": "No accounting entries recorded for this loan.",
+				"source": {
+					"TRANSACTION_ENTRY": "Transaction",
+					"LEDGER_ENTRY": "General ledger"
+				},
+				"table": {
+					"date": "Date",
+					"source": "Source",
+					"type": "Type",
+					"amount": "Amount",
+					"glAccount": "GL account",
+					"reference": "Reference",
+					"actions": "Actions"
+				},
+				"view": "View",
+				"modal": {
+					"title": "Entry details",
+					"close": "Close",
+					"description": "Description",
+					"createdAt": "Recorded at",
+					"transaction": "Linked transaction"
+				}
 			},
 			"repayments": {
 				"title": "Repayments made",
@@ -3402,6 +3430,51 @@
 					"accrualSuspended": "Accrual suspended",
 					"override": "Manual override",
 					"updatedAt": "Last updated"
+				},
+				"remission": {
+					"requestButton": "Request stage remission",
+					"pendingTitle": "Remission request pending approval",
+					"requestedAt": "Submitted on {{date}} by operator #{{user}}",
+					"approveButton": "Approve",
+					"rejectButton": "Reject",
+					"cancelButton": "Cancel request",
+					"makerHint": "Another operator must validate this request (four-eyes control).",
+					"historyTitle": "Remission request history",
+					"loading": "Loading requests…",
+					"empty": "No remission requests on file.",
+					"submitted": "Remission request submitted.",
+					"approved": "Remission approved and executed.",
+					"rejected": "Remission request rejected.",
+					"cancelled": "Remission request cancelled.",
+					"submitError": "Failed to submit remission request.",
+					"approveError": "Failed to approve remission.",
+					"rejectError": "Failed to reject remission.",
+					"cancelError": "Failed to cancel remission.",
+					"reasonTooShort": "Justification must be at least 20 characters.",
+					"modalTitle": "Stage remission request",
+					"modalHint": "Remission will run after a second operator approves (maker-checker).",
+					"targetStageLabel": "Target stage",
+					"reasonLabel": "Justification / credit committee rationale",
+					"reasonPlaceholder": "Describe recovery, committee decision, supporting evidence… (min. 20 characters)",
+					"submitButton": "Submit request",
+					"submitting": "Submitting…",
+					"rejectModalTitle": "Reject remission request",
+					"rejectReasonPlaceholder": "Rejection reason (min. 20 characters)",
+					"rejectConfirm": "Confirm rejection",
+					"rejecting": "Rejecting…",
+					"status": {
+						"PENDING": "Pending",
+						"APPROVED": "Approved",
+						"REJECTED": "Rejected",
+						"CANCELLED": "Cancelled"
+					},
+					"table": {
+						"date": "Date",
+						"transition": "Transition",
+						"status": "Status",
+						"reason": "Justification",
+						"actors": "Actors"
+					}
 				}
 			}
 		},

@@ -11,23 +11,30 @@ import { sumScheduleDueAmounts } from "@/lib/loanScheduleUtils";
 import { parseLoanRepaymentMetadata } from "@/lib/loanRepaymentUtils";
 import { formatAmount } from "@/lib/utils";
 import { useToast } from "@/contexts/ToastContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { Eye } from "lucide-react";
 import type {
 	Account,
 	AccountStatus,
 	LoanBalanceBreakdown,
+	LoanAccountAccountingEntry,
 	LoanCreditClassification,
 	LoanClassificationStage,
+	LoanStageRemissionRequest,
+	LoanStageRemissionRequestStatus,
 	LoanScheduleItem,
 	PaymentMethod
 } from "@/types";
+import { LOAN_CLASSIFICATION_STAGE_ORDER } from "@/types";
 import type { Transaction, TransactionStatus } from "@/types/transaction";
 
-type LoanDetailTab = "overview" | "schedule" | "repayments" | "classification";
+type LoanDetailTab = "overview" | "schedule" | "repayments" | "accountingEntries" | "classification";
 
 export default function LoanDetailPage() {
 	const params = useParams();
 	const { t, i18n } = useTranslation();
 	const { showToast } = useToast();
+	const { user } = useAuth();
 	const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 	const accountId = params.id as string;
 	const [loan, setLoan] = useState<Account | null>(null);
@@ -54,15 +61,29 @@ export default function LoanDetailPage() {
 	const [activeTab, setActiveTab] = useState<LoanDetailTab>("overview");
 	const [repayments, setRepayments] = useState<Transaction[]>([]);
 	const [repaymentsLoading, setRepaymentsLoading] = useState(false);
+	const [accountingEntries, setAccountingEntries] = useState<LoanAccountAccountingEntry[]>([]);
+	const [accountingEntriesLoading, setAccountingEntriesLoading] = useState(false);
+	const [selectedAccountingEntry, setSelectedAccountingEntry] = useState<LoanAccountAccountingEntry | null>(null);
+	const [remissionRequests, setRemissionRequests] = useState<LoanStageRemissionRequest[]>([]);
+	const [remissionRequestsLoading, setRemissionRequestsLoading] = useState(false);
+	const [showRemissionModal, setShowRemissionModal] = useState(false);
+	const [remissionTargetStage, setRemissionTargetStage] = useState<LoanClassificationStage | "">("");
+	const [remissionReason, setRemissionReason] = useState("");
+	const [remissionSubmitting, setRemissionSubmitting] = useState(false);
+	const [showRejectRemissionModal, setShowRejectRemissionModal] = useState(false);
+	const [rejectRemissionReason, setRejectRemissionReason] = useState("");
+	const [remissionDeciding, setRemissionDeciding] = useState(false);
+	const [selectedRemissionRequest, setSelectedRemissionRequest] = useState<LoanStageRemissionRequest | null>(null);
 
 	const loanTabs = useMemo(
 		() => [
 			{ id: "overview" as const, label: t("loan.detail.tabs.overview") },
 			{ id: "schedule" as const, label: t("loan.detail.tabs.schedule"), count: schedule.length },
 			{ id: "repayments" as const, label: t("loan.detail.tabs.repayments"), count: repayments.length },
+			{ id: "accountingEntries" as const, label: t("loan.detail.tabs.accountingEntries"), count: accountingEntries.length },
 			{ id: "classification" as const, label: t("loan.detail.tabs.classification") }
 		],
-		[t, schedule.length, repayments.length]
+		[t, schedule.length, repayments.length, accountingEntries.length]
 	);
 
 	async function load() {
@@ -114,6 +135,44 @@ export default function LoanDetailPage() {
 	useEffect(() => {
 		if (activeTab === "repayments" && accountId) {
 			void loadRepayments();
+		}
+	}, [activeTab, accountId]);
+
+	async function loadAccountingEntries() {
+		if (!accountId) return;
+		setAccountingEntriesLoading(true);
+		try {
+			const entries = await loansApi.getAccountingEntries(accountId);
+			setAccountingEntries(entries);
+		} catch {
+			setAccountingEntries([]);
+		} finally {
+			setAccountingEntriesLoading(false);
+		}
+	}
+
+	useEffect(() => {
+		if (activeTab === "accountingEntries" && accountId) {
+			void loadAccountingEntries();
+		}
+	}, [activeTab, accountId]);
+
+	async function loadRemissionRequests() {
+		if (!accountId) return;
+		setRemissionRequestsLoading(true);
+		try {
+			const requests = await loansApi.listStageRemissionRequests(accountId);
+			setRemissionRequests(requests);
+		} catch {
+			setRemissionRequests([]);
+		} finally {
+			setRemissionRequestsLoading(false);
+		}
+	}
+
+	useEffect(() => {
+		if (activeTab === "classification" && accountId) {
+			void loadRemissionRequests();
 		}
 	}, [activeTab, accountId]);
 
@@ -259,6 +318,125 @@ export default function LoanDetailPage() {
 				{t(`loan.detail.classification.stage.${stage}`)}
 			</Badge>
 		);
+	}
+
+	function getRemissionStatusBadge(status: LoanStageRemissionRequestStatus) {
+		const map: Record<LoanStageRemissionRequestStatus, string> = {
+			PENDING: "bg-amber-100 text-amber-800",
+			APPROVED: "bg-green-100 text-green-800",
+			REJECTED: "bg-red-100 text-red-800",
+			CANCELLED: "bg-gray-100 text-gray-800"
+		};
+		return (
+			<Badge className={map[status]}>
+				{t(`loan.detail.classification.remission.status.${status}`)}
+			</Badge>
+		);
+	}
+
+	function getLowerClassificationStages(stage: LoanClassificationStage): LoanClassificationStage[] {
+		const idx = LOAN_CLASSIFICATION_STAGE_ORDER.indexOf(stage);
+		if (idx <= 0) return [];
+		return LOAN_CLASSIFICATION_STAGE_ORDER.slice(0, idx) as LoanClassificationStage[];
+	}
+
+	const pendingRemissionRequest = useMemo(
+		() => remissionRequests.find((r) => r.status === "PENDING") ?? null,
+		[remissionRequests]
+	);
+
+	const remissionTargetOptions = useMemo(() => {
+		if (!classification) return [] as LoanClassificationStage[];
+		return getLowerClassificationStages(classification.classificationStage);
+	}, [classification]);
+
+	const canRequestRemission =
+		loan?.status === "ACTIVE" &&
+		loan?.disbursedAt != null &&
+		classification != null &&
+		classification.classificationStage !== "PERFORMING" &&
+		pendingRemissionRequest == null;
+
+	const currentUserId = user?.id ?? 0;
+	const canApprovePendingRemission =
+		pendingRemissionRequest != null &&
+		pendingRemissionRequest.requestedBy != null &&
+		pendingRemissionRequest.requestedBy !== currentUserId;
+	const canCancelPendingRemission =
+		pendingRemissionRequest != null &&
+		pendingRemissionRequest.requestedBy === currentUserId;
+
+	async function handleSubmitRemissionRequest() {
+		if (!accountId || remissionTargetStage === "") return;
+		const reason = remissionReason.trim();
+		if (reason.length < 20) {
+			showToast(t("loan.detail.classification.remission.reasonTooShort"), "error");
+			return;
+		}
+		setRemissionSubmitting(true);
+		try {
+			await loansApi.submitStageRemissionRequest(accountId, {
+				targetStage: remissionTargetStage,
+				reason
+			});
+			showToast(t("loan.detail.classification.remission.submitted"), "success");
+			setShowRemissionModal(false);
+			setRemissionReason("");
+			setRemissionTargetStage("");
+			await Promise.all([load(), loadRemissionRequests()]);
+		} catch (e: unknown) {
+			showToast((e as Error)?.message ?? t("loan.detail.classification.remission.submitError"), "error");
+		} finally {
+			setRemissionSubmitting(false);
+		}
+	}
+
+	async function handleApproveRemissionRequest(request: LoanStageRemissionRequest) {
+		setRemissionDeciding(true);
+		try {
+			await loansApi.approveStageRemissionRequest(request.id);
+			showToast(t("loan.detail.classification.remission.approved"), "success");
+			await Promise.all([load(), loadRemissionRequests()]);
+		} catch (e: unknown) {
+			showToast((e as Error)?.message ?? t("loan.detail.classification.remission.approveError"), "error");
+		} finally {
+			setRemissionDeciding(false);
+		}
+	}
+
+	async function handleRejectRemissionRequest() {
+		if (!selectedRemissionRequest) return;
+		const reason = rejectRemissionReason.trim();
+		if (reason.length < 20) {
+			showToast(t("loan.detail.classification.remission.reasonTooShort"), "error");
+			return;
+		}
+		setRemissionDeciding(true);
+		try {
+			await loansApi.rejectStageRemissionRequest(selectedRemissionRequest.id, { reason });
+			showToast(t("loan.detail.classification.remission.rejected"), "success");
+			setShowRejectRemissionModal(false);
+			setRejectRemissionReason("");
+			setSelectedRemissionRequest(null);
+			await loadRemissionRequests();
+		} catch (e: unknown) {
+			showToast((e as Error)?.message ?? t("loan.detail.classification.remission.rejectError"), "error");
+		} finally {
+			setRemissionDeciding(false);
+		}
+	}
+
+	async function handleCancelRemissionRequest(request: LoanStageRemissionRequest) {
+		setRemissionDeciding(true);
+		try {
+			await loansApi.cancelStageRemissionRequest(request.id);
+			showToast(t("loan.detail.classification.remission.cancelled"), "success");
+			await loadRemissionRequests();
+		} catch (e: unknown) {
+			showToast((e as Error)?.message ?? t("loan.detail.classification.remission.cancelError"), "error");
+		} finally {
+			setRemissionDeciding(false);
+		}
 	}
 
 	function getStatusBadge(status: AccountStatus) {
@@ -457,6 +635,11 @@ export default function LoanDetailPage() {
 								)}
 								{tab.id === "repayments" && tab.count != null && tab.count > 0 && (
 									<span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+										{tab.count}
+									</span>
+								)}
+								{tab.id === "accountingEntries" && tab.count != null && tab.count > 0 && (
+									<span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
 										{tab.count}
 									</span>
 								)}
@@ -695,18 +878,114 @@ export default function LoanDetailPage() {
 						</div>
 					)}
 
-					{activeTab === "classification" && (
+					{activeTab === "accountingEntries" && (
 						<div className="space-y-4">
 							<div className="flex items-center gap-2">
-								<div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
-									<svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+								<div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
+									<svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 									</svg>
 								</div>
 								<div>
-									<h2 className="text-lg font-semibold text-gray-900">{t("loan.detail.classification.title")}</h2>
-									<p className="text-sm text-gray-500">{t("loan.detail.classification.subtitle")}</p>
+									<h2 className="text-lg font-semibold text-gray-900">{t("loan.detail.accountingEntries.title")}</h2>
+									<p className="text-sm text-gray-500">{t("loan.detail.accountingEntries.subtitle")}</p>
 								</div>
+							</div>
+							{accountingEntriesLoading ? (
+								<div className="py-12 text-center text-gray-500">{t("loan.detail.accountingEntries.loading")}</div>
+							) : accountingEntries.length === 0 ? (
+								<div className="py-12 text-center text-gray-500 rounded-lg border border-dashed border-gray-200">
+									{t("loan.detail.accountingEntries.empty")}
+								</div>
+							) : (
+								<div className="overflow-x-auto rounded-lg border border-gray-200">
+									<table className="min-w-full divide-y divide-gray-200">
+										<thead className="bg-gray-50">
+											<tr>
+												<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.date")}</th>
+												<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.source")}</th>
+												<th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.type")}</th>
+												<th className="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.amount")}</th>
+												<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.glAccount")}</th>
+												<th className="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.reference")}</th>
+												<th className="px-4 py-2 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.detail.accountingEntries.table.actions")}</th>
+											</tr>
+										</thead>
+										<tbody className="bg-white divide-y divide-gray-200 text-sm">
+											{accountingEntries.map((entry) => (
+												<tr key={`${entry.source}-${entry.id}`} className="hover:bg-gray-50">
+													<td className="px-4 py-2 text-gray-600 whitespace-nowrap">
+														{formatDate(entry.entryDate ?? entry.createdAt)}
+													</td>
+													<td className="px-4 py-2 whitespace-nowrap">
+														<Badge className="bg-slate-100 text-slate-800">
+															{t(`loan.detail.accountingEntries.source.${entry.source}`)}
+														</Badge>
+													</td>
+													<td className="px-4 py-2 text-center">
+														<Badge className={entry.entryType === "DEBIT" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+															{t(`transaction.detail.entryTypes.${entry.entryType}`)}
+														</Badge>
+													</td>
+													<td className="px-4 py-2 text-right font-medium font-mono">
+														{formatAmount(entry.amount, entry.currency, locale)}
+													</td>
+													<td className="px-4 py-2 font-mono text-gray-700">
+														{entry.ledgerAccountCode ?? "—"}
+													</td>
+													<td className="px-4 py-2 text-gray-600">
+														{entry.referenceType != null ? (
+															<span className="font-mono text-xs">{entry.referenceType}</span>
+														) : entry.transactionType != null ? (
+															<span className="font-mono text-xs">{entry.transactionType}</span>
+														) : (
+															"—"
+														)}
+													</td>
+													<td className="px-4 py-2 text-center">
+														<Button
+															variant="outline"
+															size="sm"
+															className="gap-1.5"
+															onClick={() => setSelectedAccountingEntry(entry)}
+														>
+															<Eye className="h-4 w-4 shrink-0" aria-hidden />
+															{t("loan.detail.accountingEntries.view")}
+														</Button>
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
+						</div>
+					)}
+
+					{activeTab === "classification" && (
+						<div className="space-y-6">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+								<div className="flex items-center gap-2">
+									<div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center">
+										<svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+										</svg>
+									</div>
+									<div>
+										<h2 className="text-lg font-semibold text-gray-900">{t("loan.detail.classification.title")}</h2>
+										<p className="text-sm text-gray-500">{t("loan.detail.classification.subtitle")}</p>
+									</div>
+								</div>
+								{canRequestRemission && (
+									<Button
+										onClick={() => {
+											setRemissionTargetStage(remissionTargetOptions[remissionTargetOptions.length - 1] ?? "");
+											setShowRemissionModal(true);
+										}}
+									>
+										{t("loan.detail.classification.remission.requestButton")}
+									</Button>
+								)}
 							</div>
 							{classification == null ? (
 								<div className="py-12 text-center text-gray-500 rounded-lg border border-dashed border-gray-200">
@@ -754,10 +1033,210 @@ export default function LoanDetailPage() {
 									</table>
 								</div>
 							)}
+
+							{pendingRemissionRequest != null && (
+								<div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+									<div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+										<div>
+											<p className="font-medium text-amber-900">{t("loan.detail.classification.remission.pendingTitle")}</p>
+											<p className="text-sm text-amber-800 mt-1">
+												{getClassificationStageBadge(pendingRemissionRequest.currentStage)}
+												<span className="mx-2">→</span>
+												{getClassificationStageBadge(pendingRemissionRequest.targetStage)}
+											</p>
+											<p className="text-sm text-amber-800 mt-2 whitespace-pre-wrap">{pendingRemissionRequest.reason}</p>
+											<p className="text-xs text-amber-700 mt-2">
+												{t("loan.detail.classification.remission.requestedAt", {
+													date: formatDateTime(pendingRemissionRequest.requestedAt),
+													user: pendingRemissionRequest.requestedBy ?? "—"
+												})}
+											</p>
+										</div>
+										<div className="flex flex-wrap gap-2">
+											{canApprovePendingRemission && (
+												<>
+													<Button
+														size="sm"
+														onClick={() => handleApproveRemissionRequest(pendingRemissionRequest)}
+														disabled={remissionDeciding}
+													>
+														{t("loan.detail.classification.remission.approveButton")}
+													</Button>
+													<Button
+														size="sm"
+														variant="outline"
+														onClick={() => {
+															setSelectedRemissionRequest(pendingRemissionRequest);
+															setShowRejectRemissionModal(true);
+														}}
+														disabled={remissionDeciding}
+													>
+														{t("loan.detail.classification.remission.rejectButton")}
+													</Button>
+												</>
+											)}
+											{canCancelPendingRemission && (
+												<Button
+													size="sm"
+													variant="outline"
+													onClick={() => handleCancelRemissionRequest(pendingRemissionRequest)}
+													disabled={remissionDeciding}
+												>
+													{t("loan.detail.classification.remission.cancelButton")}
+												</Button>
+											)}
+										</div>
+									</div>
+									{!canApprovePendingRemission && pendingRemissionRequest.requestedBy === currentUserId && (
+										<p className="text-xs text-amber-700">{t("loan.detail.classification.remission.makerHint")}</p>
+									)}
+								</div>
+							)}
+
+							<div className="space-y-3">
+								<h3 className="text-base font-semibold text-gray-900">{t("loan.detail.classification.remission.historyTitle")}</h3>
+								{remissionRequestsLoading ? (
+									<p className="text-sm text-gray-500">{t("loan.detail.classification.remission.loading")}</p>
+								) : remissionRequests.length === 0 ? (
+									<p className="text-sm text-gray-500 rounded-lg border border-dashed border-gray-200 py-8 text-center">
+										{t("loan.detail.classification.remission.empty")}
+									</p>
+								) : (
+									<div className="overflow-x-auto rounded-lg border border-gray-200">
+										<table className="min-w-full divide-y divide-gray-200 text-sm">
+											<thead className="bg-gray-50">
+												<tr>
+													<th className="px-4 py-3 text-left font-medium text-gray-600">{t("loan.detail.classification.remission.table.date")}</th>
+													<th className="px-4 py-3 text-left font-medium text-gray-600">{t("loan.detail.classification.remission.table.transition")}</th>
+													<th className="px-4 py-3 text-left font-medium text-gray-600">{t("loan.detail.classification.remission.table.status")}</th>
+													<th className="px-4 py-3 text-left font-medium text-gray-600">{t("loan.detail.classification.remission.table.reason")}</th>
+													<th className="px-4 py-3 text-left font-medium text-gray-600">{t("loan.detail.classification.remission.table.actors")}</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-gray-100 bg-white">
+												{remissionRequests.map((req) => (
+													<tr key={req.id} className="hover:bg-gray-50 align-top">
+														<td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDateTime(req.requestedAt)}</td>
+														<td className="px-4 py-3 whitespace-nowrap">
+															{getClassificationStageBadge(req.currentStage)}
+															<span className="mx-1">→</span>
+															{getClassificationStageBadge(req.targetStage)}
+														</td>
+														<td className="px-4 py-3">{getRemissionStatusBadge(req.status)}</td>
+														<td className="px-4 py-3 max-w-xs">
+															<p className="line-clamp-3">{req.reason}</p>
+															{req.decisionComment && (
+																<p className="text-xs text-gray-500 mt-1">{req.decisionComment}</p>
+															)}
+														</td>
+														<td className="px-4 py-3 text-gray-600 text-xs">
+															<div>#{req.requestedBy ?? "—"}</div>
+															{req.decidedBy != null && <div>→ #{req.decidedBy}</div>}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</div>
 						</div>
 					)}
 				</div>
 			</div>
+
+			{/* Modal détail écriture comptable */}
+			{selectedAccountingEntry != null && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+					onClick={() => setSelectedAccountingEntry(null)}
+				>
+					<div
+						className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div className="flex items-start justify-between gap-4">
+							<div>
+								<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.accountingEntries.modal.title")}</h3>
+								<p className="text-sm text-gray-500 mt-1">
+									{t(`loan.detail.accountingEntries.source.${selectedAccountingEntry.source}`)} · #{selectedAccountingEntry.id}
+								</p>
+							</div>
+							<button
+								type="button"
+								className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+								onClick={() => setSelectedAccountingEntry(null)}
+								aria-label={t("loan.detail.accountingEntries.modal.close")}
+							>
+								×
+							</button>
+						</div>
+						<dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.table.date")}</dt>
+								<dd className="font-medium text-gray-900">
+									{formatDate(selectedAccountingEntry.entryDate ?? selectedAccountingEntry.createdAt)}
+								</dd>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.modal.createdAt")}</dt>
+								<dd className="font-medium text-gray-900">{formatDateTime(selectedAccountingEntry.createdAt)}</dd>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.table.type")}</dt>
+								<dd>
+									<Badge className={selectedAccountingEntry.entryType === "DEBIT" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+										{t(`transaction.detail.entryTypes.${selectedAccountingEntry.entryType}`)}
+									</Badge>
+								</dd>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.table.amount")}</dt>
+								<dd className="font-mono font-semibold text-gray-900">
+									{formatAmount(selectedAccountingEntry.amount, selectedAccountingEntry.currency, locale)}
+								</dd>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.table.glAccount")}</dt>
+								<dd className="font-mono text-gray-900">{selectedAccountingEntry.ledgerAccountCode ?? "—"}</dd>
+							</div>
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.table.reference")}</dt>
+								<dd className="font-mono text-gray-900">
+									{selectedAccountingEntry.referenceType ?? selectedAccountingEntry.transactionType ?? "—"}
+									{selectedAccountingEntry.referenceId != null && (
+										<span className="text-gray-500"> · #{selectedAccountingEntry.referenceId}</span>
+									)}
+								</dd>
+							</div>
+							{selectedAccountingEntry.transactionId != null && (
+								<div className="bg-gray-50 rounded-lg p-3 border border-gray-100 sm:col-span-2">
+									<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.modal.transaction")}</dt>
+									<dd>
+										<Link
+											href={`/transactions/${selectedAccountingEntry.transactionId}`}
+											className="text-indigo-600 hover:text-indigo-800 hover:underline font-mono"
+										>
+											{selectedAccountingEntry.transactionNumber ?? `#${selectedAccountingEntry.transactionId}`}
+										</Link>
+									</dd>
+								</div>
+							)}
+							<div className="bg-gray-50 rounded-lg p-3 border border-gray-100 sm:col-span-2">
+								<dt className="text-gray-500 mb-1">{t("loan.detail.accountingEntries.modal.description")}</dt>
+								<dd className="text-gray-900 whitespace-pre-wrap break-words">
+									{selectedAccountingEntry.description ?? "—"}
+								</dd>
+							</div>
+						</dl>
+						<div className="flex justify-end pt-2">
+							<Button variant="outline" onClick={() => setSelectedAccountingEntry(null)}>
+								{t("loan.detail.accountingEntries.modal.close")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{/* Modal Remboursement */}
 			{showRepayModal && (
@@ -858,6 +1337,82 @@ export default function LoanDetailPage() {
 								disabled={disburseLoading || selectedTargetId === "" || clientAccounts.length === 0}
 							>
 								{disburseLoading ? t("loan.detail.disburseLoading") : t("loan.detail.disburseConfirm")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+			{showRemissionModal && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+					onClick={() => !remissionSubmitting && setShowRemissionModal(false)}
+				>
+					<div
+						className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.classification.remission.modalTitle")}</h3>
+						<p className="text-sm text-gray-500">{t("loan.detail.classification.remission.modalHint")}</p>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">
+								{t("loan.detail.classification.remission.targetStageLabel")}
+							</label>
+							<select
+								className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+								value={remissionTargetStage}
+								onChange={(e) => setRemissionTargetStage(e.target.value as LoanClassificationStage)}
+							>
+								{remissionTargetOptions.map((stage) => (
+									<option key={stage} value={stage}>
+										{t(`loan.detail.classification.stage.${stage}`)}
+									</option>
+								))}
+							</select>
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-gray-700 mb-1">
+								{t("loan.detail.classification.remission.reasonLabel")}
+							</label>
+							<textarea
+								className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[120px]"
+								value={remissionReason}
+								onChange={(e) => setRemissionReason(e.target.value)}
+								placeholder={t("loan.detail.classification.remission.reasonPlaceholder")}
+							/>
+						</div>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button variant="outline" onClick={() => setShowRemissionModal(false)} disabled={remissionSubmitting}>
+								{t("loan.apply.cancel")}
+							</Button>
+							<Button onClick={handleSubmitRemissionRequest} disabled={remissionSubmitting || remissionTargetStage === ""}>
+								{remissionSubmitting ? t("loan.detail.classification.remission.submitting") : t("loan.detail.classification.remission.submitButton")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+			{showRejectRemissionModal && selectedRemissionRequest != null && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+					onClick={() => !remissionDeciding && setShowRejectRemissionModal(false)}
+				>
+					<div
+						className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.classification.remission.rejectModalTitle")}</h3>
+						<textarea
+							className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm min-h-[100px]"
+							value={rejectRemissionReason}
+							onChange={(e) => setRejectRemissionReason(e.target.value)}
+							placeholder={t("loan.detail.classification.remission.rejectReasonPlaceholder")}
+						/>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button variant="outline" onClick={() => setShowRejectRemissionModal(false)} disabled={remissionDeciding}>
+								{t("loan.apply.cancel")}
+							</Button>
+							<Button onClick={handleRejectRemissionRequest} disabled={remissionDeciding}>
+								{remissionDeciding ? t("loan.detail.classification.remission.rejecting") : t("loan.detail.classification.remission.rejectConfirm")}
 							</Button>
 						</div>
 					</div>

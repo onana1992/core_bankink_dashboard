@@ -30,6 +30,19 @@ export interface LoanSimulationResult {
 	totalInterest: number;
 }
 
+/** Contexte affiché avec le résultat de simulation catalogue. */
+export interface LoanSimulationPreview {
+	productId: number;
+	productName: string;
+	productCode: string;
+	currency: string;
+	periodId: number;
+	periodName: string;
+	periodMonths: number;
+	annualRatePercent: number;
+	estimatedOpeningFee: number | null;
+}
+
 export interface DisburseRequest {
 	targetAccountId: number;
 }
@@ -46,6 +59,14 @@ export interface LoanRepaymentAllocationItem {
 	interestPaid: number;
 }
 
+/** Champs extraits du metadata d'une transaction LOAN_REPAYMENT sur le compte prêt. */
+export interface LoanRepaymentMetadata {
+	sourceAccountId: number | null;
+	penaltyAllocation: number;
+	principalPaid: number;
+	interestPaid: number;
+}
+
 export interface LoanRepaymentResult {
 	fromTransaction: { id: number; amount: number; [key: string]: unknown };
 	loanTransaction: { id: number; amount: number; [key: string]: unknown };
@@ -54,10 +75,92 @@ export interface LoanRepaymentResult {
 	allocations: LoanRepaymentAllocationItem[];
 }
 
-/** Détail du solde prêt : reste échéancier + pénalités (calcul côté serveur). */
+/** Détail du solde prêt : reste échéancier + pénalités + CRD + intérêts + total (calcul côté serveur). */
 export interface LoanBalanceBreakdown {
 	scheduleRemaining: number;
 	penaltyBalance: number;
+	capitalRemaining: number;
+	interestRemaining: number;
+	totalDue: number;
+}
+
+export type LoanAccountingEntrySource = "TRANSACTION_ENTRY" | "LEDGER_ENTRY";
+
+/** Écriture comptable liée au compte prêt (transaction ou Grand Livre). */
+export interface LoanAccountAccountingEntry {
+	id: number;
+	source: LoanAccountingEntrySource;
+	transactionId?: number | null;
+	transactionNumber?: string | null;
+	transactionType?: string | null;
+	referenceType?: string | null;
+	referenceId?: number | null;
+	entryType: "DEBIT" | "CREDIT";
+	amount: number;
+	currency: string;
+	ledgerAccountCode?: string | null;
+	description?: string | null;
+	entryDate?: string | null;
+	createdAt: string;
+}
+
+export type LoanClassificationStage = "PERFORMING" | "UNPAID" | "NON_PERFORMING" | "DOUBTFUL";
+
+/** Ordre croissant de sévérité prudentielle (index 0 = moins sévère). */
+export const LOAN_CLASSIFICATION_STAGE_ORDER: readonly LoanClassificationStage[] = [
+	"PERFORMING",
+	"UNPAID",
+	"NON_PERFORMING",
+	"DOUBTFUL"
+] as const;
+
+export type LoanStageRemissionRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+/** Demande de rémission manuelle de stade (CU-L17, maker-checker). */
+export interface LoanStageRemissionRequest {
+	id: number;
+	accountId: number;
+	currentStage: LoanClassificationStage;
+	targetStage: LoanClassificationStage;
+	reason: string;
+	status: LoanStageRemissionRequestStatus;
+	requestedAt: string;
+	requestedBy?: number | null;
+	decidedAt?: string | null;
+	decidedBy?: number | null;
+	decisionComment?: string | null;
+	effectiveDate?: string | null;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface CreateLoanStageRemissionRequest {
+	targetStage: LoanClassificationStage;
+	reason: string;
+}
+
+export interface ApproveLoanStageRemissionRequest {
+	comment?: string;
+}
+
+export interface RejectLoanStageRemissionRequest {
+	reason: string;
+}
+
+/** Classification prudentielle PCEMF — une ligne par compte prêt (état actuel). */
+export interface LoanCreditClassification {
+	id: number;
+	accountId: number;
+	classificationStage: LoanClassificationStage;
+	pcemfLoanAccountCode: string;
+	dpdDays: number;
+	stageSinceDate: string;
+	doubtfulSinceDate?: string | null;
+	provisionAmount: number;
+	interestAccrualSuspended: boolean;
+	classificationOverride: boolean;
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 // UC-L07 / UC-L08 : Demandes de prêt (workflow)

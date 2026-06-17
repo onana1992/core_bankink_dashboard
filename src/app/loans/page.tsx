@@ -8,7 +8,6 @@ import Input from "@/components/ui/Input";
 import Badge from "@/components/ui/Badge";
 import TablePagination from "@/components/ui/TablePagination";
 import { loansApi, customersApi } from "@/lib/api";
-import { formatAmount } from "@/lib/utils";
 import type { Account, AccountStatus, Customer } from "@/types";
 
 export default function LoansPage() {
@@ -246,7 +245,6 @@ export default function LoansPage() {
 										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.accountNumber")}</th>
 										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.clientId")}</th>
 										<th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.product")}</th>
-										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.balance")}</th>
 										<th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.rate")}</th>
 										<th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.maturity")}</th>
 										<th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">{t("loan.list.table.status")}</th>
@@ -267,7 +265,6 @@ export default function LoansPage() {
 												)}
 											</td>
 											<td className="px-4 py-3 text-sm text-gray-600">{loan.product?.name ?? "—"}</td>
-											<td className="px-4 py-3 text-sm text-right font-medium">{formatAmount(loan.balance, loan.currency, locale)}</td>
 											<td className="px-4 py-3 text-sm text-right">{loan.interestRate != null ? `${Number(loan.interestRate)} %` : "—"}</td>
 											<td className="px-4 py-3 text-sm text-center">{formatDate(loan.maturityDate)}</td>
 											<td className="px-4 py-3 text-center">{getStatusBadge(loan.status)}</td>

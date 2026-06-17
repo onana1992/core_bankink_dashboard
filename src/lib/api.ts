@@ -106,7 +106,12 @@ import type {
 	LoanScheduleItem,
 	LoanSimulationResult,
 	LoanBalanceBreakdown,
+	LoanAccountAccountingEntry,
 	LoanCreditClassification,
+	LoanStageRemissionRequest,
+	CreateLoanStageRemissionRequest,
+	ApproveLoanStageRemissionRequest,
+	RejectLoanStageRemissionRequest,
 	DisburseRequest,
 	RepayLoanRequest,
 	LoanRepaymentResult,
@@ -1575,6 +1580,14 @@ export const loansApi = {
 		return handleJsonResponse<LoanScheduleItem[]>(res);
 	},
 
+	async getAccountingEntries(accountId: number | string): Promise<LoanAccountAccountingEntry[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/accounting-entries`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanAccountAccountingEntry[]>(res);
+	},
+
 	async generateSchedule(accountId: number | string): Promise<LoanScheduleItem[]> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/schedule/generate`, {
 			method: "POST",
@@ -1611,6 +1624,58 @@ export const loansApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<LoanSimulationResult>(res);
+	},
+
+	async listStageRemissionRequests(accountId: number | string): Promise<LoanStageRemissionRequest[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/stage-remission-requests`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<LoanStageRemissionRequest[]>(res);
+	},
+
+	async submitStageRemissionRequest(
+		accountId: number | string,
+		payload: CreateLoanStageRemissionRequest
+	): Promise<LoanStageRemissionRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/stage-remission-requests`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LoanStageRemissionRequest>(res);
+	},
+
+	async approveStageRemissionRequest(
+		requestId: number | string,
+		payload?: ApproveLoanStageRemissionRequest
+	): Promise<LoanStageRemissionRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/stage-remission-requests/${requestId}/approve`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload ?? {})
+		});
+		return handleJsonResponse<LoanStageRemissionRequest>(res);
+	},
+
+	async rejectStageRemissionRequest(
+		requestId: number | string,
+		payload: RejectLoanStageRemissionRequest
+	): Promise<LoanStageRemissionRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/stage-remission-requests/${requestId}/reject`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<LoanStageRemissionRequest>(res);
+	},
+
+	async cancelStageRemissionRequest(requestId: number | string): Promise<LoanStageRemissionRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/stage-remission-requests/${requestId}/cancel`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LoanStageRemissionRequest>(res);
 	}
 };
 
