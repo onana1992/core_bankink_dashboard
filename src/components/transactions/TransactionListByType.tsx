@@ -6,6 +6,7 @@ import i18n from "@/lib/i18n";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 import { transactionsApi, accountsApi } from "@/lib/api";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import type { Transaction, TransactionType, TransactionStatus, Account } from "@/types";
@@ -81,8 +82,8 @@ export default function TransactionListByType({
 				});
 				
 				setTransactions(sortedTransactions);
-				setTotalPages(response.totalPages || 0);
-				setTotalElements(response.totalElements || 0);
+				setTotalPages(response.totalPages);
+				setTotalElements(response.totalElements);
 			} catch (e: any) {
 				setError(e?.message ?? t("transaction.byType.errors.loadTransactions", { type: title.toLowerCase() }));
 			} finally {
@@ -384,46 +385,26 @@ export default function TransactionListByType({
 						</table>
 					</div>
 					
-					{totalElements > 0 && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-							<div className="flex items-center justify-between">
-								<div className="text-sm text-gray-600">
-									{totalElements > 1 
-										? t("transaction.byType.pagination.showingPlural", { count: transactions.length, total: totalElements })
-										: t("transaction.byType.pagination.showing", { count: transactions.length, total: totalElements })
-									}
-								</div>
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(page - 1)}
-										disabled={page === 0}
-										className="flex items-center gap-1"
-									>
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-										</svg>
-										{t("transaction.byType.pagination.previous")}
-									</Button>
-									<span className="flex items-center px-4 text-sm text-gray-700">
-										{t("transaction.byType.pagination.page", { current: page + 1, total: totalPages || 1 })}
-									</span>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(page + 1)}
-										disabled={page >= totalPages - 1}
-										className="flex items-center gap-1"
-									>
-										{t("transaction.byType.pagination.next")}
-										<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-										</svg>
-									</Button>
-								</div>
-							</div>
-						</div>
+					{(transactions.length > 0 || totalElements > 0) && (
+						<TablePagination
+							page={page}
+							totalPages={totalPages}
+							totalElements={totalElements}
+							pageSize={size}
+							onPageChange={setPage}
+							resultsLabel={
+								totalElements > 1
+									? t("transaction.list.pagination.transactionsPlural")
+									: t("transaction.list.pagination.transactions")
+							}
+							showFirstLast
+							sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
+							size={size}
+							onSizeChange={(nextSize) => {
+								setSize(nextSize);
+								setPage(0);
+							}}
+						/>
 					)}
 				</div>
 			)}

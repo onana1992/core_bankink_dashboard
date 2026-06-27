@@ -24,7 +24,7 @@
 		"chartOfAccounts": "Plan comptable",
 		"transactions": "Transactions",
 		"allTransactions": "Toutes les transactions",
-		"journal": "Journal",
+		"journal": "Lot de journalisation",
 		"transfers": "Virements",
 		"holds": "Réservations",
 		"users": "Utilisateurs",
@@ -2429,7 +2429,7 @@
 	},
 	"journalBatches": {
 		"title": "Lots de journalisation",
-		"subtitle": "Gestion des lots de journalisation comptable",
+		"subtitle": "Consultation des lots créés automatiquement par le système",
 		"refresh": "Actualiser",
 		"newBatch": "Nouveau lot",
 		"cancel": "Annuler",
@@ -2439,7 +2439,8 @@
 		"startDate": "Date début",
 		"endDate": "Date fin",
 		"statusDraft": "Brouillon",
-		"statusPosted": "Posté",
+		"statusPosted": "Posté (legacy)",
+		"statusPostedLegacy": "Clôturé (legacy)",
 		"statusClosed": "Clôturé",
 		"formNewTitle": "Nouveau lot de journalisation",
 		"formBatchNumber": "Numéro de lot *",
@@ -2459,7 +2460,7 @@
 		"close": "Clôturer",
 		"loadingBatches": "Chargement des lots...",
 		"noBatches": "Aucun lot de journalisation trouvé",
-		"noBatchesHint": "Essayez de modifier vos filtres ou créez un nouveau lot",
+		"noBatchesHint": "Les lots sont créés automatiquement lors des opérations et batchs comptables",
 		"errorLoad": "Erreur lors du chargement des lots de journalisation",
 		"errorCreate": "Erreur lors de la création du lot",
 		"errorPost": "Erreur lors du posting du lot",
@@ -2473,10 +2474,13 @@
 		"next": "Suivant",
 		"last": "Dernier",
 		"pageOf": "Page {{current}} sur {{total}}",
+		"paginationResultsLabel": "lots",
+		"paginationResultLabel": "lot",
 		"detail": {
 			"back": "Retour",
 			"backToList": "Retour à la liste",
-			"subtitle": "Détails du lot de journalisation",
+			"subtitle": "Consultation du lot de journalisation",
+			"readOnlyHint": "Les lots sont créés et clôturés automatiquement. La clôture journalière finalise les lots DRAFT du jour.",
 			"recalculateTotals": "Recalculer les totaux",
 			"postBatch": "Poster le lot",
 			"closeBatch": "Clôturer le lot",
@@ -2491,8 +2495,8 @@
 			"closedAt": "Clôturé le",
 			"balanced": "Lot équilibré ✓",
 			"unbalanced": "Lot déséquilibré - Écart: {{amount}}",
-			"balancedHint": "Les totaux débit et crédit sont égaux. Le lot peut être posté.",
-			"unbalancedHint": "Les totaux débit et crédit ne sont pas égaux. Veuillez corriger les écritures avant de poster.",
+			"balancedHint": "Les totaux débit et crédit sont égaux. Le lot sera clôturé automatiquement à la clôture journalière.",
+			"unbalancedHint": "Les totaux débit et crédit ne sont pas égaux. La clôture journalière sera bloquée tant que le lot n'est pas corrigé.",
 			"entries": "Écritures",
 			"entriesCount": "Écritures ({{count}})",
 			"refresh": "Actualiser",
@@ -2780,7 +2784,9 @@
 				"showingPlural": "Affichage de {{count}} sur {{total}} transactions",
 				"page": "Page {{current}} sur {{total}}",
 				"previous": "Précédent",
-				"next": "Suivant"
+				"next": "Suivant",
+				"transactions": "transaction",
+				"transactionsPlural": "transactions"
 			},
 			"errors": {
 				"loadAccounts": "Erreur lors du chargement des comptes",
@@ -3494,6 +3500,21 @@
 						"reason": "Justificatif",
 						"actors": "Acteurs"
 					}
+				},
+				"writeOff": {
+					"button": "Abandonner la créance",
+					"modalTitle": "Abandon de créance (6922)",
+					"modalHint": "Cette opération constate une perte définitive sur un prêt en stade douteux. Elle est irréversible : écritures 6922 / 3352 et reprise de provision, puis clôture du compte prêt.",
+					"principalLabel": "Capital restant dû (CRD)",
+					"provisionLabel": "Provision à reprendre",
+					"netLossLabel": "Perte nette estimée",
+					"netLossFullyCovered": "Nulle (provision ≥ CRD)",
+					"confirmButton": "Confirmer l'abandon",
+					"confirming": "Abandon en cours…",
+					"success": "Créance abandonnée. Le compte prêt est clôturé.",
+					"error": "Erreur lors de l'abandon de créance.",
+					"blockedByRemission": "Une demande de rémission est en cours. Annulez-la ou validez-la avant l'abandon.",
+					"requiresDoubtful": "Disponible uniquement pour un prêt en stade douteux."
 				}
 			}
 		},

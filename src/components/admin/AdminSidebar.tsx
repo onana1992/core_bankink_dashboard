@@ -39,7 +39,8 @@ import {
 	Server,
 	CreditCard,
 	Layers,
-	Scale
+	Scale,
+	NotebookText
 } from "lucide-react";
 
 const navFocus =
@@ -296,8 +297,8 @@ export default function AdminSidebar({ collapsed = false }: { collapsed?: boolea
 							<NavLink href="/transactions/interest" label={t("transaction.list.types.interests")} icon={Sparkles} collapsed={collapsed} />
 							<NavLink href="/transactions/adjustment" label={t("transaction.list.types.adjustments")} icon={Settings2} collapsed={collapsed} />
 							<NavLink href="/transactions/reversal" label={t("transaction.list.types.reversals")} icon={RotateCcw} collapsed={collapsed} />
-							<NavLink href="/journal-batches" label={t("sidebar.journal")} icon={Repeat} collapsed={collapsed} />
 							<NavLink href="/holds" label={t("sidebar.holds")} icon={CheckCircle} collapsed={collapsed} />
+							<NavLink href="/journal-batches" label={t("sidebar.journal")} icon={NotebookText} collapsed={collapsed} />
 						</div>
 					</details>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
@@ -12,23 +12,21 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
 
-
 const STATUS_COLORS: Record<JournalBatchStatus, string> = {
 	DRAFT: "bg-yellow-100 text-yellow-800",
-	POSTED: "bg-blue-100 text-blue-800",
+	POSTED: "bg-green-100 text-green-800",
 	CLOSED: "bg-green-100 text-green-800"
 };
 
 export default function JournalBatchDetailPage() {
 	const { t, i18n } = useTranslation();
 	const params = useParams();
-	const router = useRouter();
 	const batchId = params.id as string;
 	const { isAuthenticated, loading: authLoading } = useAuth();
 
 	const STATUS_LABELS: Record<JournalBatchStatus, string> = {
 		DRAFT: t("journalBatches.statusDraft"),
-		POSTED: t("journalBatches.statusPosted"),
+		POSTED: t("journalBatches.statusPostedLegacy"),
 		CLOSED: t("journalBatches.statusClosed")
 	};
 
@@ -37,8 +35,6 @@ export default function JournalBatchDetailPage() {
 	const [loading, setLoading] = useState(false);
 	const [entriesLoading, setEntriesLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [actionLoading, setActionLoading] = useState(false);
-	const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
 	useEffect(() => {
 		if (authLoading) return;
@@ -75,66 +71,11 @@ export default function JournalBatchDetailPage() {
 		}
 	}
 
-	async function handlePost() {
-		if (!batch) return;
-		if (!confirm(t("journalBatches.detail.confirmPost"))) {
-			return;
-		}
-		setActionLoading(true);
-		try {
-			const updatedBatch = await journalBatchesApi.post(batchId);
-			setBatch(updatedBatch);
-			setToast({ message: t("journalBatches.detail.toastPosted"), type: "success" });
-			setTimeout(() => {
-				window.location.reload();
-			}, 1500);
-		} catch (e: any) {
-			setToast({ message: e?.message ?? "Erreur lors du posting du lot", type: "error" });
-		} finally {
-			setActionLoading(false);
-		}
-	}
-
-	async function handleClose() {
-		if (!batch) return;
-		if (!confirm(t("journalBatches.detail.confirmClose"))) {
-			return;
-		}
-		setActionLoading(true);
-		try {
-			const updatedBatch = await journalBatchesApi.close(batchId);
-			setBatch(updatedBatch);
-			setToast({ message: t("journalBatches.detail.toastClosed"), type: "success" });
-			setTimeout(() => {
-				window.location.reload();
-			}, 1500);
-		} catch (e: any) {
-			setToast({ message: e?.message ?? t("journalBatches.errorClose"), type: "error" });
-		} finally {
-			setActionLoading(false);
-		}
-	}
-
-	async function handleRecalculateTotals() {
-		if (!batch) return;
-		setActionLoading(true);
-		try {
-			await journalBatchesApi.recalculateTotals(batchId);
-			await loadBatch();
-			setToast({ message: t("journalBatches.detail.toastRecalculated"), type: "success" });
-		} catch (e: any) {
-			setToast({ message: e?.message ?? t("journalBatches.detail.errorRecalculate"), type: "error" });
-		} finally {
-			setActionLoading(false);
-		}
-	}
-
 	function formatAmount(amount: number, currency: string): string {
 		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 		return formatAmountUtil(amount, currency, locale);
 	}
 
-	/** Pour les chaînes date seule "YYYY-MM-DD" : évite le décalage d'un jour en fuseaux à l'ouest de UTC */
 	function formatDateOnly(dateString: string): string {
 		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 		const [y, m, d] = dateString.split("-").map(Number);
@@ -182,7 +123,7 @@ export default function JournalBatchDetailPage() {
 					{error}
 				</div>
 				<Link href="/journal-batches">
-					<Button variant="outline">Retour à la liste</Button>
+					<Button variant="outline">{t("journalBatches.detail.backToList")}</Button>
 				</Link>
 			</div>
 		);
@@ -194,26 +135,6 @@ export default function JournalBatchDetailPage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Toast */}
-			{toast && (
-				<div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-md border shadow-lg transition-all duration-300 ${
-					toast.type === "success" 
-						? "bg-green-50 border-green-200 text-green-800" 
-						: "bg-red-50 border-red-200 text-red-800"
-				}`}>
-					<div className="flex items-center gap-2">
-						<span className="font-medium">{toast.message}</span>
-						<button
-							onClick={() => setToast(null)}
-							className="ml-2 text-current opacity-70 hover:opacity-100 text-xl leading-none font-bold"
-						>
-							×
-						</button>
-					</div>
-				</div>
-			)}
-
-			{/* En-tête */}
 			<div className="flex items-center justify-between">
 				<div>
 					<div className="flex items-center gap-3 mb-2">
@@ -232,48 +153,12 @@ export default function JournalBatchDetailPage() {
 					</div>
 					<p className="text-gray-600">{t("journalBatches.detail.subtitle")}</p>
 				</div>
-				<div className="flex gap-3">
-					{batch.status === "DRAFT" && (
-						<>
-							<Button
-								variant="outline"
-								onClick={handleRecalculateTotals}
-								disabled={actionLoading}
-								className="flex items-center gap-2"
-							>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-								</svg>
-								{t("journalBatches.detail.recalculateTotals")}
-							</Button>
-							<Button
-								onClick={handlePost}
-								disabled={actionLoading || !isBalanced}
-								className="flex items-center gap-2"
-							>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-								</svg>
-								{t("journalBatches.detail.postBatch")}
-							</Button>
-						</>
-					)}
-					{batch.status === "POSTED" && (
-						<Button
-							onClick={handleClose}
-							disabled={actionLoading}
-							className="flex items-center gap-2"
-						>
-							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-							</svg>
-							{t("journalBatches.detail.closeBatch")}
-						</Button>
-					)}
-				</div>
 			</div>
 
-			{/* Informations du lot */}
+			<div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-900">
+				{t("journalBatches.detail.readOnlyHint")}
+			</div>
+
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
 				<h2 className="text-xl font-semibold text-gray-900 mb-4">{t("journalBatches.detail.batchInfo")}</h2>
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -321,13 +206,7 @@ export default function JournalBatchDetailPage() {
 						<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.createdAt")}</label>
 						<p className="text-gray-900">{formatDateTime(batch.createdAt)}</p>
 					</div>
-					{batch.status === "POSTED" && (
-						<div>
-							<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.postedAt")}</label>
-							<p className="text-gray-900">{formatDateTime(batch.updatedAt)}</p>
-						</div>
-					)}
-					{batch.status === "CLOSED" && (
+					{(batch.status === "CLOSED" || batch.status === "POSTED") && (
 						<div>
 							<label className="block text-sm font-medium text-gray-500 mb-1">{t("journalBatches.detail.closedAt")}</label>
 							<p className="text-gray-900">{formatDateTime(batch.updatedAt)}</p>
@@ -335,10 +214,9 @@ export default function JournalBatchDetailPage() {
 					)}
 				</div>
 
-				{/* Indicateur d'équilibre */}
 				<div className={`mt-6 p-4 rounded-lg border ${
-					isBalanced 
-						? "bg-green-50 border-green-200" 
+					isBalanced
+						? "bg-green-50 border-green-200"
 						: "bg-red-50 border-red-200"
 				}`}>
 					<div className="flex items-center gap-3">
@@ -355,7 +233,7 @@ export default function JournalBatchDetailPage() {
 							<p className={`font-semibold ${
 								isBalanced ? "text-green-800" : "text-red-800"
 							}`}>
-								{isBalanced 
+								{isBalanced
 									? t("journalBatches.detail.balanced")
 									: t("journalBatches.detail.unbalanced", { amount: formatAmount(difference, currency) })
 								}
@@ -363,7 +241,7 @@ export default function JournalBatchDetailPage() {
 							<p className={`text-sm mt-1 ${
 								isBalanced ? "text-green-700" : "text-red-700"
 							}`}>
-								{isBalanced 
+								{isBalanced
 									? t("journalBatches.detail.balancedHint")
 									: t("journalBatches.detail.unbalancedHint")
 								}
@@ -373,12 +251,11 @@ export default function JournalBatchDetailPage() {
 				</div>
 			</div>
 
-			{/* Écritures */}
 			<div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
 				<div className="p-6 border-b border-gray-200">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-semibold text-gray-900">
-							Écritures ({entries.length})
+							{t("journalBatches.detail.entriesCount", { count: entries.length })}
 						</h2>
 						<Button
 							variant="outline"
@@ -390,7 +267,7 @@ export default function JournalBatchDetailPage() {
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
-							Actualiser
+							{t("journalBatches.detail.refresh")}
 						</Button>
 					</div>
 				</div>
@@ -413,13 +290,13 @@ export default function JournalBatchDetailPage() {
 						<table className="min-w-full divide-y divide-gray-200">
 							<thead className="bg-gray-50">
 								<tr>
-									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Compte GL</th>
-									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
-									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Débit</th>
-									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Crédit</th>
-									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Devise</th>
-									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Référence</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.date")}</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.detail.glAccount")}</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.description")}</th>
+									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.debit")}</th>
+									<th className="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.credit")}</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.detail.currency")}</th>
+									<th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{t("journalBatches.detail.reference")}</th>
 								</tr>
 							</thead>
 							<tbody className="bg-white divide-y divide-gray-200 text-sm">
@@ -489,4 +366,3 @@ export default function JournalBatchDetailPage() {
 		</div>
 	);
 }
-

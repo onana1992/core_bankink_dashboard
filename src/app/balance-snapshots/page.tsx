@@ -17,7 +17,11 @@ const selectClass =
 export default function BalanceSnapshotsPage() {
 	const router = useRouter();
 	const { isAuthenticated, loading: authLoading } = useAuth();
-	const [snapshotDate, setSnapshotDate] = useState(() => new Date().toISOString().split("T")[0]);
+	const [snapshotDate, setSnapshotDate] = useState(() => {
+		const d = new Date();
+		d.setDate(d.getDate() - 1);
+		return d.toISOString().split("T")[0];
+	});
 	const [ledgerAccounts, setLedgerAccounts] = useState<LedgerAccount[]>([]);
 	const [filterLedgerId, setFilterLedgerId] = useState<string>("");
 	const [rows, setRows] = useState<BalanceSnapshot[]>([]);

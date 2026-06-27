@@ -74,6 +74,8 @@ export default function LoanDetailPage() {
 	const [rejectRemissionReason, setRejectRemissionReason] = useState("");
 	const [remissionDeciding, setRemissionDeciding] = useState(false);
 	const [selectedRemissionRequest, setSelectedRemissionRequest] = useState<LoanStageRemissionRequest | null>(null);
+	const [showWriteOffModal, setShowWriteOffModal] = useState(false);
+	const [writeOffSubmitting, setWriteOffSubmitting] = useState(false);
 
 	const loanTabs = useMemo(
 		() => [
@@ -366,6 +368,17 @@ export default function LoanDetailPage() {
 		pendingRemissionRequest != null &&
 		pendingRemissionRequest.requestedBy === currentUserId;
 
+	const writeOffPrincipal = balanceBreakdown?.capitalRemaining ?? loan?.balance ?? 0;
+	const writeOffProvision = classification?.provisionAmount ?? 0;
+	const writeOffNetLoss = Math.max(0, writeOffPrincipal - writeOffProvision);
+
+	const canWriteOff =
+		loan?.status === "ACTIVE" &&
+		loan?.disbursedAt != null &&
+		classification?.classificationStage === "DOUBTFUL" &&
+		pendingRemissionRequest == null &&
+		(writeOffPrincipal > 0 || writeOffProvision > 0);
+
 	async function handleSubmitRemissionRequest() {
 		if (!accountId || remissionTargetStage === "") return;
 		const reason = remissionReason.trim();
@@ -436,6 +449,21 @@ export default function LoanDetailPage() {
 			showToast((e as Error)?.message ?? t("loan.detail.classification.remission.cancelError"), "error");
 		} finally {
 			setRemissionDeciding(false);
+		}
+	}
+
+	async function handleWriteOff() {
+		if (!accountId) return;
+		setWriteOffSubmitting(true);
+		try {
+			await loansApi.writeOff(accountId);
+			showToast(t("loan.detail.classification.writeOff.success"), "success");
+			setShowWriteOffModal(false);
+			await load();
+		} catch (e: unknown) {
+			showToast((e as Error)?.message ?? t("loan.detail.classification.writeOff.error"), "error");
+		} finally {
+			setWriteOffSubmitting(false);
 		}
 	}
 
@@ -976,16 +1004,27 @@ export default function LoanDetailPage() {
 										<p className="text-sm text-gray-500">{t("loan.detail.classification.subtitle")}</p>
 									</div>
 								</div>
-								{canRequestRemission && (
-									<Button
-										onClick={() => {
-											setRemissionTargetStage(remissionTargetOptions[remissionTargetOptions.length - 1] ?? "");
-											setShowRemissionModal(true);
-										}}
-									>
-										{t("loan.detail.classification.remission.requestButton")}
-									</Button>
-								)}
+								<div className="flex flex-wrap items-center gap-2">
+									{canRequestRemission && (
+										<Button
+											onClick={() => {
+												setRemissionTargetStage(remissionTargetOptions[remissionTargetOptions.length - 1] ?? "");
+												setShowRemissionModal(true);
+											}}
+										>
+											{t("loan.detail.classification.remission.requestButton")}
+										</Button>
+									)}
+									{canWriteOff && (
+										<Button
+											variant="outline"
+											className="border-red-300 text-red-700 hover:bg-red-50"
+											onClick={() => setShowWriteOffModal(true)}
+										>
+											{t("loan.detail.classification.writeOff.button")}
+										</Button>
+									)}
+								</div>
 							</div>
 							{classification == null ? (
 								<div className="py-12 text-center text-gray-500 rounded-lg border border-dashed border-gray-200">
@@ -1032,6 +1071,10 @@ export default function LoanDetailPage() {
 										</tbody>
 									</table>
 								</div>
+							)}
+
+							{pendingRemissionRequest != null && classification?.classificationStage === "DOUBTFUL" && (
+								<p className="text-sm text-amber-700">{t("loan.detail.classification.writeOff.blockedByRemission")}</p>
 							)}
 
 							{pendingRemissionRequest != null && (
@@ -1386,6 +1429,56 @@ export default function LoanDetailPage() {
 							</Button>
 							<Button onClick={handleSubmitRemissionRequest} disabled={remissionSubmitting || remissionTargetStage === ""}>
 								{remissionSubmitting ? t("loan.detail.classification.remission.submitting") : t("loan.detail.classification.remission.submitButton")}
+							</Button>
+						</div>
+					</div>
+				</div>
+			)}
+			{showWriteOffModal && loan != null && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+					onClick={() => !writeOffSubmitting && setShowWriteOffModal(false)}
+				>
+					<div
+						className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4"
+						onClick={(e) => e.stopPropagation()}
+					>
+						<h3 className="text-lg font-semibold text-gray-900">{t("loan.detail.classification.writeOff.modalTitle")}</h3>
+						<p className="text-sm text-gray-500">{t("loan.detail.classification.writeOff.modalHint")}</p>
+						<dl className="rounded-lg border border-gray-200 divide-y divide-gray-100 text-sm">
+							<div className="flex justify-between gap-4 px-4 py-3">
+								<dt className="text-gray-600">{t("loan.detail.classification.writeOff.principalLabel")}</dt>
+								<dd className="font-mono font-medium text-gray-900">
+									{formatAmount(writeOffPrincipal, loan.currency, locale)}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-4 px-4 py-3">
+								<dt className="text-gray-600">{t("loan.detail.classification.writeOff.provisionLabel")}</dt>
+								<dd className="font-mono font-medium text-gray-900">
+									{formatAmount(writeOffProvision, loan.currency, locale)}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-4 px-4 py-3 bg-gray-50">
+								<dt className="text-gray-600">{t("loan.detail.classification.writeOff.netLossLabel")}</dt>
+								<dd className="font-mono font-medium text-red-700">
+									{writeOffNetLoss > 0
+										? formatAmount(writeOffNetLoss, loan.currency, locale)
+										: t("loan.detail.classification.writeOff.netLossFullyCovered")}
+								</dd>
+							</div>
+						</dl>
+						<div className="flex justify-end gap-2 pt-2">
+							<Button variant="outline" onClick={() => setShowWriteOffModal(false)} disabled={writeOffSubmitting}>
+								{t("loan.apply.cancel")}
+							</Button>
+							<Button
+								className="bg-red-700 text-white hover:bg-red-800"
+								onClick={handleWriteOff}
+								disabled={writeOffSubmitting}
+							>
+								{writeOffSubmitting
+									? t("loan.detail.classification.writeOff.confirming")
+									: t("loan.detail.classification.writeOff.confirmButton")}
 							</Button>
 						</div>
 					</div>

@@ -102,6 +102,12 @@ import type {
 	CloseDayRequest,
 	CloseMonthRequest,
 	ClosureValidationResponse,
+	ClosureRequest,
+	AccountingCalendarStatus,
+	ApproveClosureRequest,
+	RejectClosureRequest,
+	CloseDayResult,
+	CloseMonthResult,
 	BalanceSnapshot,
 	LoanScheduleItem,
 	LoanSimulationResult,
@@ -112,6 +118,7 @@ import type {
 	CreateLoanStageRemissionRequest,
 	ApproveLoanStageRemissionRequest,
 	RejectLoanStageRemissionRequest,
+	LoanWriteOffResult,
 	DisburseRequest,
 	RepayLoanRequest,
 	LoanRepaymentResult,
@@ -510,6 +517,22 @@ function normalizeSpringPagePayload<T>(raw: unknown): {
 	return out;
 }
 
+type SpringPagePayload<T> = ReturnType<typeof normalizeSpringPagePayload<T>>;
+
+/** GET paginé Spring (`PageSerializationMode.VIA_DTO`) → métadonnées normalisées à la racine. */
+async function fetchSpringPage<T>(
+	url: string,
+	init: RequestInit,
+	errorLabel: string
+): Promise<SpringPagePayload<T>> {
+	const res = await fetchWithAutoRefresh(url, init);
+	const body = await handleJsonResponse<Record<string, unknown>>(res);
+	if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
+		throw new Error(`${errorLabel} : réponse invalide ou vide.`);
+	}
+	return normalizeSpringPagePayload<T>(body);
+}
+
 function normalizeOpsCustomersPagePayload(raw: unknown): {
 	content: Customer[];
 	totalElements: number;
@@ -535,15 +558,11 @@ export const customersApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/customers${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		const body = await handleJsonResponse<Record<string, unknown>>(res);
-		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
-			throw new Error("Liste clients : réponse invalide ou vide.");
-		}
-		return normalizeOpsCustomersPagePayload(body);
+		return fetchSpringPage<Customer>(
+			`${API_BASE}/api/ops/customers${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste clients"
+		);
 	},
 
 	async create(payload: CreateCustomerRequest): Promise<Customer> {
@@ -1007,15 +1026,11 @@ export const productsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/products${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		const body = await handleJsonResponse<Record<string, unknown>>(res);
-		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
-			throw new Error("Liste produits : réponse invalide ou vide.");
-		}
-		return normalizeSpringPagePayload<Product>(body);
+		return fetchSpringPage<Product>(
+			`${API_BASE}/api/ops/products${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste produits"
+		);
 	},
 
 	async create(payload: CreateProductRequest): Promise<Product> {
@@ -1435,12 +1450,11 @@ export const accountsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const url = `${API_BASE}/api/ops/accounts${query ? `?${query}` : ""}`;
-		const res = await fetchWithAutoRefresh(url, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<Account>(
+			`${API_BASE}/api/ops/accounts${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste comptes"
+		);
 	},
 
 	async get(id: number | string): Promise<Account> {
@@ -1539,11 +1553,11 @@ export const loansApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: Account[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<Account>(
+			`${API_BASE}/api/ops/loans${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste prêts"
+		);
 	},
 
 	async get(accountId: number | string): Promise<Account> {
@@ -1676,6 +1690,14 @@ export const loansApi = {
 			headers: getAuthHeaders()
 		});
 		return handleJsonResponse<LoanStageRemissionRequest>(res);
+	},
+
+	async writeOff(accountId: number | string): Promise<LoanWriteOffResult> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/${accountId}/write-off`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<LoanWriteOffResult>(res);
 	}
 };
 
@@ -1701,11 +1723,11 @@ export const loanApplicationsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/loans/applications${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: LoanApplication[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<LoanApplication>(
+			`${API_BASE}/api/ops/loans/applications${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste demandes de prêt"
+		);
 	},
 
 	async get(id: number | string): Promise<LoanApplication> {
@@ -1862,8 +1884,8 @@ export type UserPageResponse = {
 	totalPages: number;
 	number: number;
 	size: number;
-	first: boolean;
-	last: boolean;
+	first?: boolean;
+	last?: boolean;
 };
 
 export const usersApi = {
@@ -1873,11 +1895,11 @@ export const usersApi = {
 		if (params?.page != null) usp.set("page", String(params.page));
 		if (params?.size != null) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/users${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<UserPageResponse>(res);
+		return fetchSpringPage<User>(
+			`${API_BASE}/api/ops/users${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste utilisateurs"
+		);
 	},
 
 	async get(id: number | string): Promise<User> {
@@ -1956,11 +1978,11 @@ export const servicesApi = {
 		if (params?.page != null) usp.set("page", String(params.page));
 		if (params?.size != null) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<ServiceRegistryPageResponse>(res);
+		return fetchSpringPage<ServiceRegistry>(
+			`${API_BASE}/api/ops/services${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste services"
+		);
 	},
 
 	async get(id: number | string): Promise<ServiceRegistry> {
@@ -2011,11 +2033,11 @@ export const servicesApi = {
 		if (params?.page != null) usp.set("page", String(params.page));
 		if (params?.size != null) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/services/${serviceId}/tokens${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<ServiceTokenPageResponse>(res);
+		return fetchSpringPage<ServiceToken>(
+			`${API_BASE}/api/ops/services/${serviceId}/tokens${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste jetons service"
+		);
 	},
 
 	async revokeToken(serviceId: number | string, tokenId: number | string): Promise<void> {
@@ -2107,8 +2129,8 @@ export type PermissionPageResponse = {
 	totalPages: number;
 	number: number;
 	size: number;
-	first: boolean;
-	last: boolean;
+	first?: boolean;
+	last?: boolean;
 };
 
 export const permissionsApi = {
@@ -2126,11 +2148,11 @@ export const permissionsApi = {
 		if (params?.sortBy) usp.set("sortBy", params.sortBy);
 		if (params?.sortDir) usp.set("sortDir", params.sortDir);
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/permissions${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<PermissionPageResponse>(res);
+		return fetchSpringPage<Permission>(
+			`${API_BASE}/api/ops/permissions${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste permissions"
+		);
 	},
 
 	/** Returns first 500 permissions (for role assignment dropdowns). */
@@ -2482,11 +2504,11 @@ export const transactionsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<Transaction>(
+			`${API_BASE}/api/ops/transactions${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste transactions"
+		);
 	},
 
 	async get(id: number | string): Promise<Transaction> {
@@ -2510,11 +2532,11 @@ export const transactionsApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: Transaction[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<Transaction>(
+			`${API_BASE}/api/ops/transactions/accounts/${accountId}/transactions${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Transactions du compte"
+		);
 	},
 
 	async getEntries(id: number | string): Promise<TransactionEntry[]> {
@@ -2567,11 +2589,11 @@ export const transfersApi = {
 		if (params?.page !== undefined) usp.set("page", String(params.page));
 		if (params?.size !== undefined) usp.set("size", String(params.size));
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/transfers${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{ content: Transfer[]; totalElements: number; totalPages: number; number: number; size: number }>(res);
+		return fetchSpringPage<Transfer>(
+			`${API_BASE}/api/ops/transfers${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste transferts"
+		);
 	},
 
 	async get(id: number | string): Promise<Transfer> {
@@ -2835,17 +2857,11 @@ export const journalBatchesApi = {
 		if (params?.page !== undefined) usp.set("page", params.page.toString());
 		if (params?.size !== undefined) usp.set("size", params.size.toString());
 		const query = usp.toString();
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches${query ? `?${query}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<{
-			content: JournalBatch[];
-			totalElements: number;
-			totalPages: number;
-			number: number;
-			size: number;
-		}>(res);
+		return fetchSpringPage<JournalBatch>(
+			`${API_BASE}/api/ops/journal-batches${query ? `?${query}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste lots journal"
+		);
 	},
 
 	async get(id: number | string): Promise<JournalBatch> {
@@ -2856,65 +2872,80 @@ export const journalBatchesApi = {
 		return handleJsonResponse<JournalBatch>(res);
 	},
 
-	async create(payload: CreateJournalBatchRequest): Promise<JournalBatch> {
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches`, {
-			method: "POST",
-			headers: getAuthHeaders(),
-			body: JSON.stringify(payload)
-		});
-		return handleJsonResponse<JournalBatch>(res);
-	},
-
-	async post(id: number | string): Promise<JournalBatch> {
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/post`, {
-			method: "POST",
-			headers: getAuthHeaders()
-		});
-		return handleJsonResponse<JournalBatch>(res);
-	},
-
-	async close(id: number | string): Promise<JournalBatch> {
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/close`, {
-			method: "POST",
-			headers: getAuthHeaders()
-		});
-		return handleJsonResponse<JournalBatch>(res);
-	},
-
 	async getEntries(id: number | string): Promise<LedgerEntry[]> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/entries`, {
 			headers: getAuthHeaders(),
 			cache: "no-store"
 		});
 		return handleJsonResponse<LedgerEntry[]>(res);
-	},
-
-	async recalculateTotals(id: number | string): Promise<void> {
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/journal-batches/${id}/recalculate-totals`, {
-			method: "POST",
-			headers: getAuthHeaders()
-		});
-		return handleJsonResponse<void>(res);
 	}
 };
 
 export const closuresApi = {
-	async closeDay(payload: CloseDayRequest): Promise<Closure> {
+	async getAccountingCalendar(): Promise<AccountingCalendarStatus> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/accounting-calendar`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<AccountingCalendarStatus>(res);
+	},
+
+	async closeDay(payload: CloseDayRequest): Promise<CloseDayResult> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-day`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
 		});
-		return handleJsonResponse<Closure>(res);
+		if (res.status === 202) {
+			return { kind: "submitted", request: await handleJsonResponse<ClosureRequest>(res) };
+		}
+		return { kind: "executed", closure: await handleJsonResponse<Closure>(res) };
 	},
 
-	async closeMonth(payload: CloseMonthRequest): Promise<Closure> {
+	async closeMonth(payload: CloseMonthRequest): Promise<CloseMonthResult> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-month`, {
 			method: "POST",
 			headers: getAuthHeaders(),
 			body: JSON.stringify(payload)
 		});
-		return handleJsonResponse<Closure>(res);
+		if (res.status === 202) {
+			return { kind: "submitted", request: await handleJsonResponse<ClosureRequest>(res) };
+		}
+		return { kind: "executed", closure: await handleJsonResponse<Closure>(res) };
+	},
+
+	async getPendingClosureRequests(): Promise<ClosureRequest[]> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closure-requests`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<ClosureRequest[]>(res);
+	},
+
+	async approveClosureRequest(id: number | string, payload?: ApproveClosureRequest): Promise<ClosureRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closure-requests/${id}/approve`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload ?? {})
+		});
+		return handleJsonResponse<ClosureRequest>(res);
+	},
+
+	async rejectClosureRequest(id: number | string, payload: RejectClosureRequest): Promise<ClosureRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closure-requests/${id}/reject`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		return handleJsonResponse<ClosureRequest>(res);
+	},
+
+	async cancelClosureRequest(id: number | string): Promise<ClosureRequest> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closure-requests/${id}/cancel`, {
+			method: "POST",
+			headers: getAuthHeaders()
+		});
+		return handleJsonResponse<ClosureRequest>(res);
 	},
 
 	async getClosure(id: number | string): Promise<Closure> {
@@ -2938,11 +2969,11 @@ export const closuresApi = {
 		if (date) params.append("date", date);
 		params.append("page", page.toString());
 		params.append("size", size.toString());
-		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures?${params.toString()}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<any>(res);
+		return fetchSpringPage<Closure>(
+			`${API_BASE}/api/ops/admin/closures?${params.toString()}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste clôtures"
+		);
 	},
 
 	async getClosuresList(
@@ -3105,11 +3136,11 @@ export const amlApi = {
 		if (params?.page != null) usp.set("page", String(params.page));
 		if (params?.size != null) usp.set("size", String(params.size));
 		const q = usp.toString();
-		const res = await fetchWithAutoRefresh(`${AML_BASE}/alerts${q ? `?${q}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		return handleJsonResponse<AmlAlertPage>(res);
+		return fetchSpringPage<AmlAlertResponse>(
+			`${AML_BASE}/alerts${q ? `?${q}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste alertes AML"
+		);
 	},
 
 	async getAlert(id: number | string): Promise<AmlAlertResponse> {
@@ -3197,15 +3228,11 @@ export const amlApi = {
 		if (params?.page != null) usp.set("page", String(params.page));
 		if (params?.size != null) usp.set("size", String(params.size));
 		const q = usp.toString();
-		const res = await fetchWithAutoRefresh(`${AML_BASE}/cases${q ? `?${q}` : ""}`, {
-			headers: getAuthHeaders(),
-			cache: "no-store"
-		});
-		const body = await handleJsonResponse<Record<string, unknown>>(res);
-		if (body === undefined || body === null || typeof body !== "object" || Array.isArray(body)) {
-			throw new Error("Liste dossiers AML : réponse invalide ou vide.");
-		}
-		return normalizeSpringPagePayload<AmlCaseSummaryResponse>(body);
+		return fetchSpringPage<AmlCaseSummaryResponse>(
+			`${AML_BASE}/cases${q ? `?${q}` : ""}`,
+			{ headers: getAuthHeaders(), cache: "no-store" },
+			"Liste dossiers AML"
+		);
 	},
 
 	async getCase(id: number | string): Promise<AmlCaseDetailResponse> {

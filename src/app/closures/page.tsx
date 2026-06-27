@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { closuresApi } from "@/lib/api";
-import type { Closure, ClosureType, ClosureStatus, CloseDayRequest, CloseMonthRequest } from "@/types";
+import type { Closure, ClosureType, ClosureStatus, CloseDayRequest, CloseMonthRequest, AccountingCalendarStatus, ClosureRequest } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
@@ -68,6 +68,9 @@ export default function ClosuresPage() {
 		description: ""
 	});
 	const [submitting, setSubmitting] = useState(false);
+	const [calendar, setCalendar] = useState<AccountingCalendarStatus | null>(null);
+	const [pendingRequests, setPendingRequests] = useState<ClosureRequest[]>([]);
+	const [actionRequestId, setActionRequestId] = useState<number | null>(null);
 
 	const pageStats = useMemo(() => {
 		let completed = 0;
@@ -85,7 +88,21 @@ export default function ClosuresPage() {
 		if (authLoading) return;
 		if (!isAuthenticated) return;
 		loadClosures();
+		loadCalendarAndRequests();
 	}, [filterType, filterStatus, filterDate, page, size, authLoading, isAuthenticated]);
+
+	async function loadCalendarAndRequests() {
+		try {
+			const [cal, requests] = await Promise.all([
+				closuresApi.getAccountingCalendar(),
+				closuresApi.getPendingClosureRequests()
+			]);
+			setCalendar(cal);
+			setPendingRequests(requests);
+		} catch {
+			// non bloquant
+		}
+	}
 
 	async function loadClosures() {
 		setLoading(true);
@@ -115,14 +132,19 @@ export default function ClosuresPage() {
 		setError(null);
 		setSuccess(null);
 		try {
-			await closuresApi.closeDay(dayForm);
-			setSuccess("Clôture journalière effectuée avec succès.");
+			const result = await closuresApi.closeDay(dayForm);
+			if (result.kind === "submitted") {
+				setSuccess(`Demande de clôture journalière soumise (n°${result.request.id}) — en attente de validation.`);
+			} else {
+				setSuccess("Clôture journalière effectuée avec succès.");
+			}
 			setShowDayForm(false);
 			setDayForm({
 				date: new Date().toISOString().split("T")[0],
 				description: ""
 			});
 			loadClosures();
+			loadCalendarAndRequests();
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : "Erreur lors de la clôture journalière";
 			setError(msg);
@@ -137,8 +159,12 @@ export default function ClosuresPage() {
 		setError(null);
 		setSuccess(null);
 		try {
-			await closuresApi.closeMonth(monthForm);
-			setSuccess("Clôture mensuelle effectuée avec succès.");
+			const result = await closuresApi.closeMonth(monthForm);
+			if (result.kind === "submitted") {
+				setSuccess(`Demande de clôture mensuelle soumise (n°${result.request.id}) — en attente de validation.`);
+			} else {
+				setSuccess("Clôture mensuelle effectuée avec succès.");
+			}
 			setShowMonthForm(false);
 			setMonthForm({
 				year: new Date().getFullYear(),
@@ -146,11 +172,45 @@ export default function ClosuresPage() {
 				description: ""
 			});
 			loadClosures();
+			loadCalendarAndRequests();
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : "Erreur lors de la clôture mensuelle";
 			setError(msg);
 		} finally {
 			setSubmitting(false);
+		}
+	}
+
+	async function handleApproveRequest(requestId: number) {
+		setActionRequestId(requestId);
+		setError(null);
+		setSuccess(null);
+		try {
+			await closuresApi.approveClosureRequest(requestId);
+			setSuccess(`Demande de clôture n°${requestId} approuvée et exécutée.`);
+			loadClosures();
+			loadCalendarAndRequests();
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : "Erreur lors de l'approbation");
+		} finally {
+			setActionRequestId(null);
+		}
+	}
+
+	async function handleRejectRequest(requestId: number) {
+		const reason = window.prompt("Motif du rejet :");
+		if (!reason?.trim()) return;
+		setActionRequestId(requestId);
+		setError(null);
+		setSuccess(null);
+		try {
+			await closuresApi.rejectClosureRequest(requestId, { reason: reason.trim() });
+			setSuccess(`Demande de clôture n°${requestId} rejetée.`);
+			loadCalendarAndRequests();
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : "Erreur lors du rejet");
+		} finally {
+			setActionRequestId(null);
 		}
 	}
 
@@ -203,6 +263,66 @@ export default function ClosuresPage() {
 					</Button>
 				</div>
 			</div>
+
+			{calendar && (
+				<div className="rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 text-sm text-blue-950">
+					<p>
+						<strong>Date comptable :</strong> {calendar.businessDate}
+						{" · "}
+						<strong>Cut-off :</strong> {calendar.cutoffTime} ({calendar.zoneId})
+						{" · "}
+						<strong>Clôture auto J :</strong>{" "}
+						{calendar.dailyClosureJobEnabled ? `cible ${calendar.dateForDailyClosure}` : "désactivée"}
+						{" · "}
+						<strong>Clôture auto M :</strong>{" "}
+						{calendar.monthlyClosureJobEnabled && calendar.monthForMonthlyClosureYear && calendar.monthForMonthlyClosureMonth
+							? `cible ${calendar.monthForMonthlyClosureYear}-${String(calendar.monthForMonthlyClosureMonth).padStart(2, "0")} (1er à 06:00)`
+							: "désactivée"}
+					</p>
+				</div>
+			)}
+
+			{pendingRequests.length > 0 && (
+				<div className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
+					<h2 className="mb-3 text-lg font-semibold text-gray-900">
+						Demandes en attente (maker-checker)
+					</h2>
+					<ul className="space-y-3">
+						{pendingRequests.map((req) => (
+							<li
+								key={req.id}
+								className="flex flex-col gap-3 rounded-lg border border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+							>
+								<div>
+									<p className="font-medium text-gray-900">
+										#{req.id} — {TYPE_LABELS[req.closureType]} — {req.closureDate}
+									</p>
+									{req.description && (
+										<p className="text-sm text-gray-600">{req.description}</p>
+									)}
+								</div>
+								<div className="flex flex-wrap gap-2">
+									<Button
+										size="sm"
+										disabled={actionRequestId === req.id}
+										onClick={() => handleApproveRequest(req.id)}
+									>
+										Approuver
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										disabled={actionRequestId === req.id}
+										onClick={() => handleRejectRequest(req.id)}
+									>
+										Rejeter
+									</Button>
+								</div>
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
 
 			{success && (
 				<div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900">

@@ -24,7 +24,7 @@
 		"chartOfAccounts": "Chart of Accounts",
 		"transactions": "Transactions",
 		"allTransactions": "All Transactions",
-		"journal": "Journal",
+		"journal": "Journal Batches",
 		"transfers": "Transfers",
 		"holds": "Holds",
 		"users": "Users",
@@ -2439,7 +2439,7 @@
 	},
 	"journalBatches": {
 		"title": "Journal Batches",
-		"subtitle": "Accounting journal batch management",
+		"subtitle": "View batches created automatically by the system",
 		"refresh": "Refresh",
 		"newBatch": "New batch",
 		"cancel": "Cancel",
@@ -2449,7 +2449,8 @@
 		"startDate": "Start date",
 		"endDate": "End date",
 		"statusDraft": "Draft",
-		"statusPosted": "Posted",
+		"statusPosted": "Posted (legacy)",
+		"statusPostedLegacy": "Closed (legacy)",
 		"statusClosed": "Closed",
 		"formNewTitle": "New journal batch",
 		"formBatchNumber": "Batch number *",
@@ -2469,7 +2470,7 @@
 		"close": "Close",
 		"loadingBatches": "Loading batches...",
 		"noBatches": "No journal batches found",
-		"noBatchesHint": "Try adjusting your filters or create a new batch",
+		"noBatchesHint": "Batches are created automatically from transactions and accounting batch jobs",
 		"errorLoad": "Error loading journal batches",
 		"errorCreate": "Error creating batch",
 		"errorPost": "Error posting batch",
@@ -2483,10 +2484,13 @@
 		"next": "Next",
 		"last": "Last",
 		"pageOf": "Page {{current}} of {{total}}",
+		"paginationResultsLabel": "batches",
+		"paginationResultLabel": "batch",
 		"detail": {
 			"back": "Back",
 			"backToList": "Back to list",
-			"subtitle": "Journal batch details",
+			"subtitle": "Journal batch consultation",
+			"readOnlyHint": "Batches are created and closed automatically. Daily closure finalizes DRAFT batches for the day.",
 			"recalculateTotals": "Recalculate totals",
 			"postBatch": "Post batch",
 			"closeBatch": "Close batch",
@@ -2501,8 +2505,8 @@
 			"closedAt": "Closed at",
 			"balanced": "Batch balanced ✓",
 			"unbalanced": "Batch unbalanced - Difference: {{amount}}",
-			"balancedHint": "Debit and credit totals are equal. The batch can be posted.",
-			"unbalancedHint": "Debit and credit totals are not equal. Please correct the entries before posting.",
+			"balancedHint": "Debit and credit totals are equal. The batch will be closed automatically during daily closure.",
+			"unbalancedHint": "Debit and credit totals are not equal. Daily closure will be blocked until the batch is corrected.",
 			"entries": "Entries",
 			"entriesCount": "Entries ({{count}})",
 			"refresh": "Refresh",
@@ -2783,7 +2787,9 @@
 				"showingPlural": "Showing {{count}} of {{total}} transactions",
 				"page": "Page {{current}} of {{total}}",
 				"previous": "Previous",
-				"next": "Next"
+				"next": "Next",
+				"transactions": "transaction",
+				"transactionsPlural": "transactions"
 			},
 			"errors": {
 				"loadAccounts": "Error loading accounts",
@@ -3475,6 +3481,21 @@
 						"reason": "Justification",
 						"actors": "Actors"
 					}
+				},
+				"writeOff": {
+					"button": "Write off loan",
+					"modalTitle": "Write off receivable (6922)",
+					"modalHint": "This records a definitive loss on a doubtful-stage loan. It is irreversible: postings 6922 / 3352 and provision release, then loan account closure.",
+					"principalLabel": "Outstanding principal (CRD)",
+					"provisionLabel": "Provision to release",
+					"netLossLabel": "Estimated net loss",
+					"netLossFullyCovered": "None (provision ≥ outstanding principal)",
+					"confirmButton": "Confirm write-off",
+					"confirming": "Writing off…",
+					"success": "Receivable written off. Loan account is closed.",
+					"error": "Failed to write off receivable.",
+					"blockedByRemission": "A remission request is pending. Cancel or decide it before writing off.",
+					"requiresDoubtful": "Available only for loans in doubtful stage."
 				}
 			}
 		},

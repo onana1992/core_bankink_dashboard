@@ -8,6 +8,7 @@ import { formatAmount as formatAmountUtil } from "@/lib/utils";
 import type { Transfer } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 
 export default function TransfersPage() {
 	const router = useRouter();
@@ -15,13 +16,13 @@ export default function TransfersPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [page, setPage] = useState(0);
+	const [size, setSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalElements, setTotalElements] = useState(0);
-	const size = 20;
 
 	useEffect(() => {
 		loadTransfers();
-	}, [page]);
+	}, [page, size]);
 
 	async function loadTransfers() {
 		setLoading(true);
@@ -172,28 +173,22 @@ export default function TransfersPage() {
 						</table>
 					</div>
 
-					{totalPages > 1 && (
-						<div className="mt-6 flex items-center justify-between">
-							<div className="text-sm text-gray-700">
-								Affichage de {page * size + 1} à {Math.min((page + 1) * size, totalElements)} sur {totalElements} transferts
-							</div>
-							<div className="flex gap-2">
-								<Button
-									onClick={() => setPage(p => Math.max(0, p - 1))}
-									disabled={page === 0}
-									className="px-4 py-2"
-								>
-									Précédent
-								</Button>
-								<Button
-									onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-									disabled={page >= totalPages - 1}
-									className="px-4 py-2"
-								>
-									Suivant
-								</Button>
-							</div>
-						</div>
+					{(transfers.length > 0 || totalElements > 0) && (
+						<TablePagination
+							page={page}
+							totalPages={totalPages}
+							totalElements={totalElements}
+							pageSize={size}
+							onPageChange={setPage}
+							resultsLabel={totalElements > 1 ? "transferts" : "transfert"}
+							showFirstLast
+							sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
+							size={size}
+							onSizeChange={(nextSize) => {
+								setSize(nextSize);
+								setPage(0);
+							}}
+						/>
 					)}
 				</>
 			)}

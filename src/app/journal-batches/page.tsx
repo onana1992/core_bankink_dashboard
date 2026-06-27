@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import "@/lib/i18n";
 import { useAuth } from "@/contexts/AuthContext";
 import { journalBatchesApi } from "@/lib/api";
-import { showToast } from "@/lib/toast";
-import type { JournalBatch, JournalBatchStatus, CreateJournalBatchRequest } from "@/types";
+import type { JournalBatch, JournalBatchStatus } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
+import TablePagination, { OPS_TABLE_PAGE_SIZE_OPTIONS } from "@/components/ui/TablePagination";
 import { formatAmount as formatAmountUtil } from "@/lib/utils";
 
 const STATUS_COLORS: Record<JournalBatchStatus, string> = {
@@ -22,7 +21,6 @@ const STATUS_COLORS: Record<JournalBatchStatus, string> = {
 
 export default function JournalBatchesPage() {
 	const { t, i18n } = useTranslation();
-	const router = useRouter();
 	const { isAuthenticated, loading: authLoading } = useAuth();
 
 	const STATUS_LABELS: Record<JournalBatchStatus, string> = {
@@ -33,7 +31,6 @@ export default function JournalBatchesPage() {
 	const [batches, setBatches] = useState<JournalBatch[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [showForm, setShowForm] = useState(false);
 	const [filterStatus, setFilterStatus] = useState<JournalBatchStatus | "">("");
 	const [filterStartDate, setFilterStartDate] = useState("");
 	const [filterEndDate, setFilterEndDate] = useState("");
@@ -41,12 +38,6 @@ export default function JournalBatchesPage() {
 	const [size, setSize] = useState(20);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalElements, setTotalElements] = useState(0);
-	const [form, setForm] = useState<CreateJournalBatchRequest>({
-		batchNumber: "",
-		batchDate: new Date().toISOString().split("T")[0],
-		description: ""
-	});
-	const [submitting, setSubmitting] = useState(false);
 
 	useEffect(() => {
 		// Ne charger les données que si l'utilisateur est authentifié et que le chargement est terminé
@@ -77,50 +68,6 @@ export default function JournalBatchesPage() {
 		}
 	}
 
-	async function handleSubmit(e: React.FormEvent) {
-		e.preventDefault();
-		setSubmitting(true);
-		setError(null);
-		try {
-			await journalBatchesApi.create(form);
-			setShowForm(false);
-			setForm({
-				batchNumber: "",
-				batchDate: new Date().toISOString().split("T")[0],
-				description: ""
-			});
-			loadBatches();
-		} catch (e: any) {
-			setError(e?.message ?? t("journalBatches.errorCreate"));
-		} finally {
-			setSubmitting(false);
-		}
-	}
-
-	async function handlePost(id: number) {
-		if (!confirm(t("journalBatches.confirmPost"))) {
-			return;
-		}
-		try {
-			await journalBatchesApi.post(id);
-			loadBatches();
-		} catch (e: any) {
-			showToast(e?.message ?? t("journalBatches.errorPost"), "error");
-		}
-	}
-
-	async function handleClose(id: number) {
-		if (!confirm(t("journalBatches.confirmClose"))) {
-			return;
-		}
-		try {
-			await journalBatchesApi.close(id);
-			loadBatches();
-		} catch (e: any) {
-			showToast(e?.message ?? t("journalBatches.errorClose"), "error");
-		}
-	}
-
 	function formatAmount(amount: number, currency: string): string {
 		const locale = i18n.language === "fr" ? "fr-FR" : "en-US";
 		return formatAmountUtil(amount, currency, locale);
@@ -146,20 +93,12 @@ export default function JournalBatchesPage() {
 					<h1 className="text-3xl font-bold text-gray-900">{t("journalBatches.title")}</h1>
 					<p className="text-gray-600 mt-1">{t("journalBatches.subtitle")}</p>
 				</div>
-				<div className="flex gap-3">
-					<Button onClick={loadBatches} variant="outline" className="flex items-center gap-2">
-						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-						</svg>
-						{t("journalBatches.refresh")}
-					</Button>
-					<Button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2">
-						<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-						</svg>
-						{showForm ? t("journalBatches.cancel") : t("journalBatches.newBatch")}
-					</Button>
-				</div>
+				<Button onClick={loadBatches} variant="outline" className="flex items-center gap-2">
+					<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+					</svg>
+					{t("journalBatches.refresh")}
+				</Button>
 			</div>
 
 			{/* Filtres */}
@@ -202,53 +141,6 @@ export default function JournalBatchesPage() {
 					</div>
 				</div>
 			</div>
-
-			{/* Formulaire de création */}
-			{showForm && (
-				<div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-					<h3 className="text-lg font-semibold text-gray-900 mb-4">{t("journalBatches.formNewTitle")}</h3>
-					<form onSubmit={handleSubmit} className="space-y-4">
-						<div className="grid grid-cols-2 gap-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">{t("journalBatches.formBatchNumber")}</label>
-								<Input
-									value={form.batchNumber}
-									onChange={(e) => setForm({ ...form, batchNumber: e.target.value })}
-									required
-									placeholder="JRNL-2024-001"
-								/>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">{t("journalBatches.formBatchDate")}</label>
-								<Input
-									type="date"
-									value={form.batchDate}
-									onChange={(e) => setForm({ ...form, batchDate: e.target.value })}
-									required
-								/>
-							</div>
-							<div className="col-span-2">
-								<label className="block text-sm font-medium text-gray-700 mb-1">{t("journalBatches.formDescription")}</label>
-								<textarea
-									className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-									value={form.description}
-									onChange={(e) => setForm({ ...form, description: e.target.value })}
-									rows={3}
-									placeholder={t("journalBatches.formDescriptionPlaceholder")}
-								/>
-							</div>
-						</div>
-						<div className="flex justify-end gap-2 mt-4">
-							<Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-								{t("journalBatches.cancel")}
-							</Button>
-							<Button type="submit" disabled={submitting}>
-								{submitting ? t("journalBatches.creating") : t("journalBatches.formCreate")}
-							</Button>
-						</div>
-					</form>
-				</div>
-			)}
 
 			{/* Erreur */}
 			{error && (
@@ -318,37 +210,15 @@ export default function JournalBatchesPage() {
 											</Badge>
 										</td>
 										<td className="px-6 py-4 whitespace-nowrap text-right">
-											<div className="flex items-center justify-end gap-2">
-												<Link href={`/journal-batches/${batch.id}`}>
-													<Button variant="outline" size="sm" className="flex items-center gap-1">
-														<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-															<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-														</svg>
-														Voir
-													</Button>
-												</Link>
-												{batch.status === "DRAFT" && (
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => handlePost(batch.id)}
-														className="flex items-center gap-1"
-													>
-														Poster
-													</Button>
-												)}
-												{batch.status === "POSTED" && (
-													<Button
-														variant="outline"
-														size="sm"
-														onClick={() => handleClose(batch.id)}
-														className="flex items-center gap-1"
-													>
-														Clôturer
-													</Button>
-												)}
-											</div>
+											<Link href={`/journal-batches/${batch.id}`}>
+												<Button variant="outline" size="sm" className="flex items-center gap-1">
+													<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+													</svg>
+													{t("journalBatches.view")}
+												</Button>
+											</Link>
 										</td>
 									</tr>
 								))}
@@ -356,68 +226,21 @@ export default function JournalBatchesPage() {
 						</table>
 					</div>
 					{(batches.length > 0 || totalElements > 0) && (
-						<div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between flex-wrap gap-4">
-							<div className="flex items-center gap-4">
-								<p className="text-sm text-gray-600">
-									{t("journalBatches.displaying", { count: batches.length, total: totalElements })}
-								</p>
-								<div className="flex items-center gap-2">
-									<label className="text-sm text-gray-600">{t("journalBatches.itemsPerPage")}</label>
-									<select
-										className="px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-										value={size}
-										onChange={(e) => {
-											setSize(Number(e.target.value));
-											setPage(0); // Reset to first page when size changes
-										}}
-									>
-										<option value="10">10</option>
-										<option value="20">20</option>
-										<option value="50">50</option>
-										<option value="100">100</option>
-									</select>
-								</div>
-							</div>
-							{totalPages > 1 && (
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(0)}
-										disabled={page === 0}
-									>
-										{t("journalBatches.first")}
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(page - 1)}
-										disabled={page === 0}
-									>
-										{t("journalBatches.previous")}
-									</Button>
-									<span className="text-sm text-gray-600 px-3">
-										{t("journalBatches.pageOf", { current: page + 1, total: totalPages })}
-									</span>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(page + 1)}
-										disabled={page >= totalPages - 1}
-									>
-										{t("journalBatches.next")}
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => setPage(totalPages - 1)}
-										disabled={page >= totalPages - 1}
-									>
-										{t("journalBatches.last")}
-									</Button>
-								</div>
-							)}
-						</div>
+						<TablePagination
+							page={page}
+							totalPages={totalPages}
+							totalElements={totalElements}
+							pageSize={size}
+							onPageChange={setPage}
+							resultsLabel={totalElements > 1 ? t("journalBatches.paginationResultsLabel") : t("journalBatches.paginationResultLabel")}
+							showFirstLast
+							sizeOptions={OPS_TABLE_PAGE_SIZE_OPTIONS}
+							size={size}
+							onSizeChange={(nextSize) => {
+								setSize(nextSize);
+								setPage(0);
+							}}
+						/>
 					)}
 				</div>
 			)}

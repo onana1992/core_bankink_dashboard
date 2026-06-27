@@ -147,6 +147,18 @@ export interface RejectLoanStageRemissionRequest {
 	reason: string;
 }
 
+/** Résultat d'un abandon de créance (CU-L18, écritures 6922 / 3352 + reprise provision). */
+export interface LoanWriteOffResult {
+	loanAccountId: number;
+	principalWrittenOff: number;
+	provisionReleased: number;
+	balanceAdjustmentTransaction?: {
+		id: number;
+		amount: number;
+		[key: string]: unknown;
+	} | null;
+}
+
 /** Classification prudentielle PCEMF — une ligne par compte prêt (état actuel). */
 export interface LoanCreditClassification {
 	id: number;
