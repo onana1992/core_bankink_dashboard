@@ -1,6 +1,8 @@
 export type ClosureType = "DAILY" | "MONTHLY" | "YEARLY";
 export type ClosureStatus = "IN_PROGRESS" | "COMPLETED" | "FAILED";
 
+export type YearEndResultType = "PROFIT" | "LOSS" | "NEUTRE";
+
 export interface Closure {
 	id: number;
 	closureDate: string;
@@ -14,6 +16,10 @@ export interface Closure {
 	createdAt: string;
 	completedAt?: string | null;
 	createdBy?: number | null;
+	fiscalYear?: number | null;
+	netResult?: number | null;
+	resultType?: YearEndResultType | null;
+	journalBatchId?: number | null;
 }
 
 export interface CloseDayRequest {
@@ -25,6 +31,40 @@ export interface CloseMonthRequest {
 	year: number;
 	month: number;
 	description?: string;
+}
+
+export interface CloseYearRequest {
+	year: number;
+	description?: string;
+}
+
+export interface YearEndClosingLine {
+	ledgerAccountId: number;
+	ledgerAccountCode: string;
+	pcemfCode: string;
+	accountType: string;
+	closingAmount: number;
+}
+
+export interface YearEndProposedEntry {
+	ledgerAccountCode: string;
+	pcemfCode: string;
+	debitAmount: number;
+	creditAmount: number;
+	description: string;
+}
+
+export interface YearEndClosingPreview {
+	year: number;
+	asOfDate: string;
+	totalCharges: number;
+	totalRevenues: number;
+	netResult: number;
+	resultType: YearEndResultType;
+	chargeLines: YearEndClosingLine[];
+	revenueLines: YearEndClosingLine[];
+	proposedEntries: YearEndProposedEntry[];
+	warnings: string[];
 }
 
 export interface ClosureValidationResponse {
@@ -66,6 +106,8 @@ export interface AccountingCalendarStatus {
 	monthForMonthlyClosureYear?: number | null;
 	monthForMonthlyClosureMonth?: number | null;
 	monthlyClosureJobEnabled: boolean;
+	yearForAnnualClosure?: number | null;
+	annualClosureJobEnabled: boolean;
 }
 
 export interface ApproveClosureRequest {
@@ -83,4 +125,26 @@ export type CloseDayResult =
 export type CloseMonthResult =
 	| { kind: "executed"; closure: Closure }
 	| { kind: "submitted"; request: ClosureRequest };
+
+export type CloseYearResult =
+	| { kind: "executed"; closure: Closure }
+	| { kind: "submitted"; request: ClosureRequest };
+
+export interface YearEndClosingDetail {
+	closureId: number;
+	fiscalYear: number;
+	netResult?: number | null;
+	resultType?: YearEndResultType | null;
+	journalBatchId?: number | null;
+	journalBatchNumber?: string | null;
+	totalCharges?: number | null;
+	totalRevenues?: number | null;
+	entries: Array<{
+		ledgerAccountCode: string;
+		pcemfCode: string;
+		debitAmount: number;
+		creditAmount: number;
+		description: string;
+	}>;
+}
 

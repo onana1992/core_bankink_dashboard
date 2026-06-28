@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { closuresApi } from "@/lib/api";
-import type { Closure, ClosureType, ClosureStatus, CloseDayRequest, CloseMonthRequest, AccountingCalendarStatus, ClosureRequest } from "@/types";
+import type { Closure, ClosureType, ClosureStatus, CloseDayRequest, CloseMonthRequest, CloseYearRequest, AccountingCalendarStatus, ClosureRequest } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Input from "@/components/ui/Input";
@@ -51,6 +51,7 @@ export default function ClosuresPage() {
 	const [success, setSuccess] = useState<string | null>(null);
 	const [showDayForm, setShowDayForm] = useState(false);
 	const [showMonthForm, setShowMonthForm] = useState(false);
+	const [showYearForm, setShowYearForm] = useState(false);
 	const [filterType, setFilterType] = useState<ClosureType | "">("");
 	const [filterStatus, setFilterStatus] = useState<ClosureStatus | "">("");
 	const [filterDate, setFilterDate] = useState("");
@@ -65,6 +66,10 @@ export default function ClosuresPage() {
 	const [monthForm, setMonthForm] = useState<CloseMonthRequest>({
 		year: new Date().getFullYear(),
 		month: new Date().getMonth() + 1,
+		description: ""
+	});
+	const [yearForm, setYearForm] = useState<CloseYearRequest>({
+		year: new Date().getFullYear() - 1,
 		description: ""
 	});
 	const [submitting, setSubmitting] = useState(false);
@@ -181,6 +186,31 @@ export default function ClosuresPage() {
 		}
 	}
 
+	async function handleCloseYear(e: React.FormEvent) {
+		e.preventDefault();
+		setSubmitting(true);
+		setError(null);
+		setSuccess(null);
+		try {
+			const result = await closuresApi.closeYear(yearForm);
+			if (result.kind === "submitted") {
+				setSuccess(`Demande de clôture annuelle soumise (n°${result.request.id}) — en attente de validation.`);
+			} else {
+				setSuccess(
+					`Clôture annuelle effectuée — résultat ${result.closure.netResult ?? "—"} (${result.closure.resultType ?? "—"}).`
+				);
+			}
+			setShowYearForm(false);
+			setYearForm({ year: new Date().getFullYear() - 1, description: "" });
+			loadClosures();
+			loadCalendarAndRequests();
+		} catch (e: unknown) {
+			setError(e instanceof Error ? e.message : "Erreur lors de la clôture annuelle");
+		} finally {
+			setSubmitting(false);
+		}
+	}
+
 	async function handleApproveRequest(requestId: number) {
 		setActionRequestId(requestId);
 		setError(null);
@@ -233,7 +263,7 @@ export default function ClosuresPage() {
 				<div>
 					<h1 className="text-3xl font-bold text-gray-900">Clôtures comptables</h1>
 					<p className="mt-1 text-gray-600">
-						Clôture journalière et mensuelle, contrôle d&apos;équilibre GL et historique des exécutions.
+						Clôture journalière, mensuelle et annuelle — contrôle d&apos;équilibre GL et historique.
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-3">
@@ -243,6 +273,7 @@ export default function ClosuresPage() {
 						onClick={() => {
 							setShowDayForm(!showDayForm);
 							setShowMonthForm(false);
+							setShowYearForm(false);
 							setSuccess(null);
 						}}
 					>
@@ -255,11 +286,25 @@ export default function ClosuresPage() {
 						onClick={() => {
 							setShowMonthForm(!showMonthForm);
 							setShowDayForm(false);
+							setShowYearForm(false);
 							setSuccess(null);
 						}}
 					>
 						<CalendarCheck className="h-4 w-4" />
 						Clôture mensuelle
+					</Button>
+					<Button
+						variant={showYearForm ? "secondary" : "default"}
+						className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700"
+						onClick={() => {
+							setShowYearForm(!showYearForm);
+							setShowDayForm(false);
+							setShowMonthForm(false);
+							setSuccess(null);
+						}}
+					>
+						<CalendarCheck className="h-4 w-4" />
+						Clôture annuelle
 					</Button>
 				</div>
 			</div>
@@ -277,6 +322,11 @@ export default function ClosuresPage() {
 						<strong>Clôture auto M :</strong>{" "}
 						{calendar.monthlyClosureJobEnabled && calendar.monthForMonthlyClosureYear && calendar.monthForMonthlyClosureMonth
 							? `cible ${calendar.monthForMonthlyClosureYear}-${String(calendar.monthForMonthlyClosureMonth).padStart(2, "0")} (1er à 06:00)`
+							: "désactivée"}
+						{" · "}
+						<strong>Clôture auto A :</strong>{" "}
+						{calendar.annualClosureJobEnabled && calendar.yearForAnnualClosure
+							? `exercice ${calendar.yearForAnnualClosure} (1er janv. à 07:00)`
 							: "désactivée"}
 					</p>
 				</div>
@@ -429,6 +479,56 @@ export default function ClosuresPage() {
 								{submitting ? "Traitement…" : "Lancer la clôture mensuelle"}
 							</Button>
 							<Button type="button" variant="outline" onClick={() => setShowMonthForm(false)}>
+								Annuler
+							</Button>
+						</div>
+					</form>
+				</div>
+			)}
+
+			{showYearForm && (
+				<div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+					<div className="mb-4 flex items-center gap-2">
+						<CalendarCheck className="h-5 w-5 text-violet-600" />
+						<h2 className="text-lg font-semibold text-gray-900">Nouvelle clôture annuelle</h2>
+					</div>
+					<p className="mb-4 text-sm text-gray-600">
+						Exige les clôtures journalière et mensuelle de décembre complétées. Génère les écritures
+						131/132 (résultat) et 121/122 (report à nouveau) pour les comptes de gestion XAF.
+					</p>
+					<form onSubmit={handleCloseYear} className="space-y-4">
+						<Input
+							label="Exercice (année)"
+							type="number"
+							min={2000}
+							max={2100}
+							value={yearForm.year}
+							onChange={(e) =>
+								setYearForm({ ...yearForm, year: parseInt(e.target.value, 10) })
+							}
+							required
+						/>
+						<Input
+							label="Commentaire (optionnel)"
+							value={yearForm.description || ""}
+							onChange={(e) => setYearForm({ ...yearForm, description: e.target.value })}
+							placeholder="Ex. Clôture exercice 2026"
+						/>
+						<div className="flex flex-wrap gap-2">
+							<Link href={`/closures/year-end/preview?year=${yearForm.year}`}>
+								<Button type="button" variant="outline" className="inline-flex items-center gap-2">
+									Prévisualiser en détail
+								</Button>
+							</Link>
+							<Button
+								type="submit"
+								disabled={submitting}
+								className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700"
+							>
+								{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+								{submitting ? "Traitement…" : "Lancer la clôture annuelle"}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => setShowYearForm(false)}>
 								Annuler
 							</Button>
 						</div>

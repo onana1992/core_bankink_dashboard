@@ -101,6 +101,10 @@ import type {
 	ClosureStatus,
 	CloseDayRequest,
 	CloseMonthRequest,
+	CloseYearRequest,
+	CloseYearResult,
+	YearEndClosingPreview,
+	YearEndClosingDetail,
 	ClosureValidationResponse,
 	ClosureRequest,
 	AccountingCalendarStatus,
@@ -2914,6 +2918,26 @@ export const closuresApi = {
 		return { kind: "executed", closure: await handleJsonResponse<Closure>(res) };
 	},
 
+	async closeYear(payload: CloseYearRequest): Promise<CloseYearResult> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-year`, {
+			method: "POST",
+			headers: getAuthHeaders(),
+			body: JSON.stringify(payload)
+		});
+		if (res.status === 202) {
+			return { kind: "submitted", request: await handleJsonResponse<ClosureRequest>(res) };
+		}
+		return { kind: "executed", closure: await handleJsonResponse<Closure>(res) };
+	},
+
+	async previewCloseYear(year: number): Promise<YearEndClosingPreview> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/close-year/preview?year=${year}`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<YearEndClosingPreview>(res);
+	},
+
 	async getPendingClosureRequests(): Promise<ClosureRequest[]> {
 		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closure-requests`, {
 			headers: getAuthHeaders(),
@@ -2954,6 +2978,14 @@ export const closuresApi = {
 			cache: "no-store"
 		});
 		return handleJsonResponse<Closure>(res);
+	},
+
+	async getYearEndDetail(id: number | string): Promise<YearEndClosingDetail> {
+		const res = await fetchWithAutoRefresh(`${API_BASE}/api/ops/admin/closures/${id}/year-end-detail`, {
+			headers: getAuthHeaders(),
+			cache: "no-store"
+		});
+		return handleJsonResponse<YearEndClosingDetail>(res);
 	},
 
 	async getClosures(

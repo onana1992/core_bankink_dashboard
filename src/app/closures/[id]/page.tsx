@@ -26,7 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { closuresApi } from "@/lib/api";
 import { formatAmount } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import type { Closure, ClosureStatus, ClosureType, ClosureValidationResponse } from "@/types";
+import type { Closure, ClosureStatus, ClosureType, ClosureValidationResponse, YearEndClosingDetail } from "@/types";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import {
@@ -196,6 +196,7 @@ export default function ClosureDetailPage() {
 
 	const [closure, setClosure] = useState<Closure | null>(null);
 	const [validation, setValidation] = useState<ClosureValidationResponse | null>(null);
+	const [yearEndDetail, setYearEndDetail] = useState<YearEndClosingDetail | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [validating, setValidating] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -214,6 +215,15 @@ export default function ClosureDetailPage() {
 		try {
 			const data = await closuresApi.getClosure(closureId);
 			setClosure(data);
+			if (data.closureType === "YEARLY" && data.status === "COMPLETED") {
+				try {
+					setYearEndDetail(await closuresApi.getYearEndDetail(closureId));
+				} catch {
+					setYearEndDetail(null);
+				}
+			} else {
+				setYearEndDetail(null);
+			}
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : "Erreur lors du chargement de la clôture";
 			setError(msg);
@@ -401,6 +411,37 @@ export default function ClosureDetailPage() {
 					</OpsInlineAlert>
 				) : null}
 			</SectionCard>
+
+			{closure.closureType === "YEARLY" && (closure.netResult != null || yearEndDetail) ? (
+				<SectionCard
+					title="Résultat de l'exercice"
+					description="Écritures 131/132 et report à nouveau 121/122"
+					icon={Scale}
+				>
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+						<MetaField label="Exercice" icon={Calendar}>
+							{closure.fiscalYear ?? yearEndDetail?.fiscalYear ?? "—"}
+						</MetaField>
+						<MetaField label="Résultat net" icon={ArrowUpRight}>
+							{closure.netResult != null ? formatAmount(closure.netResult, "XAF") : "—"}
+						</MetaField>
+						<MetaField label="Type" icon={CheckCircle2}>
+							{closure.resultType ?? yearEndDetail?.resultType ?? "—"}
+						</MetaField>
+					</div>
+					{yearEndDetail?.journalBatchId ? (
+						<div className="mt-4">
+							<Link
+								href={`/journal-batches/${yearEndDetail.journalBatchId}`}
+								className="inline-flex items-center gap-2 text-sm font-medium text-ops-ring hover:underline"
+							>
+								<ExternalLink className="h-4 w-4" />
+								Lot {yearEndDetail.journalBatchNumber ?? yearEndDetail.journalBatchId}
+							</Link>
+						</div>
+					) : null}
+				</SectionCard>
+			) : null}
 
 			{validation ? (
 				<SectionCard
