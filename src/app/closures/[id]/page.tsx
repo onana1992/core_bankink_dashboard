@@ -82,6 +82,19 @@ function formatDateOnly(dateString: string): string {
 	});
 }
 
+const RESULT_TYPE_LABELS: Record<string, string> = {
+	PROFIT: "Bénéfice",
+	LOSS: "Perte",
+	NEUTRE: "Résultat nul"
+};
+
+function AmountCell({ amount }: { amount: number }) {
+	if (!amount || amount === 0) {
+		return <span className="text-ops-fg-muted">—</span>;
+	}
+	return <span className="font-mono text-ops-fg">{formatAmount(amount, "XAF")}</span>;
+}
+
 function formatDateTime(iso: string | null | undefined): string {
 	if (!iso) return "—";
 	try {
@@ -426,7 +439,11 @@ export default function ClosureDetailPage() {
 							{closure.netResult != null ? formatAmount(closure.netResult, "XAF") : "—"}
 						</MetaField>
 						<MetaField label="Type" icon={CheckCircle2}>
-							{closure.resultType ?? yearEndDetail?.resultType ?? "—"}
+							{closure.resultType
+								? (RESULT_TYPE_LABELS[closure.resultType] ?? closure.resultType)
+								: yearEndDetail?.resultType
+									? (RESULT_TYPE_LABELS[yearEndDetail.resultType] ?? yearEndDetail.resultType)
+									: "—"}
 						</MetaField>
 					</div>
 					{yearEndDetail?.journalBatchId ? (
@@ -438,6 +455,55 @@ export default function ClosureDetailPage() {
 								<ExternalLink className="h-4 w-4" />
 								Lot {yearEndDetail.journalBatchNumber ?? yearEndDetail.journalBatchId}
 							</Link>
+						</div>
+					) : null}
+					{yearEndDetail && yearEndDetail.entries.length > 0 ? (
+						<div className="mt-6 space-y-3">
+							<p className="text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+								Écritures du lot ({yearEndDetail.entries.length})
+							</p>
+							<div className="overflow-x-auto rounded-ops-lg border border-ops-border">
+								<table className="min-w-full divide-y divide-ops-border text-sm">
+									<thead className="bg-ops-surface-muted/60">
+										<tr>
+											<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+												Compte GL
+											</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+												PCEMF
+											</th>
+											<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+												Débit
+											</th>
+											<th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+												Crédit
+											</th>
+											<th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ops-fg-muted">
+												Libellé
+											</th>
+										</tr>
+									</thead>
+									<tbody className="divide-y divide-ops-border bg-white">
+										{yearEndDetail.entries.map((entry, index) => (
+											<tr key={`${entry.ledgerAccountCode}-${index}`} className="hover:bg-ops-surface-muted/30">
+												<td className="whitespace-nowrap px-4 py-3 font-mono text-ops-fg">
+													{entry.ledgerAccountCode}
+												</td>
+												<td className="whitespace-nowrap px-4 py-3 font-mono text-ops-fg-muted">
+													{entry.pcemfCode}
+												</td>
+												<td className="whitespace-nowrap px-4 py-3 text-right">
+													<AmountCell amount={entry.debitAmount} />
+												</td>
+												<td className="whitespace-nowrap px-4 py-3 text-right">
+													<AmountCell amount={entry.creditAmount} />
+												</td>
+												<td className="px-4 py-3 text-ops-fg-muted">{entry.description}</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
 						</div>
 					) : null}
 				</SectionCard>

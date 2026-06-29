@@ -39,6 +39,16 @@ const STATUS_COLORS: Record<ClosureStatus, string> = {
 	FAILED: "bg-red-100 text-red-900 border-red-200"
 };
 
+function formatRequestLabel(req: { closureType: ClosureType; closureDate: string; closureYear?: number | null; closureMonth?: number | null }): string {
+	if (req.closureType === "YEARLY" && req.closureYear) {
+		return `Exercice ${req.closureYear} (31/12/${req.closureYear})`;
+	}
+	if (req.closureType === "MONTHLY" && req.closureYear && req.closureMonth) {
+		return `${String(req.closureMonth).padStart(2, "0")}/${req.closureYear}`;
+	}
+	return req.closureDate;
+}
+
 const selectClass =
 	"w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white";
 
@@ -345,11 +355,19 @@ export default function ClosuresPage() {
 							>
 								<div>
 									<p className="font-medium text-gray-900">
-										#{req.id} — {TYPE_LABELS[req.closureType]} — {req.closureDate}
+										#{req.id} — {TYPE_LABELS[req.closureType]} — {formatRequestLabel(req)}
 									</p>
 									{req.description && (
 										<p className="text-sm text-gray-600">{req.description}</p>
 									)}
+									{req.closureType === "YEARLY" && req.closureYear ? (
+										<Link
+											href={`/closures/year-end/preview?year=${req.closureYear}`}
+											className="mt-1 inline-block text-sm font-medium text-violet-700 hover:underline"
+										>
+											Prévisualiser l&apos;exercice {req.closureYear}
+										</Link>
+									) : null}
 								</div>
 								<div className="flex flex-wrap gap-2">
 									<Button
